@@ -673,93 +673,117 @@ AGE_BANDS = [
 
 
 def gen_tracts(r: np.random.Generator, n: int = 60) -> list[dict]:
-    """Tracts laid out on a jittered hex-ish grid covering the whole bbox, so
-    the choropleth tiles the study area without gaps."""
+    """Census tracts as a Voronoi tessellation of jittered seed points.
+
+    Real census geography partitions its area exactly -- neighbourhoods share
+    borders and leave no gaps. Independent blobs on a grid read as generated at
+    a glance, and worse, they make the choropleth lie: the white space between
+    them is not "no population", it is missing polygons. Voronoi cells clipped
+    to the study area tile it completely, which is both honest and what a
+    neighbourhood map looks like.
+
+    Seeds are denser toward the centre, so tracts are small in the city and
+    large in the countryside -- the same relationship real census areas have,
+    since they are drawn to hold comparable populations.
+    """
+    from shapely import voronoi_polygons
+    from shapely.geometry import MultiPoint
+
+    envelope = box(MIN_LON, MIN_LAT, MAX_LON, MAX_LAT)
+
+    # Half the seeds cluster on the city, half spread over the whole area.
+    seeds: list[tuple[float, float]] = []
+    while len(seeds) < n:
+        if len(seeds) % 2 == 0:
+            lon = CENTRE_LON + m_to_lon(float(r.normal(0, 4200)))
+            lat = CENTRE_LAT + m_to_lat(float(r.normal(0, 4200)))
+        else:
+            lon = float(r.uniform(MIN_LON, MAX_LON))
+            lat = float(r.uniform(MIN_LAT, MAX_LAT))
+        if MIN_LON < lon < MAX_LON and MIN_LAT < lat < MAX_LAT:
+            seeds.append((lon, lat))
+
+    cells = [
+        cell.intersection(envelope)
+        for cell in voronoi_polygons(MultiPoint(seeds), extend_to=envelope).geoms
+    ]
+    cells = [c for c in cells if not c.is_empty and c.geom_type in ("Polygon", "MultiPolygon")]
+    # Voronoi returns cells in its own order; sorting by centroid keeps the
+    # output stable run to run, which the fixed seed alone does not guarantee.
+    cells.sort(key=lambda c: (round(c.centroid.y, 6), round(c.centroid.x, 6)))
+
     tracts = []
-    cols, rows_n = 10, 6
-    lon_step = (MAX_LON - MIN_LON) / cols
-    lat_step = (MAX_LAT - MIN_LAT) / rows_n
+    for idx, cell in enumerate(cells, start=1):
+        centroid = cell.centroid
+        lon, lat = centroid.x, centroid.y
+        u = urbanity(lon, lat)
 
-    idx = 0
-    for i in range(cols):
-        for j in range(rows_n):
-            if idx >= n:
-                break
-            # Offset alternate rows so cells are not a perfect lattice.
-            lon = MIN_LON + (i + 0.5 + (0.25 if j % 2 else 0)) * lon_step
-            lat = MIN_LAT + (j + 0.5) * lat_step
-            lon = min(lon, MAX_LON - lon_step * 0.3)
+        # Real area of the cell, in km2 at this latitude.
+        area_km2 = round(cell.area * (68.5 * 111.3), 3)
 
-            poly = irregular_polygon(
-                r, lon, lat,
-                radius_m=max(lon_step, lat_step) * 55_000,
-                vertices=int(r.integers(6, 10)), jitter=0.16,
-            )
-            u = urbanity(lon, lat)
-            area_km2 = round(float(r.uniform(1.4, 6.5)) * (0.55 + (1 - u)), 3)
+        # Density spans two orders of magnitude between the medieval core and
+        # the Lopikerwaard polder. Calibrated so the study area totals roughly
+        # 800k residents over its 534 km2 -- Utrecht city plus Nieuwegein,
+        # Zeist, Houten, IJsselstein and the countryside between them.
+        density = float(np.clip(r.lognormal(math.log(55 + 3600 * u**2.1), 0.45), 12, 12000))
+        population = max(50, int(density * area_km2))
+        households = max(20, int(population / float(r.uniform(1.9, 2.7))))
 
-            # Density spans three orders of magnitude between the medieval core
-            # and the Lopikerwaard polder -- the real Utrecht range.
-            density = float(np.clip(r.lognormal(math.log(120 + 9200 * u**2.1), 0.42), 12, 16000))
-            population = int(density * area_km2)
-            households = int(population / float(r.uniform(1.9, 2.7)))
+        # Age structure shifts with urbanity: students in the core, families in
+        # the suburbs, retirees in the villages.
+        pct_under_15 = float(np.clip(r.normal(19 - 7 * u + 3 * (1 - u), 2.4), 6, 30))
+        pct_15_29 = float(np.clip(r.normal(14 + 17 * u, 3.5), 8, 46))
+        pct_65_plus = float(np.clip(r.normal(21 - 11 * u, 3.8), 4, 34))
+        pct_30_44 = float(np.clip(r.normal(22 + 2 * u, 3.0), 12, 34))
+        pct_45_64 = max(4.0, 100 - pct_under_15 - pct_15_29 - pct_30_44 - pct_65_plus)
+        scale = 100 / (pct_under_15 + pct_15_29 + pct_30_44 + pct_45_64 + pct_65_plus)
+        pct_under_15, pct_15_29, pct_30_44, pct_45_64, pct_65_plus = (
+            v * scale for v in (pct_under_15, pct_15_29, pct_30_44, pct_45_64, pct_65_plus)
+        )
+        median_age = (
+            12 * pct_under_15 / 100 + 23 * pct_15_29 / 100 + 37 * pct_30_44 / 100
+            + 54 * pct_45_64 / 100 + 73 * pct_65_plus / 100
+        )
 
-            # Age structure shifts with urbanity: students in the core,
-            # families in the suburbs, retirees in the villages.
-            pct_under_15 = float(np.clip(r.normal(19 - 7 * u + 3 * (1 - u), 2.4), 6, 30))
-            pct_15_29 = float(np.clip(r.normal(14 + 17 * u, 3.5), 8, 46))
-            pct_65_plus = float(np.clip(r.normal(21 - 11 * u, 3.8), 4, 34))
-            pct_30_44 = float(np.clip(r.normal(22 + 2 * u, 3.0), 12, 34))
-            pct_45_64 = max(4.0, 100 - pct_under_15 - pct_15_29 - pct_30_44 - pct_65_plus)
-            total = pct_under_15 + pct_15_29 + pct_30_44 + pct_45_64 + pct_65_plus
-            scale = 100 / total
-            pct_under_15, pct_15_29, pct_30_44, pct_45_64, pct_65_plus = (
-                v * scale for v in (pct_under_15, pct_15_29, pct_30_44, pct_45_64, pct_65_plus)
-            )
-            median_age = 12 * pct_under_15 / 100 + 23 * pct_15_29 / 100 + 37 * pct_30_44 / 100 \
-                + 54 * pct_45_64 / 100 + 73 * pct_65_plus / 100
+        # Education drives income; income drives rent and deprivation.
+        tertiary = float(np.clip(r.normal(30 + 34 * u, 8.5), 8, 78))
+        income = float(np.clip(r.normal(24_000 + 520 * tertiary, 5200), 16_000, 82_000))
+        unemployment = float(np.clip(r.normal(7.4 - 0.062 * tertiary, 1.2), 0.8, 12.5))
+        owner_occ = float(np.clip(r.normal(78 - 46 * u, 10), 12, 96))
+        rent = float(np.clip(r.normal(560 + 5.6 * tertiary + 260 * u, 90), 420, 1650))
+        deprivation = float(np.clip(
+            55 - (income - 24_000) / 700 + unemployment * 2.2 + r.normal(0, 4.5), 2, 98
+        ))
 
-            # Education drives income; income drives rent and deprivation.
-            tertiary = float(np.clip(r.normal(30 + 34 * u, 8.5), 8, 78))
-            income = float(np.clip(r.normal(24_000 + 520 * tertiary, 5200), 16_000, 82_000))
-            unemployment = float(np.clip(r.normal(7.4 - 0.062 * tertiary, 1.2), 0.8, 12.5))
-            owner_occ = float(np.clip(r.normal(78 - 46 * u, 10), 12, 96))
-            rent = float(np.clip(r.normal(560 + 5.6 * tertiary + 260 * u, 90), 420, 1650))
-            deprivation = float(np.clip(
-                55 - (income - 24_000) / 700 + unemployment * 2.2 + r.normal(0, 4.5), 2, 98
-            ))
-
-            idx += 1
-            tracts.append(
-                {
-                    "tract_code": f"BU{idx:06d}",
-                    "tract_name": TRACT_NAMES[(idx - 1) % len(TRACT_NAMES)],
-                    "district": DISTRICTS[int(r.integers(0, len(DISTRICTS)))] if u < 0.3
-                                else DISTRICTS[int(r.integers(0, 6))],
-                    "population": population,
-                    "households": households,
-                    "avg_household_size": round(population / max(households, 1), 2),
-                    "area_km2": area_km2,
-                    "density_km2": round(density, 1),
-                    "pct_under_15": round(pct_under_15, 1),
-                    "pct_15_29": round(pct_15_29, 1),
-                    "pct_30_44": round(pct_30_44, 1),
-                    "pct_45_64": round(pct_45_64, 1),
-                    "pct_65_plus": round(pct_65_plus, 1),
-                    "median_age": round(median_age, 1),
-                    "median_income": round(income, 2),
-                    "unemployment_rate": round(unemployment, 2),
-                    "pct_tertiary_educated": round(tertiary, 1),
-                    "pct_foreign_born": round(float(np.clip(r.normal(12 + 22 * u, 6), 2, 62)), 1),
-                    "dwellings": int(households * float(r.uniform(1.01, 1.09))),
-                    "pct_owner_occupied": round(owner_occ, 1),
-                    "pct_vacant": round(float(np.clip(r.normal(3.4, 1.5), 0.3, 12)), 1),
-                    "median_rent": round(rent, 2),
-                    "deprivation_index": round(deprivation, 1),
-                    "census_year": 2021,
-                    "geom": multi_wkt(poly, "polygon"),
-                }
-            )
+        tracts.append(
+            {
+                "tract_code": f"BU{idx:06d}",
+                "tract_name": TRACT_NAMES[(idx - 1) % len(TRACT_NAMES)],
+                "district": DISTRICTS[min(int(u * len(DISTRICTS)), len(DISTRICTS) - 1)],
+                "population": population,
+                "households": households,
+                "avg_household_size": round(population / max(households, 1), 2),
+                "area_km2": area_km2,
+                "density_km2": round(population / max(area_km2, 0.01), 1),
+                "pct_under_15": round(pct_under_15, 1),
+                "pct_15_29": round(pct_15_29, 1),
+                "pct_30_44": round(pct_30_44, 1),
+                "pct_45_64": round(pct_45_64, 1),
+                "pct_65_plus": round(pct_65_plus, 1),
+                "median_age": round(median_age, 1),
+                "median_income": round(income, 2),
+                "unemployment_rate": round(unemployment, 2),
+                "pct_tertiary_educated": round(tertiary, 1),
+                "pct_foreign_born": round(float(np.clip(r.normal(12 + 22 * u, 6), 2, 62)), 1),
+                "dwellings": int(households * float(r.uniform(1.01, 1.09))),
+                "pct_owner_occupied": round(owner_occ, 1),
+                "pct_vacant": round(float(np.clip(r.normal(3.4, 1.5), 0.3, 12)), 1),
+                "median_rent": round(rent, 2),
+                "deprivation_index": round(deprivation, 1),
+                "census_year": 2021,
+                "geom": multi_wkt(cell, "polygon"),
+            }
+        )
     return tracts
 
 
