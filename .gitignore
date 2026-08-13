@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Env / secrets
+.env
+.env.local
+*.local
+
+# Data downloads
+data/raw/
+data/processed/
+*.osm.pbf
+*.gpkg
+*.tif
+*.zip
