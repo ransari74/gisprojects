@@ -34,6 +34,8 @@ const EXTERNAL_HOSTS = [
   'arcgisonline.com',
   'service.pdok.nl',
   'services.terrascope.be',
+  'maps.isric.org',
+  'bio.discomap.eea.europa.eu',
 ];
 
 // Browser-level messages for a blocked external fetch. These carry no URL we

@@ -138,14 +138,25 @@ class OverlaySpec:
     name: str
     description: str
     attribution: str
-    project: str
-    #: WMS GetMap URL template using MapLibre's `{bbox-epsg-3857}` substitution
-    #: -- MapLibre fills this in per-tile, so no WMTS proxy is needed.
+    #: Which project pages offer this overlay. Purely a hint the frontend acts
+    #: on by choosing what to pass in `overlayIds` -- the API itself serves the
+    #: whole registry to everyone, the same as /meta/basemaps.
+    projects: tuple[str, ...]
+    #: Either a WMS GetMap URL using MapLibre's `{bbox-epsg-3857}` substitution
+    #: (no WMTS proxy needed, MapLibre fills it in per-tile) or a plain
+    #: `{z}/{x}/{y}` XYZ template -- both are just raster tile sources to
+    #: MapLibre, so one field covers both.
     tiles: tuple[str, ...]
     tile_size: int = 256
     max_zoom: int = 18
     default_opacity: float = 0.7
+    #: Discrete class legend (WorldCover's 11 classes, a single-class
+    #: boundary tint). Leave empty for a continuous property map.
     legend: tuple[LandCoverClass, ...] = field(default_factory=tuple)
+    #: Short explanation shown instead of a legend when the overlay is a
+    #: continuous surface (SoilGrids) or a pre-styled cartographic reference
+    #: layer (the hydro overlay) rather than a fixed set of classes.
+    legend_note: str = ""
 
 
 OVERLAYS: tuple[OverlaySpec, ...] = (
@@ -154,7 +165,7 @@ OVERLAYS: tuple[OverlaySpec, ...] = (
         name="ESA WorldCover",
         description="Global 10 m land cover, 2021 (v200) -- 11 classes",
         attribution="ESA WorldCover project 2021 / VITO",
-        project="agriculture",
+        projects=("agriculture",),
         tiles=(
             "https://services.terrascope.be/wms/v2?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap"
             "&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=WORLDCOVER_2021_MAP"
@@ -162,6 +173,77 @@ OVERLAYS: tuple[OverlaySpec, ...] = (
         ),
         default_opacity=0.7,
         legend=WORLDCOVER_LEGEND,
+    ),
+    # ISRIC's SoilGrids WMS renders each property through its own mapfile at
+    # maps.isric.org, one endpoint per property (phh2o, soc, clay, ...), with
+    # ISRIC's own colour ramp baked into the WMS response server-side -- the
+    # same reason WorldCover needs no client-side classification either.
+    # There is no fixed class list for a continuous property, so this carries
+    # a legend_note instead of a swatch list.
+    OverlaySpec(
+        id="soilgrids_ph",
+        name="SoilGrids pH",
+        description="ISRIC SoilGrids v2.0 -- soil pH in H2O, 0-5 cm depth, 250 m",
+        attribution="ISRIC -- World Soil Information, SoilGrids 2.0",
+        projects=("agriculture",),
+        tiles=(
+            "https://maps.isric.org/mapserv?map=/map/phh2o.map&SERVICE=WMS&VERSION=1.1.1"
+            "&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=phh2o_0-5cm_mean"
+            "&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}",
+        ),
+        default_opacity=0.75,
+        legend_note="Continuous property map; ISRIC's own colour ramp -- lighter is more acidic, darker more alkaline.",
+    ),
+    OverlaySpec(
+        id="soilgrids_soc",
+        name="SoilGrids organic carbon",
+        description="ISRIC SoilGrids v2.0 -- soil organic carbon, 0-5 cm depth, 250 m",
+        attribution="ISRIC -- World Soil Information, SoilGrids 2.0",
+        projects=("agriculture",),
+        tiles=(
+            "https://maps.isric.org/mapserv?map=/map/soc.map&SERVICE=WMS&VERSION=1.1.1"
+            "&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=soc_0-5cm_mean"
+            "&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}",
+        ),
+        default_opacity=0.75,
+        legend_note="Continuous property map; ISRIC's own colour ramp -- darker means more organic carbon.",
+    ),
+    # EEA's Natura 2000 WMS is the authoritative EU-wide protected-area
+    # boundary service (Dutch sites published nationally via PDOK are the
+    # same underlying data, republished) -- one endpoint covers the whole
+    # study area with no country-specific swap needed.
+    OverlaySpec(
+        id="protected_areas",
+        name="Protected areas (Natura 2000)",
+        description="EU-wide protected habitat and bird-directive site boundaries",
+        attribution="European Environment Agency, Natura 2000",
+        projects=("agriculture", "parcel", "terrain", "transport"),
+        tiles=(
+            "https://bio.discomap.eea.europa.eu/arcgis/services/ProtectedSites/"
+            "Natura2000_Dyna_WM/MapServer/WmsServer?SERVICE=WMS&VERSION=1.1.1"
+            "&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=0"
+            "&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}",
+        ),
+        default_opacity=0.55,
+        legend=(LandCoverClass(1, "Natura 2000 site", "#2e7d32"),),
+    ),
+    # Esri's "Reference" overlay family -- the same collection
+    # Reference/World_Boundaries_and_Places (used in the hybrid basemap above)
+    # belongs to -- also ships a hydro-only sibling: transparent water bodies
+    # and labels, designed specifically to sit on top of plain satellite
+    # imagery, which is exactly where narrow canals are hardest to see.
+    OverlaySpec(
+        id="waterways",
+        name="Waterways",
+        description="Rivers, canals and water bodies with labels",
+        attribution="Esri",
+        projects=("agriculture", "parcel", "demographics", "transport", "terrain"),
+        tiles=(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/"
+            "Reference/World_Hydro_Reference_Overlay/MapServer/tile/{z}/{y}/{x}",
+        ),
+        default_opacity=0.9,
+        legend_note="Esri's cartographic water reference layer -- rivers, canals, lakes and their labels.",
     ),
 )
 
@@ -190,7 +272,7 @@ def overlays_payload() -> list[dict]:
             "name": o.name,
             "description": o.description,
             "attribution": o.attribution,
-            "project": o.project,
+            "projects": list(o.projects),
             "tiles": list(o.tiles),
             "tileSize": o.tile_size,
             "maxZoom": o.max_zoom,
@@ -198,6 +280,7 @@ def overlays_payload() -> list[dict]:
             "legend": [
                 {"code": c.code, "label": c.label, "colorHex": c.color_hex} for c in o.legend
             ],
+            "legendNote": o.legend_note,
         }
         for o in OVERLAYS
     ]

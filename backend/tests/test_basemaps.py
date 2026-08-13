@@ -80,13 +80,43 @@ async def test_every_basemap_layer_has_a_zxy_tile_template(client):
                 assert "{z}" in url and "{x}" in url and "{y}" in url, url
 
 
+EXPECTED_OVERLAY_IDS = {
+    "esa_worldcover",
+    "soilgrids_ph",
+    "soilgrids_soc",
+    "protected_areas",
+    "waterways",
+}
+
+
 @async_test
 async def test_overlays_endpoint(client):
     resp = await client.get("/api/meta/overlays")
     assert resp.status_code == 200
-    body = resp.json()
-    ids = {o["id"] for o in body}
-    assert "esa_worldcover" in ids
+    ids = {o["id"] for o in resp.json()}
+    assert EXPECTED_OVERLAY_IDS <= ids
+
+
+@async_test
+async def test_every_overlay_has_projects_a_valid_tile_url_and_either_a_legend_or_a_note(client):
+    resp = await client.get("/api/meta/overlays")
+    for overlay in resp.json():
+        assert overlay["projects"], f"{overlay['id']} is not offered on any project"
+        assert 0 < overlay["defaultOpacity"] <= 1
+        for url in overlay["tiles"]:
+            # Every registered overlay here is either a WMS GetMap using
+            # MapLibre's bbox substitution or a plain {z}/{x}/{y} XYZ template.
+            assert "{bbox-epsg-3857}" in url or ("{z}" in url and "{x}" in url and "{y}" in url), url
+            # Same key-free promise as the basemaps: no overlay should ever
+            # need a credential to load.
+            assert "key=" not in url.lower()
+            assert "token=" not in url.lower()
+        # A continuous or pre-styled layer explains itself in prose instead of
+        # a fake discrete legend; a classified layer always gets real swatches.
+        assert overlay["legend"] or overlay["legendNote"], f"{overlay['id']} has neither"
+        for entry in overlay["legend"]:
+            assert entry["colorHex"].startswith("#")
+            assert entry["label"]
 
 
 @async_test
@@ -96,15 +126,40 @@ async def test_worldcover_overlay_is_a_wms_bbox_template_with_full_legend(client
 
     # MapLibre substitutes this token itself; there is no WMTS proxy behind it.
     assert all("{bbox-epsg-3857}" in url for url in worldcover["tiles"])
-    assert worldcover["project"] == "agriculture"
-    assert 0 < worldcover["defaultOpacity"] <= 1
+    assert worldcover["projects"] == ["agriculture"]
 
     # The legend is what keeps colour from being the only signal on the map --
     # every class ESA actually ships needs a label and a colour here.
     assert len(worldcover["legend"]) == 11
-    for entry in worldcover["legend"]:
-        assert entry["colorHex"].startswith("#")
-        assert entry["label"]
+
+
+@async_test
+async def test_soilgrids_overlays_are_agriculture_only_and_carry_no_fake_legend(client):
+    resp = await client.get("/api/meta/overlays")
+    for overlay_id in ("soilgrids_ph", "soilgrids_soc"):
+        overlay = next(o for o in resp.json() if o["id"] == overlay_id)
+        assert overlay["projects"] == ["agriculture"]
+        # A continuous property has no discrete class list -- asserting an
+        # empty legend here catches a future edit that invents fake classes.
+        assert overlay["legend"] == []
+        assert overlay["legendNote"]
+
+
+@async_test
+async def test_protected_areas_overlay_covers_the_relevant_projects(client):
+    resp = await client.get("/api/meta/overlays")
+    overlay = next(o for o in resp.json() if o["id"] == "protected_areas")
+    assert set(overlay["projects"]) >= {"agriculture", "parcel", "terrain"}
+    assert len(overlay["legend"]) == 1
+
+
+@async_test
+async def test_waterways_overlay_is_offered_broadly(client):
+    resp = await client.get("/api/meta/overlays")
+    overlay = next(o for o in resp.json() if o["id"] == "waterways")
+    # A cartographic water reference is useful context on every project, not
+    # just the ones with their own hydrology analytics.
+    assert len(overlay["projects"]) == 5
 
 
 def test_worldcover_legend_matches_the_official_esa_class_count():

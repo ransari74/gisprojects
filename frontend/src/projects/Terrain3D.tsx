@@ -72,6 +72,7 @@ interface SolarRow {
 // model close in, so this project needs a fixed view rather than the
 // study-area fit.
 const INITIAL_VIEW = { center: [5.1214, 52.0907] as [number, number], zoom: 14.6 };
+const OVERLAY_IDS = ['protected_areas', 'waterways'];
 
 export function Terrain3DProject() {
   const [exaggeration, setExaggeration] = useState('2.5');
@@ -108,6 +109,7 @@ export function Terrain3DProject() {
       tagline="Extruded building model draped over Copernicus DEM terrain — polder below sea level in the west, the Utrechtse Heuvelrug ridge in the east"
       defaultLayers={['terrain_buildings', 'terrain_contours']}
       initialView={INITIAL_VIEW}
+      overlayIds={OVERLAY_IDS}
       colorOverrides={colorOverrides}
       terrain={terrainConfig.data ?? null}
       terrainExaggeration={Number(exaggeration)}

@@ -66,7 +66,7 @@ const SOIL_COLUMNS = [
 // memoised layer list downstream (ProjectShell's `active`, MapView's data
 // layer sync effect) on every unrelated re-render.
 const INITIAL_VIEW = { center: [5.1214, 52.0907] as [number, number], zoom: 10.4 };
-const OVERLAY_IDS = ['esa_worldcover'];
+const OVERLAY_IDS = ['esa_worldcover', 'soilgrids_ph', 'soilgrids_soc', 'protected_areas', 'waterways'];
 
 export function AgricultureProject() {
   const [soilColumn, setSoilColumn] = useState('soil_organic_c');

@@ -67,6 +67,7 @@ const DRIVERS = [
 ];
 
 const INITIAL_VIEW = { center: [5.1214, 52.0907] as [number, number], zoom: 10.4 };
+const OVERLAY_IDS = ['waterways'];
 
 export function DemographicsProject() {
   const [metric, setMetric] = useState('density_km2');
@@ -100,6 +101,7 @@ export function DemographicsProject() {
       tagline="Census structure, deprivation and commuting patterns across 60 Utrecht neighbourhoods"
       defaultLayers={['demog_tracts', 'demog_flows']}
       initialView={INITIAL_VIEW}
+      overlayIds={OVERLAY_IDS}
       colorOverrides={colorOverrides}
       controls={
         <>

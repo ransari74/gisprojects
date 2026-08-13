@@ -73,6 +73,7 @@ const ROAD_CLASSES = [
 ];
 
 const INITIAL_VIEW = { center: [5.1214, 52.0907] as [number, number], zoom: 12.4 };
+const OVERLAY_IDS = ['protected_areas', 'waterways'];
 
 export function TransportProject() {
   const [colorBy, setColorBy] = useState('congestion_index');
@@ -133,6 +134,7 @@ export function TransportProject() {
       tagline="Road congestion, transit ridership and walk-time accessibility across the Utrecht network"
       defaultLayers={['transport_roads', 'transport_stops']}
       initialView={INITIAL_VIEW}
+      overlayIds={OVERLAY_IDS}
       colorOverrides={colorOverrides}
       tileFilters={tileFilters}
       controls={

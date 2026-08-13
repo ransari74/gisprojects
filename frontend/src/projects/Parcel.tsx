@@ -74,6 +74,7 @@ interface ZoningCompliance {
 // view rather than the study-area fit. A literal here would otherwise create
 // a fresh object every render and needlessly invalidate the map's layer sync.
 const INITIAL_VIEW = { center: [5.1214, 52.0907] as [number, number], zoom: 14.2 };
+const OVERLAY_IDS = ['protected_areas', 'waterways'];
 
 export function ParcelProject() {
   const [groupBy, setGroupBy] = useState('land_use');
@@ -138,6 +139,7 @@ export function ParcelProject() {
       // Parcels only tile from z13; opening fitted to the whole province
       // would show zoning polygons over an empty cadastre.
       initialView={INITIAL_VIEW}
+      overlayIds={OVERLAY_IDS}
       colorOverrides={colorOverrides}
       controls={
         <>

@@ -88,18 +88,28 @@ export function BasemapSwitcher({
                       onChange={(e) => onOverlayChange(overlay.id, { opacity: Number(e.target.value) })}
                       className="overlay-opacity"
                     />
-                    <ul className="legend compact overlay-legend">
-                      {overlay.legend.map((c) => (
-                        <li key={c.code} style={{ color: ink.textSecondary }}>
-                          <span
-                            className="legend-swatch"
-                            style={{ background: c.colorHex }}
-                            aria-hidden="true"
-                          />
-                          {c.label}
-                        </li>
-                      ))}
-                    </ul>
+                    {overlay.legend.length > 0 ? (
+                      <ul className="legend compact overlay-legend">
+                        {overlay.legend.map((c) => (
+                          <li key={c.code} style={{ color: ink.textSecondary }}>
+                            <span
+                              className="legend-swatch"
+                              style={{ background: c.colorHex }}
+                              aria-hidden="true"
+                            />
+                            {c.label}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      // A continuous property (SoilGrids) or a pre-styled
+                      // cartographic layer (the water reference overlay) has
+                      // no fixed class list -- explain what the colours mean
+                      // in prose instead of inventing fake swatches.
+                      <p className="figure-note overlay-legend-note" style={{ color: ink.textSecondary }}>
+                        {overlay.legendNote}
+                      </p>
+                    )}
                     <p className="figure-note overlay-attribution" style={{ color: ink.textMuted }}>
                       {overlay.description} · {overlay.attribution}
                     </p>

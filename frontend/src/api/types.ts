@@ -173,12 +173,14 @@ export interface OverlaySpec {
   name: string;
   description: string;
   attribution: string;
-  project: ProjectKey;
+  projects: ProjectKey[];
   tiles: string[];
   tileSize: number;
   maxZoom: number;
   defaultOpacity: number;
   legend: LandCoverClass[];
+  /** Shown instead of a legend for a continuous or pre-styled overlay. */
+  legendNote: string;
 }
 
 export interface TerrainTileConfig {
