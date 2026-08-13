@@ -89,6 +89,16 @@ fills draw from the ordinal sub-range of the sequential ramp so no polygon reced
 surface, and every chart ships a legend and a table view so nothing rests on colour alone. See
 `frontend/src/styles/theme.ts`.
 
+**Every map switches between roads, satellite, hybrid and Dutch aerial imagery** — deliberately
+not Google's tile API. Google Maps Platform tiles need an API key tied to a billing account, and
+the unofficial `mt0-mt3.google.com` endpoint some hobby projects use needs no key but is not a
+documented product, so Google can rate-limit or block it without notice. Everything registered in
+`backend/app/services/basemaps.py` is public, key-free and documented instead: OpenStreetMap,
+Esri World Imagery, Esri's imagery+labels hybrid, and PDOK's Dutch national aerial imagery, which
+is higher resolution than any global provider over Utrecht specifically. The agriculture project
+also layers **ESA WorldCover** (10 m global land cover, 11 classes) over the satellite basemap, as
+a live WMS overlay with its official legend — see `frontend/src/components/BasemapSwitcher.tsx`.
+
 ---
 
 ## Layout

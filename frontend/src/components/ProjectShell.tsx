@@ -30,6 +30,8 @@ interface ProjectShellProps {
   pitch?: number;
   /** Opens the camera here instead of fitting the study area. */
   initialView?: { center?: [number, number]; zoom: number } | null;
+  /** Raster overlays to offer on this project's map (e.g. ESA WorldCover). */
+  overlayIds?: string[];
   /** Controls rendered above the chart rail. */
   controls?: ReactNode;
   children: ReactNode;
@@ -46,6 +48,7 @@ export function ProjectShell({
   terrainExaggeration = 1.5,
   pitch = 0,
   initialView = null,
+  overlayIds,
   controls,
   children,
 }: ProjectShellProps) {
@@ -167,6 +170,7 @@ export function ProjectShell({
             terrainExaggeration={terrainExaggeration}
             pitch={pitch}
             initialView={initialView}
+            overlayIds={overlayIds}
           />
 
           <div className="layer-panel" style={{ background: ink.surface, borderColor: ink.border }}>

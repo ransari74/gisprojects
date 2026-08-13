@@ -27,7 +27,14 @@ const failedRequests = [];
 // runner they are unreachable, and the app is deliberately built to degrade
 // gracefully when they are -- the 3D page falls back to a flat map and says so.
 // Their failures are therefore reported but not treated as a regression.
-const EXTERNAL_HOSTS = ['tile.openstreetmap.org', 'elevation-tiles-prod', 'openmaptiles'];
+const EXTERNAL_HOSTS = [
+  'tile.openstreetmap.org',
+  'elevation-tiles-prod',
+  'openmaptiles',
+  'arcgisonline.com',
+  'service.pdok.nl',
+  'services.terrascope.be',
+];
 
 // Browser-level messages for a blocked external fetch. These carry no URL we
 // can match on, so they are matched by shape instead.

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
 from app.core.deps import CurrentUser, get_optional_user
+from app.services.basemaps import basemaps_payload, overlays_payload
 from app.services.layers import PROJECTS
 
 router = APIRouter(prefix="/meta", tags=["meta"])
@@ -97,28 +98,20 @@ async def project_catalogue(
     ]
 
 
-@router.get("/basemap-style")
-async def basemap_style() -> dict:
-    """A key-free raster basemap style.
+@router.get("/basemaps")
+async def basemaps() -> list[dict]:
+    """Key-free raster basemaps the frontend can switch between.
 
-    Deliberately not a hosted vector style: every vector basemap provider
-    (Mapbox, MapTiler, Stadia) requires an API key, which would break the
-    "clone and run" promise. The project's own data is served as MVT on top.
+    Deliberately not a hosted vector style or Google's tile API -- every vector
+    basemap provider (Mapbox, MapTiler, Stadia) and Google Maps Platform both
+    require an API key, which would break the "clone and run" promise. See
+    app/services/basemaps.py for why each of these was picked instead.
     """
-    return {
-        "version": 8,
-        "name": "OSM Carto (raster)",
-        "sources": {
-            "osm": {
-                "type": "raster",
-                "tiles": ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-                "tileSize": 256,
-                "maxzoom": 19,
-                "attribution": '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            }
-        },
-        "layers": [
-            {"id": "background", "type": "background", "paint": {"background-color": "#eef1f4"}},
-            {"id": "osm", "type": "raster", "source": "osm", "paint": {"raster-opacity": 0.85}},
-        ],
-    }
+    return basemaps_payload()
+
+
+@router.get("/overlays")
+async def overlays() -> list[dict]:
+    """Raster reference overlays (currently: ESA WorldCover land cover),
+    drawn above the basemap and below the project's own vector layers."""
+    return overlays_payload()

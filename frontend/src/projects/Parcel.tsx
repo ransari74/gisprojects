@@ -70,6 +70,11 @@ interface ZoningCompliance {
   totalOverFar: number;
 }
 
+// Hoisted: parcels only tile from z13, so this project needs a fixed close-in
+// view rather than the study-area fit. A literal here would otherwise create
+// a fresh object every render and needlessly invalidate the map's layer sync.
+const INITIAL_VIEW = { center: [5.1214, 52.0907] as [number, number], zoom: 14.2 };
+
 export function ParcelProject() {
   const [groupBy, setGroupBy] = useState('land_use');
   const [colorBy, setColorBy] = useState('value_per_m2');
@@ -122,6 +127,7 @@ export function ParcelProject() {
   );
 
   const s = summary.data;
+  const colorOverrides = useMemo(() => ({ parcel_parcels: colorBy }), [colorBy]);
 
   return (
     <ProjectShell
@@ -131,8 +137,8 @@ export function ParcelProject() {
       defaultLayers={['parcel_zoning', 'parcel_parcels']}
       // Parcels only tile from z13; opening fitted to the whole province
       // would show zoning polygons over an empty cadastre.
-      initialView={{ center: [5.1214, 52.0907], zoom: 14.2 }}
-      colorOverrides={{ parcel_parcels: colorBy }}
+      initialView={INITIAL_VIEW}
+      colorOverrides={colorOverrides}
       controls={
         <>
           <Selector

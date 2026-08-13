@@ -4,8 +4,10 @@ import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
 
 import { apiGet } from '@/api/client';
 import type {
+  BasemapSpec,
   Capabilities,
   DatasetSource,
+  OverlaySpec,
   ProjectSummary,
   StudyArea,
   TerrainTileConfig,
@@ -50,3 +52,9 @@ export const useTerrainConfig = (enabled = true) =>
     ...STATIC,
     enabled,
   });
+
+export const useBasemaps = () =>
+  useApiQuery<BasemapSpec[]>(['basemaps'], '/meta/basemaps', STATIC);
+
+export const useOverlays = () =>
+  useApiQuery<OverlaySpec[]>(['overlays'], '/meta/overlays', STATIC);

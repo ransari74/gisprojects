@@ -14,5 +14,15 @@ export default defineConfig({
       '/health': { target: process.env.VITE_API_TARGET ?? 'http://localhost:8000', changeOrigin: true },
     },
   },
+  // `vite preview` (serving the production build) does not inherit `server.proxy`
+  // -- it needs its own copy, otherwise the smoke test against a prod build has
+  // no backend to talk to.
+  preview: {
+    port: 4173,
+    proxy: {
+      '/api': { target: process.env.VITE_API_TARGET ?? 'http://localhost:8000', changeOrigin: true },
+      '/health': { target: process.env.VITE_API_TARGET ?? 'http://localhost:8000', changeOrigin: true },
+    },
+  },
   build: { outDir: 'dist', sourcemap: false, chunkSizeWarningLimit: 1200 },
 });

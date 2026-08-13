@@ -3,6 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { API_BASE, ensureAccessToken, tileUrlTemplate } from '@/api/client';
 import type { LayerInfo, StudyArea, TerrainTileConfig } from '@/api/types';
+import { BasemapSwitcher } from './BasemapSwitcher';
+import { useBasemaps, useOverlays } from '@/hooks/useApi';
+import { useBasemapPreference } from '@/hooks/useBasemapPreference';
 import { CHROME, currentMode, type Mode } from '@/styles/theme';
 import { buildPaint } from './layerStyles';
 
@@ -35,6 +38,12 @@ interface MapViewProps {
    * center/zoom here overrides the fit.
    */
   initialView?: { center?: [number, number]; zoom: number } | null;
+  /**
+   * Raster reference overlays to offer for this map (e.g. ESA WorldCover on
+   * the agriculture project), drawn above the basemap and below the
+   * project's own vector layers. Off by default; the user opts in per layer.
+   */
+  overlayIds?: string[];
 }
 
 /** A DEM tile covering the study area, used only to test reachability. */
@@ -57,6 +66,7 @@ export function MapView({
   onFeatureClick,
   className,
   initialView = null,
+  overlayIds = [],
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
@@ -65,14 +75,40 @@ export function MapView({
   const [mode, setMode] = useState<Mode>(currentMode);
   // Set when the third-party DEM cannot be reached and we drop back to 2D.
   const [terrainFailed, setTerrainFailed] = useState(false);
+  // Set when the selected basemap's tiles repeatedly fail to load.
+  const [basemapNotice, setBasemapNotice] = useState<string | null>(null);
+
+  const { data: basemapList } = useBasemaps();
+  const { data: overlayList } = useOverlays();
+  const [basemapId, setBasemapId] = useBasemapPreference();
+
+  const activeBasemap = useMemo(
+    () => basemapList?.find((b) => b.id === basemapId) ?? basemapList?.[0] ?? null,
+    [basemapList, basemapId],
+  );
+  const activeOverlays = useMemo(
+    () => (overlayList ?? []).filter((o) => overlayIds.includes(o.id)),
+    [overlayList, overlayIds],
+  );
+  const [overlayState, setOverlayState] = useState<Record<string, { visible: boolean; opacity: number }>>({});
 
   // Layer ids we own, so a re-render removes exactly what it added.
   const ownedRef = useRef<{ sources: Set<string>; layers: Set<string> }>({
     sources: new Set(),
     layers: new Set(),
   });
+  // Basemap and overlay layers we own, tracked separately so switching one
+  // never disturbs the other's bookkeeping.
+  const basemapOwnedRef = useRef<{ sources: string[]; layers: string[] }>({ sources: [], layers: [] });
+  const overlayOwnedRef = useRef<Map<string, { source: string; layer: string }>>(new Map());
 
   const chrome = CHROME[mode];
+
+  /** Bottommost currently-tracked data layer -- everything else (basemap,
+   * overlay) is inserted directly below it, so switching a basemap live never
+   * covers the project's own vector layers. Undefined when no data layer is
+   * on the map yet, in which case a new layer simply appends on top. */
+  const firstDataLayerId = useCallback((): string | undefined => ownedRef.current.layers.values().next().value, []);
 
   // --- init -----------------------------------------------------------------
   useEffect(() => {
@@ -101,15 +137,13 @@ export function MapView({
 
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
     map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: 'metric' }), 'bottom-left');
-    map.addControl(
-      new maplibregl.AttributionControl({ compact: true, customAttribution: BASEMAP_ATTRIBUTION }),
-      'bottom-right',
-    );
+    // No customAttribution here: each raster source below carries its own
+    // `attribution`, and MapLibre's control aggregates whatever is currently
+    // visible on its own -- so it updates correctly as the user switches
+    // basemaps or toggles an overlay, with nothing to keep in sync by hand.
+    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
 
-    map.on('load', () => {
-      addBasemap(map, mode);
-      setReady(true);
-    });
+    map.on('load', () => setReady(true));
 
     mapRef.current = map;
     return () => {
@@ -151,6 +185,156 @@ export function MapView({
       observer.disconnect();
     };
   }, []);
+
+  // --- basemap ----------------------------------------------------------------
+  // Re-synced whenever the chosen basemap or the theme changes. Layers are
+  // inserted with beforeId = the bottommost data layer (or appended, if none
+  // is on the map yet), so a live switch never covers the project's own data
+  // -- see firstDataLayerId above.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !activeBasemap) return;
+
+    for (const layerId of basemapOwnedRef.current.layers) {
+      if (map.getLayer(layerId)) map.removeLayer(layerId);
+    }
+    for (const sourceId of basemapOwnedRef.current.sources) {
+      if (map.getSource(sourceId)) map.removeSource(sourceId);
+    }
+    basemapOwnedRef.current = { sources: [], layers: [] };
+    setBasemapNotice(null);
+
+    if (!map.getLayer('basemap-background')) {
+      map.addLayer(
+        { id: 'basemap-background', type: 'background', paint: { 'background-color': chrome.page } },
+        firstDataLayerId(),
+      );
+    } else {
+      map.setPaintProperty('basemap-background', 'background-color', chrome.page);
+    }
+
+    const beforeId = firstDataLayerId();
+    let errorCount = 0;
+
+    activeBasemap.layers.forEach((layer, i) => {
+      const sourceId = `basemap-${i}`;
+      const layerId = `basemap-layer-${i}`;
+      map.addSource(sourceId, {
+        type: 'raster',
+        tiles: layer.tiles,
+        tileSize: layer.tileSize,
+        maxzoom: layer.maxZoom,
+        attribution: activeBasemap.attribution,
+      });
+      map.addLayer(
+        {
+          id: layerId,
+          type: 'raster',
+          source: sourceId,
+          paint:
+            // Roads basemaps are context, not content: desaturated and dimmed
+            // so the project's own data carries the colour. Imagery is shown
+            // at full strength -- seeing it is usually the point.
+            activeBasemap.kind === 'roads'
+              ? {
+                  'raster-opacity': mode === 'dark' ? 0.35 : 0.55,
+                  'raster-saturation': -0.7,
+                  'raster-contrast': mode === 'dark' ? -0.2 : 0,
+                }
+              : { 'raster-opacity': 1 },
+        },
+        beforeId,
+      );
+      basemapOwnedRef.current.sources.push(sourceId);
+      basemapOwnedRef.current.layers.push(layerId);
+    });
+
+    // A raster tile 404/CORS failure just leaves that one tile blank, unlike
+    // the terrain DEM (which blanks the whole map) -- so there is no need to
+    // probe first. A note after a real burst of failures is enough to tell
+    // the user their choice did not load rather than leaving them guessing.
+    const ownSources = new Set(basemapOwnedRef.current.sources);
+    const onError = (event: { error?: Error; sourceId?: string }) => {
+      if (!event.sourceId || !ownSources.has(event.sourceId)) return;
+      errorCount += 1;
+      if (errorCount === 6) {
+        setBasemapNotice(
+          `"${activeBasemap.name}" tiles are not loading. Try a different basemap from the switcher.`,
+        );
+      }
+    };
+    map.on('error', onError);
+    return () => {
+      map.off('error', onError);
+    };
+  }, [ready, activeBasemap, mode, chrome.page, firstDataLayerId]);
+
+  // --- overlays -----------------------------------------------------------
+  // Default each overlay to its server-provided opacity and off (opt-in);
+  // only set once per overlay so a user toggling it doesn't get reset.
+  useEffect(() => {
+    if (!overlayList) return;
+    setOverlayState((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const overlay of overlayList) {
+        if (!(overlay.id in next)) {
+          next[overlay.id] = { visible: false, opacity: overlay.defaultOpacity };
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [overlayList]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+
+    const wanted = new Set(
+      activeOverlays.filter((o) => overlayState[o.id]?.visible).map((o) => o.id),
+    );
+
+    for (const [id, owned] of overlayOwnedRef.current) {
+      if (!wanted.has(id)) {
+        if (map.getLayer(owned.layer)) map.removeLayer(owned.layer);
+        if (map.getSource(owned.source)) map.removeSource(owned.source);
+        overlayOwnedRef.current.delete(id);
+      }
+    }
+
+    for (const overlay of activeOverlays) {
+      const state = overlayState[overlay.id];
+      if (!state?.visible) continue;
+
+      const sourceId = `overlay-${overlay.id}`;
+      const layerId = `overlay-layer-${overlay.id}`;
+      if (!overlayOwnedRef.current.has(overlay.id)) {
+        // WMS raster source: MapLibre substitutes {bbox-epsg-3857} per tile
+        // itself, so this needs no proxy -- the overlay's WMS server is
+        // queried directly, the same as any other raster tile source.
+        map.addSource(sourceId, {
+          type: 'raster',
+          tiles: overlay.tiles,
+          tileSize: overlay.tileSize,
+          maxzoom: overlay.maxZoom,
+          attribution: overlay.attribution,
+        });
+        map.addLayer(
+          {
+            id: layerId,
+            type: 'raster',
+            source: sourceId,
+            paint: { 'raster-opacity': state.opacity },
+          },
+          firstDataLayerId(),
+        );
+        overlayOwnedRef.current.set(overlay.id, { source: sourceId, layer: layerId });
+      } else if (map.getLayer(layerId)) {
+        map.setPaintProperty(layerId, 'raster-opacity', state.opacity);
+      }
+    }
+  }, [ready, activeOverlays, overlayState, firstDataLayerId]);
 
   // --- fit to study area ----------------------------------------------------
   useEffect(() => {
@@ -245,6 +429,15 @@ export function MapView({
   }, [ready, terrain, terrainExaggeration]);
 
   // --- data layers ----------------------------------------------------------
+  // Content-based, not reference-based: `layers` is rebuilt by ProjectShell's
+  // useMemo on every render where any prop -- including ones this map does not
+  // care about -- produces a new array reference. Depending on that reference
+  // directly would re-run this effect (and, worse, call setTiles() on a vector
+  // source that may still be mid-initialisation from a PREVIOUS redundant run,
+  // which is what was surfacing as a MapLibre AbortError). layerSignature is a
+  // full serialisation of everything the effect below actually reads, so it is
+  // the correct dependency; the array itself is read from a ref that is kept
+  // current every render, without being a dependency.
   const layerSignature = useMemo(
     () =>
       JSON.stringify(
@@ -252,10 +445,13 @@ export function MapView({
       ),
     [layers],
   );
+  const layersRef = useRef(layers);
+  layersRef.current = layers;
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
+    const layers = layersRef.current;
 
     const owned = ownedRef.current;
     const wanted = new Set(layers.filter((l) => l.visible).map((l) => l.info.name));
@@ -317,7 +513,7 @@ export function MapView({
         owned.layers.add(layerId);
       }
     }
-  }, [ready, layerSignature, mode, layers]);
+  }, [ready, layerSignature, mode]);
 
   // --- click popups ---------------------------------------------------------
   const handleClick = useCallback(
@@ -362,6 +558,20 @@ export function MapView({
   return (
     <>
       <div ref={containerRef} className={className ?? 'map-canvas'} />
+
+      {basemapList && (
+        <BasemapSwitcher
+          basemaps={basemapList}
+          activeId={activeBasemap?.id ?? basemapId}
+          onChange={setBasemapId}
+          overlays={activeOverlays}
+          overlayState={overlayState}
+          onOverlayChange={(id, patch) =>
+            setOverlayState((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }))
+          }
+        />
+      )}
+
       {terrainFailed && (
         <div className="map-notice" role="status" style={{ background: chrome.surface, borderColor: chrome.border }}>
           <strong style={{ color: chrome.textPrimary }}>3D terrain unavailable</strong>
@@ -371,38 +581,14 @@ export function MapView({
           </span>
         </div>
       )}
+      {basemapNotice && (
+        <div className="map-notice" role="status" style={{ background: chrome.surface, borderColor: chrome.border }}>
+          <strong style={{ color: chrome.textPrimary }}>Basemap unavailable</strong>
+          <span style={{ color: chrome.textSecondary }}>{basemapNotice}</span>
+        </div>
+      )}
     </>
   );
-}
-
-const BASEMAP_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
-
-function addBasemap(map: MlMap, mode: Mode) {
-  map.addSource('osm', {
-    type: 'raster',
-    tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-    tileSize: 256,
-    maxzoom: 19,
-    attribution: BASEMAP_ATTRIBUTION,
-  });
-  map.addLayer({
-    id: 'basemap-background',
-    type: 'background',
-    paint: { 'background-color': mode === 'dark' ? '#12161c' : '#eef1f4' },
-  });
-  map.addLayer({
-    id: 'basemap',
-    type: 'raster',
-    source: 'osm',
-    paint: {
-      // The basemap is context, not content: desaturated and dimmed so the
-      // project's own data carries the colour.
-      'raster-opacity': mode === 'dark' ? 0.35 : 0.55,
-      'raster-saturation': -0.7,
-      'raster-contrast': mode === 'dark' ? -0.2 : 0,
-    },
-  });
 }
 
 const HIDDEN_PROPS = new Set(['geom', 'osm_id']);

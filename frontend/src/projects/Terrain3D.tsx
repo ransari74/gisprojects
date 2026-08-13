@@ -68,6 +68,11 @@ interface SolarRow {
   energy_class: string;
 }
 
+// Building footprints tile from z14, and the extrusions only read as a city
+// model close in, so this project needs a fixed view rather than the
+// study-area fit.
+const INITIAL_VIEW = { center: [5.1214, 52.0907] as [number, number], zoom: 14.6 };
+
 export function Terrain3DProject() {
   const [exaggeration, setExaggeration] = useState('2.5');
   const [colorBy, setColorBy] = useState('height_m');
@@ -94,6 +99,7 @@ export function Terrain3DProject() {
   );
 
   const s = summary.data;
+  const colorOverrides = useMemo(() => ({ terrain_buildings: colorBy }), [colorBy]);
 
   return (
     <ProjectShell
@@ -101,10 +107,8 @@ export function Terrain3DProject() {
       title="3D Terrain & Urban Massing"
       tagline="Extruded building model draped over Copernicus DEM terrain — polder below sea level in the west, the Utrechtse Heuvelrug ridge in the east"
       defaultLayers={['terrain_buildings', 'terrain_contours']}
-      // Building footprints tile from z14, and the extrusions only read as
-      // a city model close in.
-      initialView={{ center: [5.1214, 52.0907], zoom: 14.6 }}
-      colorOverrides={{ terrain_buildings: colorBy }}
+      initialView={INITIAL_VIEW}
+      colorOverrides={colorOverrides}
       terrain={terrainConfig.data ?? null}
       terrainExaggeration={Number(exaggeration)}
       pitch={58}

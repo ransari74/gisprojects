@@ -72,6 +72,8 @@ const ROAD_CLASSES = [
   { value: 'residential', label: 'Residential' },
 ];
 
+const INITIAL_VIEW = { center: [5.1214, 52.0907] as [number, number], zoom: 12.4 };
+
 export function TransportProject() {
   const [colorBy, setColorBy] = useState('congestion_index');
   const [classFilter, setClassFilter] = useState('');
@@ -115,6 +117,14 @@ export function TransportProject() {
   );
 
   const s = summary.data;
+  const colorOverrides = useMemo(() => ({ transport_roads: colorBy }), [colorBy]);
+  const tileFilters = useMemo(
+    () => ({
+      transport_isochrones: { filter_mode: isoMode, filter_minutes: '15' },
+      ...(classFilter ? { transport_roads: { filter_highway_class: classFilter } } : {}),
+    }),
+    [isoMode, classFilter],
+  );
 
   return (
     <ProjectShell
@@ -122,12 +132,9 @@ export function TransportProject() {
       title="Multimodal Transport Network Analytics"
       tagline="Road congestion, transit ridership and walk-time accessibility across the Utrecht network"
       defaultLayers={['transport_roads', 'transport_stops']}
-      initialView={{ center: [5.1214, 52.0907], zoom: 12.4 }}
-      colorOverrides={{ transport_roads: colorBy }}
-      tileFilters={{
-        transport_isochrones: { filter_mode: isoMode, filter_minutes: '15' },
-        ...(classFilter ? { transport_roads: { filter_highway_class: classFilter } } : {}),
-      }}
+      initialView={INITIAL_VIEW}
+      colorOverrides={colorOverrides}
+      tileFilters={tileFilters}
       controls={
         <>
           <Selector

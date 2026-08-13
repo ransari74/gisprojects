@@ -145,6 +145,42 @@ export interface CorrelationResult {
   cropType?: string | null;
 }
 
+export interface BasemapLayer {
+  tiles: string[];
+  tileSize: number;
+  maxZoom: number;
+}
+
+export interface BasemapSpec {
+  id: string;
+  name: string;
+  description: string;
+  attribution: string;
+  /** "roads" is shown desaturated so the app's own data reads clearly on top;
+   * "imagery" is shown at full colour since the imagery is usually the point. */
+  kind: 'roads' | 'imagery';
+  layers: BasemapLayer[];
+}
+
+export interface LandCoverClass {
+  code: number;
+  label: string;
+  colorHex: string;
+}
+
+export interface OverlaySpec {
+  id: string;
+  name: string;
+  description: string;
+  attribution: string;
+  project: ProjectKey;
+  tiles: string[];
+  tileSize: number;
+  maxZoom: number;
+  defaultOpacity: number;
+  legend: LandCoverClass[];
+}
+
 export interface TerrainTileConfig {
   source: {
     type: 'raster-dem';

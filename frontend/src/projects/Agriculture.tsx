@@ -61,6 +61,13 @@ const SOIL_COLUMNS = [
   { value: 'ndvi_mean', label: 'Mean NDVI' },
 ];
 
+// Hoisted rather than inline: these never depend on component state, so a
+// fresh object/array literal on every render would needlessly invalidate the
+// memoised layer list downstream (ProjectShell's `active`, MapView's data
+// layer sync effect) on every unrelated re-render.
+const INITIAL_VIEW = { center: [5.1214, 52.0907] as [number, number], zoom: 10.4 };
+const OVERLAY_IDS = ['esa_worldcover'];
+
 export function AgricultureProject() {
   const [soilColumn, setSoilColumn] = useState('soil_organic_c');
   const [colorBy, setColorBy] = useState('yield_t_ha');
@@ -97,6 +104,7 @@ export function AgricultureProject() {
   }, [ndvi.data]);
 
   const s = summary.data;
+  const colorOverrides = useMemo(() => ({ agri_fields: colorBy }), [colorBy]);
 
   return (
     <ProjectShell
@@ -105,8 +113,9 @@ export function AgricultureProject() {
       tagline="Field-level soil chemistry, land cover and yield modelling across the Utrecht polder and Heuvelrug"
       defaultLayers={['agri_fields', 'agri_canals']}
       // Fields sit in the rural ring, so keep the whole study area in view.
-      initialView={{ center: [5.1214, 52.0907], zoom: 10.4 }}
-      colorOverrides={{ agri_fields: colorBy }}
+      initialView={INITIAL_VIEW}
+      overlayIds={OVERLAY_IDS}
+      colorOverrides={colorOverrides}
       controls={
         <>
           <Selector

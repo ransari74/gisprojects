@@ -164,6 +164,37 @@ in their layers and their charts.
   as a fetch rejection inside a worker. So the DEM is fetched once first, and terrain is only
   switched on if it is reachable. Otherwise the map stays flat and says so.
 
+### Basemaps and overlays
+
+`backend/app/services/basemaps.py` registers every basemap and raster overlay the frontend can
+offer, the same pattern as the vector layer registry: one place, served through
+`/meta/basemaps` and `/meta/overlays`, so adding a basemap never touches `MapView`. Registered
+today: OpenStreetMap roads, Esri World Imagery (satellite), Esri imagery + labels (hybrid), and
+PDOK Dutch national aerial imagery. Deliberately not Google's tile API — see the module docstring
+for why. The agriculture project also offers ESA WorldCover land cover as a live WMS overlay,
+using MapLibre's `{bbox-epsg-3857}` URL substitution so no proxy is needed.
+
+`MapView` owns the switcher and the overlay toggles itself (self-contained, reading its own
+persisted preference via `useBasemapPreference`), so a project page opts in with nothing more
+than an `overlayIds` prop. Two things had to be got right:
+
+- **Z-order survives a live switch.** Layers are inserted with `beforeId` computed fresh each
+  time from the bottommost currently-tracked *data* layer (`firstDataLayerId`), not appended.
+  Appending would work the first time a basemap loads, but switching basemaps *after* the
+  project's vector layers are already on the map would append the new basemap layer on top of
+  everything — covering the data it is supposed to sit under.
+- **A content-based effect dependency, not a reference-based one.** The map's data-layer sync
+  effect originally depended on the `layers` array directly. `ProjectShell` rebuilds that array
+  with `useMemo`, but several project pages passed `colorOverrides`/`tileFilters` as inline object
+  literals — a fresh reference on *every* render, for *any* reason, including ones the map does
+  not care about. That re-ran the effect far more often than the content actually changed, and on
+  a source that was still initialising, it called MapLibre's `setTiles()` redundantly, which
+  surfaced as an internal `AbortError`. The fix has two parts: the effect now depends on
+  `layerSignature` (a full serialisation of what it actually reads) with the array itself read
+  from a ref, and the project pages hoist or memoise those props so they stop generating new
+  references in the first place. Both were necessary — the ref makes the effect correct
+  regardless of what callers do, and the memoisation stops the churn from happening at all.
+
 ### Charts
 
 A shared kit (`components/charts/`) supplies bar, line, scatter, stacked bar, histogram, box

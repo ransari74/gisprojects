@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { CorrelationResult } from '@/api/types';
 import { BarChart } from '@/components/charts/BarChart';
@@ -66,6 +66,8 @@ const DRIVERS = [
   { value: 'median_age', label: 'Median age' },
 ];
 
+const INITIAL_VIEW = { center: [5.1214, 52.0907] as [number, number], zoom: 10.4 };
+
 export function DemographicsProject() {
   const [metric, setMetric] = useState('density_km2');
   const [driver, setDriver] = useState('pct_tertiary_educated');
@@ -86,6 +88,10 @@ export function DemographicsProject() {
   const s = summary.data;
   const metricLabel = METRICS.find((m) => m.value === metric)?.label ?? metric;
   const isCurrency = metric === 'median_income' || metric === 'median_rent';
+  const colorOverrides = useMemo(
+    () => ({ demog_tracts: metric === 'median_rent' ? 'density_km2' : metric }),
+    [metric],
+  );
 
   return (
     <ProjectShell
@@ -93,8 +99,8 @@ export function DemographicsProject() {
       title="Population & Socio-Economic Atlas"
       tagline="Census structure, deprivation and commuting patterns across 60 Utrecht neighbourhoods"
       defaultLayers={['demog_tracts', 'demog_flows']}
-      initialView={{ center: [5.1214, 52.0907], zoom: 10.4 }}
-      colorOverrides={{ demog_tracts: metric === 'median_rent' ? 'density_km2' : metric }}
+      initialView={INITIAL_VIEW}
+      colorOverrides={colorOverrides}
       controls={
         <>
           <Selector label="Map & ranking metric" value={metric} onChange={setMetric} options={METRICS} />
