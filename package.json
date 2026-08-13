@@ -1,0 +1,12 @@
+{
+  "name": "geospatial-portfolio-tooling",
+  "private": true,
+  "type": "module",
+  "description": "Repo-level tooling. The application itself lives in frontend/ and backend/.",
+  "scripts": {
+    "screenshots": "node scripts/screenshots.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.1"
+  }
+}

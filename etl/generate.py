@@ -106,14 +106,14 @@ def _texture_for(lon: float) -> tuple[str, tuple, tuple]:
     return SOIL_TEXTURES[4]  # Heuvelrug sand
 
 
-def gen_fields(r: np.random.Generator, n: int = 900) -> list[dict]:
+def gen_fields(r: np.random.Generator, n: int = 1600) -> list[dict]:
     crops, weights = [c[0] for c in CROPS], np.array([c[1] for c in CROPS])
     weights = weights / weights.sum()
     crop_meta = {c[0]: c for c in CROPS}
 
     fields = []
     for i in range(n):
-        lon, lat = sample_rural_point(r, max_urbanity=0.28)
+        lon, lat = sample_rural_point(r, max_urbanity=0.68)
 
         # Dutch field parcels are long and narrow ("slagenlandschap"), aligned
         # with the drainage ditches, so the aspect ratio is deliberately extreme.
@@ -240,7 +240,7 @@ def gen_canals(r: np.random.Generator, n: int = 130) -> list[dict]:
 
     # Tertiary field ditches scattered through the rural south-west
     while len(canals) < n:
-        lon, lat = sample_rural_point(r, max_urbanity=0.25)
+        lon, lat = sample_rural_point(r, max_urbanity=0.62)
         end = (lon + float(r.uniform(-0.010, 0.010)), lat + float(r.uniform(0.004, 0.014)))
         line = wiggly_line(r, (lon, lat), end, segments=4, amplitude_m=60)
         idx += 1
@@ -1035,7 +1035,7 @@ def gen_roads(r: np.random.Generator) -> list[dict]:
 
     # --- rural connectors ----------------------------------------------------
     for k in range(260):
-        lon, lat = sample_rural_point(r, max_urbanity=0.35)
+        lon, lat = sample_rural_point(r, max_urbanity=0.72)
         end = (lon + float(r.uniform(-0.022, 0.022)), lat + float(r.uniform(-0.016, 0.016)))
         add(wiggly_line(r, (lon, lat), end, segments=5, amplitude_m=130),
             str(r.choice(["tertiary", "residential", "service"], p=[0.45, 0.35, 0.20])),
@@ -1202,7 +1202,7 @@ BUILDING_TYPES = [
 ]
 
 
-def gen_buildings(r: np.random.Generator, n: int = 5200) -> list[dict]:
+def gen_buildings(r: np.random.Generator, n: int = 11000) -> list[dict]:
     """Footprints in perimeter blocks -- the Dutch urban form -- with heights
     that decay from the centre and a solar model driven by height and shading."""
     types = [b[0] for b in BUILDING_TYPES]
@@ -1212,21 +1212,23 @@ def gen_buildings(r: np.random.Generator, n: int = 5200) -> list[dict]:
 
     buildings = []
     idx = 0
-    # Blocks on a radial lattice; buildings line the block perimeter.
-    n_blocks = 300
+    # Perimeter blocks on a radial lattice. The count is set so the core reads
+    # as a continuous urban fabric at z15 rather than scattered islands.
+    n_blocks = 1100
     for b in range(n_blocks):
         if idx >= n:
             break
         a = float(r.uniform(0, 2 * math.pi))
-        # Bias blocks toward the centre -- sqrt gives uniform area density.
-        d = 9000 * math.sqrt(float(r.random()))
+        # sqrt(u) would spread blocks evenly by area; the exponent below biases
+        # them toward the centre instead, which is how a real city is built.
+        d = 9500 * float(r.random()) ** 1.35
         blon = CENTRE_LON + m_to_lon(d * math.cos(a))
         blat = CENTRE_LAT + m_to_lat(d * math.sin(a))
         if not (MIN_LON < blon < MAX_LON and MIN_LAT < blat < MAX_LAT):
             continue
 
         u = urbanity(blon, blat)
-        per_block = max(2, int(r.normal(6 + 16 * u, 4)))
+        per_block = max(3, int(r.normal(8 + 14 * u, 4)))
         block_rot = float(r.uniform(0, math.pi))
         block_w, block_h = float(r.uniform(60, 140)), float(r.uniform(60, 140))
 

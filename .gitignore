@@ -23,3 +23,6 @@ data/processed/
 *.gpkg
 *.tif
 *.zip
+
+# Repo-level tooling (playwright for the screenshot smoke test)
+/node_modules/

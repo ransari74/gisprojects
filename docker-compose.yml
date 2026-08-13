@@ -1,0 +1,97 @@
+# Local development stack: PostGIS + FastAPI + the Vite dev server.
+#
+#   docker compose up --build          bring everything up
+#   docker compose run --rm etl        generate and load the demo dataset
+#   docker compose run --rm api pytest tests -q
+#
+# The API container applies `alembic upgrade head` on start, so the schema is
+# created by the migration chain -- there are no init SQL scripts mounted into
+# the database image.
+
+name: geospatial-portfolio
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gis}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gis}
+      POSTGRES_DB: ${POSTGRES_DB:-gisportfolio}
+      # The bulk load writes ~40k rows of geometry; the defaults are tuned for
+      # a much smaller shared_buffers than a dev box can spare.
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - work_mem=32MB
+      - -c
+      - maintenance_work_mem=256MB
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gis} -d ${POSTGRES_DB:-gisportfolio}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  api:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-gis}:${POSTGRES_PASSWORD:-gis}@db:5432/${POSTGRES_DB:-gisportfolio}
+      SECRET_KEY: ${SECRET_KEY:-dev-only-insecure-change-me-in-production}
+      ENVIRONMENT: development
+      SEED_DEMO_USERS: "true"
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-demo1234}
+      CORS_ORIGINS: http://localhost:5173,http://localhost:4173,http://localhost:3000
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Live reload during development; drop this in any real deployment.
+      - ./backend/app:/app/app:ro
+      - ./backend/alembic:/app/alembic:ro
+      - ./backend/tests:/app/tests:ro
+    restart: unless-stopped
+
+  etl:
+    build:
+      context: .
+      dockerfile: etl/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-gis}:${POSTGRES_PASSWORD:-gis}@db:5432/${POSTGRES_DB:-gisportfolio}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./etl:/work/etl:ro
+      - ./data:/work/data
+    # Not started by `up`; run explicitly:
+    #   docker compose run --rm etl
+    profiles: ["tools"]
+    command: ["python", "-m", "etl.load", "--generate", "--truncate"]
+
+  web:
+    build:
+      context: ./frontend
+      target: dev
+    environment:
+      VITE_API_TARGET: http://api:8000
+    ports:
+      - "${WEB_PORT:-5173}:5173"
+    depends_on:
+      - api
+    volumes:
+      - ./frontend/src:/app/src:ro
+      - ./frontend/index.html:/app/index.html:ro
+    restart: unless-stopped
+
+volumes:
+  pgdata:

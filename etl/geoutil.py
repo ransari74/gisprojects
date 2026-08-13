@@ -213,12 +213,19 @@ def sample_urban_point(
     return CENTRE_LON, CENTRE_LAT
 
 
-def sample_rural_point(rng: np.random.Generator, max_urbanity: float = 0.30) -> tuple[float, float]:
-    """Uniform in the bbox but rejecting built-up land."""
-    for _ in range(60):
+def sample_rural_point(rng: np.random.Generator, max_urbanity: float = 0.70) -> tuple[float, float]:
+    """Uniform in the bbox, rejecting built-up land.
+
+    The default threshold puts the farmland edge about 6 km from the Domtoren,
+    which is where the Utrecht green belt actually starts. A stricter cut-off
+    reads as "correct" but pushes every field past 12 km and leaves the middle
+    of the study area empty, which is not what the region looks like.
+    """
+    for _ in range(80):
         lon, lat = sample_point(rng)
         if urbanity(lon, lat) < max_urbanity:
             return lon, lat
+    # Fall back to the western polder, which is rural everywhere.
     return float(rng.uniform(MIN_LON, MIN_LON + 0.08)), float(rng.uniform(MIN_LAT, MAX_LAT))
 
 

@@ -1,7 +1,8 @@
 """Startup tasks: verify the schema is present and seed demo accounts.
 
-Kept separate from migrations on purpose -- the SQL in db/init owns the schema,
-this module only owns rows that need application-side hashing.
+Kept separate from the migrations on purpose. Alembic owns the schema and the
+permission catalogue; this module owns only the rows that need application-side
+work -- demo users, whose passwords must be bcrypt-hashed by the app.
 """
 
 import logging
@@ -42,7 +43,7 @@ async def seed_demo_users(db: AsyncSession) -> int:
 
     roles = {r.name: r for r in (await db.execute(select(Role))).scalars()}
     if not roles:
-        log.warning("No roles found -- run db/init/90_seed_rbac.sql before seeding users")
+        log.warning("No roles found -- run `alembic upgrade head` before seeding users")
         return 0
 
     created = 0

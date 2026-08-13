@@ -48,12 +48,26 @@ async def client():
 
 @pytest_asyncio.fixture(loop_scope="session", scope="session", autouse=True)
 async def require_database():
+    """Skip the suite unless a migrated, loaded database is reachable.
+
+    Also seeds the demo accounts. The app normally does that in its lifespan
+    hook, which ASGITransport does not run -- without this the suite would only
+    pass on a database some other process had already started the app against.
+    """
     from sqlalchemy import text
+
+    from app.core.bootstrap import schema_ready, seed_demo_users
 
     try:
         async with SessionLocal() as db:
             await db.execute(text("SELECT 1"))
+            if not await schema_ready(db):
+                pytest.skip(
+                    "Schema not migrated -- run: alembic upgrade head",
+                    allow_module_level=True,
+                )
             count = (await db.execute(text("SELECT count(*) FROM agri.fields"))).scalar_one()
+            await seed_demo_users(db)
     except Exception as exc:  # noqa: BLE001
         pytest.skip(f"No database available: {type(exc).__name__}: {exc}", allow_module_level=True)
     if not count:

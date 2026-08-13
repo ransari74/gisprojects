@@ -30,8 +30,8 @@ async def lifespan(app: FastAPI):
                 await seed_demo_users(db)
             else:
                 log.warning(
-                    "Database schema is not initialised. Run: make db-init "
-                    "(or let docker compose apply db/init/*.sql on first boot)."
+                    "Database schema is not initialised. Run `alembic upgrade head` "
+                    "(the api container's entrypoint does this automatically)."
                 )
     except Exception as exc:  # noqa: BLE001 - never let startup diagnostics kill the app
         # A cold serverless Postgres can refuse the first connection; the app
