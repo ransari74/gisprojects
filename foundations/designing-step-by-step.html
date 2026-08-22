@@ -1,0 +1,692 @@
+<title>Designing a System, Step by Step</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:ital,wght@0,400..700;1,400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* ============ tokens: light is the base, both themes defined at token level ============ */
+:root{
+  --ground:#EDEFF3;
+  --paper:#FAFBFC;
+  --paper-2:#F2F4F7;
+  --sunk:#E4E8EE;
+  --ink:#101720;
+  --ink-2:#3B4654;
+  --ink-3:#6B7787;
+  --rule:#D3D9E2;
+  --rule-soft:#E2E7EE;
+  --teal:#12707A;
+  --teal-bright:#0E8A96;
+  --teal-wash:#DDEEF0;
+  --ochre:#A96C15;
+  --ochre-wash:#F5EAD6;
+  --violet:#5C41A8;
+  --violet-wash:#E9E4F6;
+  --good:#2A6B43;
+  --warn:#A05A12;
+  --crit:#9B2C2C;
+  --code-bg:#151C25;
+  --code-ink:#DCE3EC;
+  --code-dim:#7D8BA0;
+  --code-key:#7FC7C2;
+  --code-str:#D9A75F;
+  --code-num:#B0A2E8;
+  --shadow:0 1px 2px rgba(16,23,32,.06), 0 8px 24px -12px rgba(16,23,32,.18);
+  --grid-line:rgba(16,23,32,.045);
+
+  --f-display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --f-body:"Newsreader",Georgia,"Times New Roman",serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+
+  --rail:288px;
+  --measure:68ch;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0D1216;
+    --paper:#151B21;
+    --paper-2:#1B222A;
+    --sunk:#111820;
+    --ink:#E6EBF1;
+    --ink-2:#AEB9C6;
+    --ink-3:#7C8895;
+    --rule:#2A333D;
+    --rule-soft:#222A33;
+    --teal:#4FBAC2;
+    --teal-bright:#6FD2D8;
+    --teal-wash:#123037;
+    --ochre:#DBA254;
+    --ochre-wash:#33270F;
+    --violet:#A28DE8;
+    --violet-wash:#231C3C;
+    --good:#68C08A;
+    --warn:#DBA254;
+    --crit:#E28787;
+    --code-bg:#0B1015;
+    --code-ink:#D6DEE8;
+    --code-dim:#6C7A8C;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+    --grid-line:rgba(230,235,241,.04);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0D1216;
+  --paper:#151B21;
+  --paper-2:#1B222A;
+  --sunk:#111820;
+  --ink:#E6EBF1;
+  --ink-2:#AEB9C6;
+  --ink-3:#7C8895;
+  --rule:#2A333D;
+  --rule-soft:#222A33;
+  --teal:#4FBAC2;
+  --teal-bright:#6FD2D8;
+  --teal-wash:#123037;
+  --ochre:#DBA254;
+  --ochre-wash:#33270F;
+  --violet:#A28DE8;
+  --violet-wash:#231C3C;
+  --good:#68C08A;
+  --warn:#DBA254;
+  --crit:#E28787;
+  --code-bg:#0B1015;
+  --code-ink:#D6DEE8;
+  --code-dim:#6C7A8C;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+  --grid-line:rgba(230,235,241,.04);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background-color:var(--ground);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size:28px 28px;
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:17px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+@media (max-width:900px){ body{font-size:16px} }
+
+h1,h2,h3,h4,.dsp{font-family:var(--f-display);font-weight:600;line-height:1.15;text-wrap:balance;letter-spacing:-.015em;margin:0}
+code,kbd,pre,.mono{font-family:var(--f-mono)}
+a{color:var(--teal);text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{color:var(--teal-bright)}
+:focus-visible{outline:2px solid var(--teal-bright);outline-offset:3px;border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important;scroll-behavior:auto !important}}
+html{scroll-behavior:smooth}
+
+/* ============ shell ============ */
+.shell{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);gap:0;align-items:start;max-width:1500px;margin:0 auto}
+.rail{position:sticky;top:0;height:100vh;overflow-y:auto;padding:26px 20px 60px 26px;border-right:1px solid var(--rule);background:var(--ground);background:color-mix(in srgb, var(--ground) 82%, var(--paper));backdrop-filter:blur(6px)}
+.main{min-width:0;padding:0 clamp(20px,4vw,64px) 140px}
+@media (max-width:1040px){
+  .shell{grid-template-columns:1fr}
+  .rail{position:static;height:auto;border-right:none;border-bottom:1px solid var(--rule);padding:20px}
+  .rail-scroll{max-height:none}
+}
+
+.brandmark{display:flex;align-items:baseline;gap:9px;margin-bottom:4px}
+.brandmark .n{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);border:1px solid var(--teal);padding:2px 6px;border-radius:3px}
+.brandmark .t{font-family:var(--f-display);font-size:19px;font-weight:600}
+.rail p.sub{font-size:13px;color:var(--ink-3);margin:6px 0 18px;line-height:1.45}
+
+nav.toc{display:flex;flex-direction:column;gap:2px}
+nav.toc .grp{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px;display:flex;align-items:center;gap:8px}
+nav.toc .grp::after{content:"";flex:1;height:1px;background:var(--rule)}
+nav.toc a{display:flex;gap:9px;align-items:baseline;font-family:var(--f-display);font-size:14px;color:var(--ink-2);text-decoration:none;padding:5px 8px;border-radius:5px;border-left:2px solid transparent;transition:background .15s,color .15s}
+nav.toc a .num{font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3);min-width:22px;font-variant-numeric:tabular-nums}
+nav.toc a:hover{background:var(--paper-2);color:var(--ink)}
+nav.toc a.on{background:var(--teal-wash);color:var(--teal);border-left-color:var(--teal);font-weight:600}
+nav.toc a.on .num{color:var(--teal)}
+
+.railbtns{display:flex;gap:8px;margin-top:22px;flex-wrap:wrap}
+.btn{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;background:var(--paper);border:1px solid var(--rule);color:var(--ink-2);padding:7px 11px;border-radius:5px;cursor:pointer;transition:border-color .15s,color .15s}
+.btn:hover{border-color:var(--teal);color:var(--teal)}
+
+/* ============ hero ============ */
+.hero{padding:clamp(48px,8vh,96px) 0 40px;border-bottom:1px solid var(--rule);max-width:var(--measure)}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:"";width:22px;height:1px;background:var(--teal)}
+.hero h1{font-size:clamp(38px,6.4vw,68px);margin:18px 0 0;letter-spacing:-.035em;font-weight:700}
+.hero h1 em{font-style:normal;color:var(--teal)}
+.hero .lede{font-size:clamp(18px,2.1vw,21px);color:var(--ink-2);margin:22px 0 0;max-width:60ch}
+.statrow{display:flex;flex-wrap:wrap;gap:0;margin:38px 0 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.statrow div{flex:1 1 130px;padding:16px 18px 16px 0;border-right:1px solid var(--rule-soft)}
+.statrow div:last-child{border-right:none}
+.statrow .k{font-family:var(--f-mono);font-size:26px;font-variant-numeric:tabular-nums;color:var(--ink);letter-spacing:-.02em}
+.statrow .l{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin-top:4px}
+
+/* ============ sections ============ */
+section{padding:64px 0 8px;scroll-margin-top:20px}
+.sec-head{max-width:var(--measure);margin-bottom:26px}
+.sec-head h2{font-size:clamp(27px,3.4vw,38px);margin-top:12px;letter-spacing:-.028em}
+.sec-head p{color:var(--ink-2);margin:12px 0 0}
+h3{font-size:22px;margin:38px 0 10px;max-width:var(--measure)}
+h4{font-size:16.5px;margin:26px 0 8px;font-weight:600;max-width:var(--measure)}
+p,ul,ol{max-width:var(--measure)}
+p{margin:0 0 14px}
+ul,ol{padding-left:22px;margin:0 0 16px}
+li{margin:0 0 7px}
+li::marker{color:var(--ink-3)}
+strong{font-weight:600;color:var(--ink)}
+em.term{font-style:normal;font-family:var(--f-mono);font-size:.88em;background:var(--sunk);padding:1px 5px;border-radius:3px;color:var(--ink)}
+hr.rule{border:none;border-top:1px solid var(--rule);margin:44px 0;max-width:var(--measure)}
+
+/* ============ components ============ */
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:20px 22px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.wide{max-width:1080px}
+
+.tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--rule);color:var(--ink-3);background:var(--paper)}
+.tag.t-ml{color:var(--violet);border-color:var(--violet);background:var(--violet-wash)}
+.tag.t-sd{color:var(--teal);border-color:var(--teal);background:var(--teal-wash)}
+.tag.t-dsa{color:var(--ochre);border-color:var(--ochre);background:var(--ochre-wash)}
+.tag.t-beh{color:var(--ink-2);border-color:var(--rule);background:var(--paper-2)}
+
+.callout{border-left:3px solid var(--teal);background:var(--paper);padding:16px 20px;border-radius:0 7px 7px 0;margin:20px 0;max-width:var(--measure)}
+.callout .ct{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);margin-bottom:6px}
+.callout p:last-child,.callout ul:last-child{margin-bottom:0}
+.callout.warnbox{border-left-color:var(--warn)}
+.callout.warnbox .ct{color:var(--warn)}
+.callout.mlbox{border-left-color:var(--violet)}
+.callout.mlbox .ct{color:var(--violet)}
+
+pre{background:var(--code-bg);color:var(--code-ink);border-radius:8px;padding:18px 20px;overflow-x:auto;font-size:13.2px;line-height:1.62;border:1px solid var(--rule);margin:16px 0;max-width:1080px}
+pre code{color:inherit;background:none;padding:0;font-size:inherit}
+code{background:var(--sunk);padding:1.5px 5px;border-radius:3px;font-size:.87em}
+.cm{color:var(--code-dim);font-style:italic}
+.kw{color:var(--code-key)}
+.st{color:var(--code-str)}
+.nu{color:var(--code-num)}
+.codehead{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--code-bg);border:1px solid var(--rule);border-bottom:none;border-radius:8px 8px 0 0;padding:9px 16px;margin:18px 0 -16px;max-width:1080px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--code-dim)}
+.codehead + pre{border-radius:0 0 8px 8px;margin-top:0}
+.copy{background:none;border:1px solid var(--code-dim);color:var(--code-dim);font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--code-ink);border-color:var(--code-ink)}
+
+.tbl-wrap{overflow-x:auto;margin:18px 0;max-width:1080px;border:1px solid var(--rule);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:11px 14px;border-bottom:1px solid var(--rule);background:var(--paper-2);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--rule-soft);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.num,th.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td code{font-size:12.5px}
+
+/* box-and-arrow diagram */
+.diagram{overflow-x:auto;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:22px;margin:20px 0;max-width:1080px}
+.dflow{display:flex;align-items:stretch;gap:0;min-width:min-content}
+.dcol{display:flex;flex-direction:column;gap:10px;justify-content:center;min-width:132px}
+.node{border:1px solid var(--rule);background:var(--paper-2);border-radius:6px;padding:9px 12px;font-family:var(--f-mono);font-size:11.5px;line-height:1.35;text-align:center;color:var(--ink)}
+.node small{display:block;color:var(--ink-3);font-size:10px;margin-top:3px}
+.node.pri{border-color:var(--teal);background:var(--teal-wash);color:var(--teal)}
+.node.ml{border-color:var(--violet);background:var(--violet-wash);color:var(--violet)}
+.node.store{border-style:dashed}
+.arrow{display:flex;align-items:center;justify-content:center;min-width:44px;color:var(--ink-3);font-family:var(--f-mono);font-size:12px;position:relative}
+.arrow span{position:absolute;top:calc(50% - 22px);font-size:9.5px;letter-spacing:.06em;white-space:nowrap;color:var(--ink-3)}
+.dcap{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);margin-top:14px;text-align:center}
+
+/* checklist */
+.check{display:flex;gap:11px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--rule-soft)}
+.check:last-child{border-bottom:none}
+.check input{appearance:none;width:17px;height:17px;min-width:17px;margin-top:4px;border:1.5px solid var(--rule);border-radius:4px;cursor:pointer;background:var(--paper);position:relative}
+.check input:checked{background:var(--teal);border-color:var(--teal)}
+.check input:checked::after{content:"✓";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--paper);font-size:12px;font-weight:700}
+.check label{cursor:pointer;font-size:15px;line-height:1.5}
+.check input:checked + label{color:var(--ink-3);text-decoration:line-through;text-decoration-color:var(--rule)}
+
+/* day grid */
+.daygrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin:20px 0;max-width:1080px}
+@media (max-width:760px){.daygrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.day{background:var(--paper);border:1px solid var(--rule);border-radius:7px;padding:9px 10px 11px;min-height:104px;display:flex;flex-direction:column;gap:5px}
+.day .d{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.day .w{font-family:var(--f-display);font-size:12.5px;font-weight:600;line-height:1.25}
+.day .m{font-family:var(--f-mono);font-size:9.5px;color:var(--ink-3);line-height:1.4;margin-top:auto}
+.day.k-sd{border-top:3px solid var(--teal)}
+.day.k-ml{border-top:3px solid var(--violet)}
+.day.k-dsa{border-top:3px solid var(--ochre)}
+.day.k-mix{border-top:3px solid var(--ink-3)}
+.day.rest{background:var(--sunk);border-style:dashed}
+
+/* q&a */
+details.qa{border:1px solid var(--rule);border-radius:7px;background:var(--paper);margin:9px 0;max-width:1080px;overflow:hidden}
+details.qa summary{cursor:pointer;padding:13px 18px;font-family:var(--f-display);font-weight:500;font-size:15.5px;list-style:none;display:flex;gap:12px;align-items:flex-start}
+details.qa summary::-webkit-details-marker{display:none}
+details.qa summary::before{content:"+";font-family:var(--f-mono);color:var(--teal);font-size:15px;line-height:1.35}
+details.qa[open] summary::before{content:"−"}
+details.qa[open] summary{border-bottom:1px solid var(--rule-soft)}
+details.qa .body{padding:14px 18px 4px 42px}
+details.qa .body p,details.qa .body ul{max-width:64ch}
+
+.kbar{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-family:var(--f-mono);font-size:11px;color:var(--ink-3);margin:14px 0}
+.legend i{display:inline-block;width:22px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.footer{border-top:1px solid var(--rule);margin-top:70px;padding:28px 0 0;font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);max-width:var(--measure)}
+.progressbar{height:4px;background:var(--sunk);border-radius:2px;overflow:hidden;margin-top:10px}
+.progressbar i{display:block;height:100%;background:var(--teal);width:0;transition:width .3s}
+.railprog{font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3);margin-top:16px;letter-spacing:.06em}
+
+/* ---- added: numbered timeline, definition grid, part dividers ---- */
+.stepline{list-style:none;counter-reset:sl;padding:0;margin:22px 0;max-width:1080px;border-left:1px solid var(--rule)}
+.stepline li{counter-increment:sl;position:relative;padding:0 0 22px 34px;margin:0}
+.stepline li::before{content:counter(sl);position:absolute;left:-13px;top:1px;width:25px;height:25px;border-radius:50%;background:var(--paper);border:1px solid var(--rule);color:var(--ink-3);font-family:var(--f-mono);font-size:11px;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.stepline li.hot::before{background:var(--teal-wash);border-color:var(--teal);color:var(--teal)}
+.stepline li b{font-family:var(--f-display);font-size:16px;display:block;margin-bottom:4px}
+.stepline li p{margin:0 0 8px;max-width:66ch}
+.stepline li:last-child{padding-bottom:0}
+
+.deflist{display:grid;grid-template-columns:minmax(140px,190px) 1fr;gap:0;max-width:1080px;border:1px solid var(--rule);border-radius:8px;overflow:hidden;margin:20px 0;background:var(--paper)}
+.deflist dt{font-family:var(--f-mono);font-size:12px;padding:12px 14px;border-bottom:1px solid var(--rule-soft);background:var(--paper-2);color:var(--ink);display:flex;align-items:flex-start}
+.deflist dd{margin:0;padding:12px 16px;border-bottom:1px solid var(--rule-soft);font-size:14.8px;line-height:1.55}
+.deflist dt:last-of-type,.deflist dd:last-of-type{border-bottom:none}
+@media (max-width:640px){.deflist{grid-template-columns:1fr}.deflist dt{border-bottom:none;padding-bottom:2px;background:none}}
+
+.partbreak{max-width:1080px;margin:86px 0 0;padding:26px 0 0;border-top:2px solid var(--ink)}
+.partbreak .pn{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal)}
+.partbreak h2{font-size:clamp(30px,4.6vw,46px);margin:10px 0 0;letter-spacing:-.03em}
+.partbreak p{color:var(--ink-2);margin:12px 0 0;max-width:62ch;font-size:18px}
+nav.toc .part{font-family:var(--f-display);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);margin:22px 0 2px;padding-top:12px;border-top:1px solid var(--rule)}
+nav.toc .part:first-of-type{margin-top:14px}
+
+.lc{display:grid;grid-template-columns:52px 1fr auto;gap:0 12px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--rule-soft);font-size:14.5px}
+.lc:last-child{border-bottom:none}
+.lc .no{font-family:var(--f-mono);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;text-align:right}
+.lc .df{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;padding:2px 6px;border-radius:3px;border:1px solid var(--rule);color:var(--ink-3);white-space:nowrap}
+.lc .df.e{color:var(--good);border-color:var(--good)}
+.lc .df.m{color:var(--warn);border-color:var(--warn)}
+.lc .df.h{color:var(--crit);border-color:var(--crit)}
+.lc .st{font-weight:600}
+
+/* ---- book series layout ---- */
+.bookhead{max-width:var(--measure);padding:clamp(44px,7vh,80px) 0 34px;border-bottom:1px solid var(--rule)}
+.serieskicker{display:flex;align-items:center;gap:12px;font-family:var(--f-mono);font-size:11px;letter-spacing:.17em;text-transform:uppercase;color:var(--teal)}
+.serieskicker .of{color:var(--ink-3)}
+.bookhead h1{font-size:clamp(36px,6vw,62px);margin:20px 0 0;letter-spacing:-.035em;font-weight:700}
+.bookhead .lede{font-size:clamp(17.5px,2vw,20.5px);color:var(--ink-2);margin:20px 0 0;max-width:62ch}
+.readmeta{display:flex;gap:22px;flex-wrap:wrap;margin-top:26px;font-family:var(--f-mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+
+.chapnum{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.chapnum::before{content:"";width:20px;height:1px;background:var(--teal)}
+
+.booknav{display:flex;gap:14px;flex-wrap:wrap;margin:64px 0 0;padding-top:26px;border-top:2px solid var(--ink);max-width:1080px}
+.booknav a{flex:1 1 260px;text-decoration:none;border:1px solid var(--rule);border-radius:8px;padding:16px 18px;background:var(--paper);transition:border-color .15s}
+.booknav a:hover{border-color:var(--teal)}
+.booknav .dir{font-family:var(--f-mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3)}
+.booknav .nm{font-family:var(--f-display);font-size:17px;font-weight:600;color:var(--ink);margin-top:6px;display:block}
+.booknav .ds{font-size:14px;color:var(--ink-2);margin-top:5px;display:block;line-height:1.45}
+
+.translate{display:grid;grid-template-columns:1fr auto 1fr;gap:0;max-width:1080px;border:1px solid var(--rule);border-radius:8px;overflow:hidden;margin:22px 0;background:var(--paper)}
+.translate .th{font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);padding:10px 16px;background:var(--paper-2);border-bottom:1px solid var(--rule)}
+.translate .th.mid{background:var(--paper-2);border-bottom:1px solid var(--rule)}
+.translate .a,.translate .b{padding:13px 16px;border-bottom:1px solid var(--rule-soft);font-size:14.8px;line-height:1.5}
+.translate .a{background:color-mix(in srgb, var(--ochre-wash) 45%, var(--paper))}
+.translate .m{display:flex;align-items:center;justify-content:center;padding:0 12px;color:var(--teal);font-family:var(--f-mono);font-size:13px;border-bottom:1px solid var(--rule-soft)}
+.translate .a:last-of-type,.translate .b:last-of-type,.translate .m:last-of-type{border-bottom:none}
+@media (max-width:720px){.translate{grid-template-columns:1fr}.translate .m{padding:4px 0;justify-content:flex-start;padding-left:16px}.translate .th.mid{display:none}}
+
+.stage{border:1px solid var(--rule);border-radius:8px;background:var(--paper);padding:20px 22px;margin:22px 0;max-width:1080px}
+.stage .sh{display:flex;align-items:baseline;gap:12px;margin-bottom:12px}
+.stage .sn{font-family:var(--f-mono);font-size:11px;color:var(--paper);background:var(--teal);border-radius:4px;padding:3px 8px;letter-spacing:.08em}
+.stage .st{font-family:var(--f-display);font-size:19px;font-weight:600}
+.stage .why{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-top:14px;padding-top:12px;border-top:1px solid var(--rule-soft)}
+</style>
+
+<!--TITLE:Designing a System, Step by Step-->
+<div class="shell">
+<aside class="rail">
+  <div class="brandmark"><span class="n">05</span><span class="t">Designing, Step by Step</span></div>
+  <p class="sub">Book five. The method, and one system taken through all of it — including the turns that get rejected.</p>
+  <nav class="toc" id="toc">
+    <div class="part">This book</div>
+    <a href="#method"><span class="num">1</span>The seven steps</a>
+    <a href="#evolution"><span class="num">2</span>One box to ten million users</a>
+    <a href="#worked"><span class="num">3</span>Worked in full: event analytics</a>
+    <a href="#second"><span class="num">4</span>The method on a second system</a>
+    <a href="#talking"><span class="num">5</span>Doing it out loud</a>
+    <div class="part">The series</div>
+    <a href="https://claude.ai/code/artifact/61085f36-c009-483c-b656-ff361d4af85f" target="_blank" rel="noopener"><span class="num">—</span>Reading path</a>
+    <a href="https://claude.ai/code/artifact/d348a3ac-1f3d-41d9-a2e0-0879604ed14b" target="_blank" rel="noopener"><span class="num">01</span>Pipelines → systems</a>
+    <a href="https://claude.ai/code/artifact/c4a17c5d-ebd0-4b10-8316-715b075174f5" target="_blank" rel="noopener"><span class="num">02</span>What a server is</a>
+    <a href="https://claude.ai/code/artifact/55b4f674-b971-4fdf-94cd-94a4acff915e" target="_blank" rel="noopener"><span class="num">03</span>How data is stored</a>
+    <a href="https://claude.ai/code/artifact/0dc9f7fb-3c27-4649-a5af-9ff9adc13300" target="_blank" rel="noopener"><span class="num">04</span>How data moves</a>
+    <a href="https://claude.ai/code/artifact/4317cd19-b8ca-46a1-a86d-e9a1dd32e36c" target="_blank" rel="noopener"><span class="num">06</span>Data &amp; ML platforms</a>
+  </nav>
+  <div class="railbtns"><button class="btn" id="themebtn" type="button">Theme</button></div>
+</aside>
+<main class="main">
+
+<header class="bookhead">
+  <div class="serieskicker">Foundations · Book five <span class="of">of six</span></div>
+  <h1>Designing a system, step by step.</h1>
+  <p class="lede">This is the book you were asking for. Not a catalogue of components — a procedure. Seven questions asked in order, where each answer narrows the next, so that by the time you draw boxes the boxes are already determined. Then one system taken all the way through it, slowly, with the arithmetic written out and the wrong turns left in, because seeing why a design gets rejected teaches more than seeing the finished diagram.</p>
+  <div class="readmeta"><span>~60 min read</span><span>Assumes Books 1–4</span><span>The payoff book</span></div>
+</header>
+
+<section id="method">
+  <div class="chapnum">Chapter one</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">The seven steps, and what each one produces</h2>
+  <p>A step is only real if it produces an artifact. Here is each one and the thing you should be able to point at when it is finished.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th class="num">#</th><th>Step</th><th>Produces</th><th>Failure if you skip it</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td><strong>Scope</strong></td><td>3–5 functional requirements, 3 non-functional ones, an explicit out-of-scope list</td><td>You design the wrong system beautifully</td></tr>
+        <tr><td class="num">2</td><td><strong>Estimate</strong></td><td>Requests per second (average and peak), bytes per year, bandwidth</td><td>Every later choice is unjustified — "why shard?" has no answer</td></tr>
+        <tr><td class="num">3</td><td><strong>Interface</strong></td><td>4–6 operations with real parameters, and how pagination works</td><td>The data model floats free of any caller</td></tr>
+        <tr><td class="num">4</td><td><strong>State</strong></td><td>Entities, the store for each, the partition key, the consistency needed</td><td>You pick a database by vibes. The most common serious miss.</td></tr>
+        <tr><td class="num">5</td><td><strong>Paths</strong></td><td>The write path and the read path, hop by hop</td><td>Nothing to deep-dive into, and flaws stay invisible</td></tr>
+        <tr><td class="num">6</td><td><strong>Bottleneck</strong></td><td>One or two components taken to the bottom, alternatives named and rejected</td><td>This is where depth is judged. A shallow answer here caps you.</td></tr>
+        <tr><td class="num">7</td><td><strong>Operate</strong></td><td>What you measure, what breaks, what the degraded mode is</td><td>Reads as incomplete, and it is the cheapest section to do well</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p><strong>The order is not arbitrary and it is not negotiable.</strong> Step 2 needs step 1's requirements to have anything to count. Step 4 needs step 3's operations to know what access patterns exist. Step 6 needs step 5's paths to know where the pressure lands. Every time someone jumps to drawing boxes, what they are really doing is guessing the answers to steps 1 through 4 silently — and usually getting one of them wrong.</p>
+
+  <div class="callout">
+    <div class="ct">The five questions that make step 1 fast</div>
+    <p>Do not ask fifteen clarifying questions. Ask these five, because they are the ones that actually change the design: <strong>(1)</strong> read-heavy or write-heavy, and by what ratio? <strong>(2)</strong> how stale can this be — seconds, minutes, never? <strong>(3)</strong> what is the latency target, and at what percentile? <strong>(4)</strong> what is the largest single entity, and the largest fan-out? <strong>(5)</strong> one region or global? Between them they determine caching, consistency, topology and most of the storage decision.</p>
+  </div>
+</section>
+
+<section id="evolution">
+  <div class="chapnum">Chapter two</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">One box to ten million users</h2>
+  <p>Before the method, an intuition. Every large architecture is the accumulated residue of scaling problems, and each component was added because something specific broke. Watching that happen in order is the fastest way to stop seeing architecture diagrams as arbitrary.</p>
+  <p>Start with one machine.</p>
+
+  <div class="stage">
+    <div class="sh"><span class="sn">0</span><span class="st">One box</span></div>
+    <p>Application and database on the same machine. Users hit it directly. <strong>This serves a real product with thousands of users, and it is the correct starting point</strong> — every added component below buys capacity at the cost of complexity, and you should be able to say what forced each one.</p>
+    <div class="why">Breaks when: the database and the app compete for memory and CPU, and neither can be tuned without hurting the other.</div>
+  </div>
+
+  <div class="stage">
+    <div class="sh"><span class="sn">1</span><span class="st">Split the database onto its own machine</span></div>
+    <p>Now each can be sized for its own workload — the database gets memory for its page cache, the app gets CPU. You have paid: one network hop (half a millisecond), and a second machine that can fail independently.</p>
+    <div class="why">Breaks when: one app server cannot handle the request rate. CPU is pinned during peak.</div>
+  </div>
+
+  <div class="stage">
+    <div class="sh"><span class="sn">2</span><span class="st">Several app servers behind a load balancer</span></div>
+    <p>This is the moment <strong>statelessness</strong> stops being a slogan. If your app kept a user's session in local memory, the user now gets logged out whenever the load balancer sends them to a different server. Two fixes: sticky sessions (route each user to the same server — simple, and it wrecks your ability to deploy or lose a machine) or move session state to a shared store like Redis (one more hop, and now any server can serve any user).</p>
+    <p><strong>Take the second one.</strong> The general principle it teaches is the one from Book 1: push state out of the compute layer, and the compute layer becomes something you can add and remove freely.</p>
+    <div class="why">Breaks when: the single database saturates on reads. It is at 90% CPU serving queries.</div>
+  </div>
+
+  <div class="stage">
+    <div class="sh"><span class="sn">3</span><span class="st">Read replicas</span></div>
+    <p>One leader takes writes; several followers take reads. Since most products read far more than they write, this is a large win for one configuration change. You have paid with <strong>replication lag</strong> — and immediately met the bug in Book 3: a user writes, reads from a lagging follower, and their own change is missing. Fix by routing a user's reads to the leader for a few seconds after they write.</p>
+    <div class="why">Breaks when: the same expensive queries run over and over, and replicas are saturating too.</div>
+  </div>
+
+  <div class="stage">
+    <div class="sh"><span class="sn">4</span><span class="st">A cache</span></div>
+    <p>Put the hot results in memory. The application checks the cache, misses, reads the database, writes the cache. Enormous win for read-heavy workloads, and you have paid with the hardest bugs in the book: staleness, invalidation, stampedes when a hot key expires, and — the one people forget — <strong>the cache becoming load-bearing</strong>. Your database now serves 2% of real traffic; if the cache dies, it receives 100% and dies too.</p>
+    <div class="why">Breaks when: users far from your datacenter are slow, and you are paying enormous bandwidth to serve images.</div>
+  </div>
+
+  <div class="stage">
+    <div class="sh"><span class="sn">5</span><span class="st">A CDN for static content</span></div>
+    <p>Copies of images, video, CSS and JS in dozens of locations near users. This is the only fix for the 70-millisecond cross-country round trip, and it removes most of your bandwidth bill at the same time. Cost: purging is slow and eventually consistent, so you version asset URLs instead of purging.</p>
+    <div class="why">Breaks when: writes get slow, because each one triggers expensive work — thumbnails, emails, indexing, notifications.</div>
+  </div>
+
+  <div class="stage">
+    <div class="sh"><span class="sn">6</span><span class="st">A queue, and workers</span></div>
+    <p>The request writes the essential record and enqueues everything else. The user gets a fast response; the slow work happens behind them. You have paid with eventual consistency in the product itself — the thumbnail is not there yet — and with the full apparatus of chapter five in Book 4: at-least-once delivery, idempotent handlers, dead-letter queues, and lag to monitor.</p>
+    <div class="why">Breaks when: the write leader saturates, or the dataset outgrows one machine's disk.</div>
+  </div>
+
+  <div class="stage">
+    <div class="sh"><span class="sn">7</span><span class="st">Shard the database</span></div>
+    <p>The expensive step, and the one to delay as long as honestly possible. Split by a key, and lose cross-shard transactions, cross-shard joins, and global unique constraints. Pick the key with the hot-partition question in mind. <strong>Before doing this, check the cheaper options:</strong> a bigger machine, a better index, archiving cold rows, moving analytical queries off the transactional store.</p>
+    <div class="why">Breaks when: the codebase and the team, not the machines — deploys are risky because everything ships together.</div>
+  </div>
+
+  <div class="stage">
+    <div class="sh"><span class="sn">8</span><span class="st">Split into services</span></div>
+    <p>Notice what forced this: an <em>organizational</em> problem, not a technical one. Services let teams deploy independently, and they cost you network calls where you had function calls, distributed transactions where you had local ones, and a great deal of operational surface. <strong>Splitting a system into services to make it faster is almost always a mistake</strong> — it makes it slower. Splitting it so ten teams can ship without coordinating is the real reason.</p>
+    <div class="why">Breaks when: a whole region goes down, or users on another continent need lower latency than physics allows from one location.</div>
+  </div>
+
+  <div class="stage">
+    <div class="sh"><span class="sn">9</span><span class="st">Multiple regions</span></div>
+    <p>The hardest step, because it turns every consistency question into a difficult one. Read-only replicas in other regions are manageable. Accepting <em>writes</em> in several regions means either routing each piece of data to a home region, or accepting concurrent conflicting writes and defining how they resolve. There is no version of this that is simple.</p>
+  </div>
+
+  <div class="callout warnbox">
+    <div class="ct">The reason to know this sequence</div>
+    <p>When you are asked to design something, you should be able to place it on this ladder and start at the right rung. A design that begins at stage 9 for a system with 10,000 users reads as poor judgment, not ambition — and over-engineering is a far more common way to fail a design round than under-engineering. Conversely, being able to say <em>"at this scale I'd stop at stage 4, and here is the number at which stage 7 becomes necessary"</em> is exactly the reasoning being tested.</p>
+  </div>
+</section>
+
+<section id="worked">
+  <div class="chapnum">Chapter three</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">Worked in full — an event analytics platform</h2>
+  <p>The prompt: <em>"Design a system that collects product events from our apps and lets analysts and dashboards query them."</em> Deliberately vague, as these always are. I have chosen a system in your territory so you can judge the reasoning rather than struggle with the domain.</p>
+
+  <h3 style="margin-top:34px">Step 1 — Scope</h3>
+  <p>Out loud, before anything else: <em>"Let me pin down what this has to do, then check the numbers, then talk about storage."</em> Then ask the five questions, and land here:</p>
+  <div class="grid g2 wide">
+    <div class="card"><span class="tag t-sd">Functional</span><ul style="margin-top:10px">
+      <li>Accept events from web, mobile and backend services</li>
+      <li>Never lose an accepted event</li>
+      <li>Serve dashboards: counts and aggregates over time, sliced by a few dimensions</li>
+      <li>Support ad-hoc analytical queries over history</li>
+      <li>Real-time counters for a handful of key metrics</li>
+    </ul></div>
+    <div class="card"><span class="tag t-sd">Non-functional</span><ul style="margin-top:10px">
+      <li>Ingest must accept in <strong>under 50 ms</strong> and must not fail when downstream is broken</li>
+      <li>Dashboard queries in <strong>under 2 seconds</strong> for the last 90 days</li>
+      <li>Freshness: <strong>minutes is fine</strong> for dashboards, <strong>seconds</strong> for the real-time counters</li>
+      <li>13-month retention</li>
+    </ul></div>
+  </div>
+  <p><strong>Explicitly out of scope</strong>, and say so: user identity resolution, GDPR deletion workflows (I will note where it bites), experimentation/A-B analysis, and the dashboard UI itself. Naming what you are not doing is not a dodge — it is what stops the interviewer from thinking you forgot.</p>
+  <p>Notice the two freshness answers. That single split — minutes for most things, seconds for a few — is what will produce two paths in the architecture, and it came from a scoping question rather than from a diagram.</p>
+
+  <h3 style="margin-top:34px">Step 2 — Estimate</h3>
+  <p>Say the units every time, and round to one significant figure.</p>
+  <div class="codehead"><span>Back-of-envelope, spoken aloud in about 90 seconds</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="cm"># Traffic</span>
+DAU                    = 50M
+events/user/day        = 40              <span class="cm"># page views, clicks, app opens — state the assumption</span>
+events/day             = 2B
+average ingest rate    = 2B / 100k s     = <span class="nu">20,000 events/s</span>
+peak (3x)              =                   <span class="nu">60,000 events/s</span>
+
+<span class="cm"># Size</span>
+event size             = 1 KB            <span class="cm"># id, user, timestamp, name, ~20 properties</span>
+raw/day                = 2B x 1 KB       = <span class="nu">2 TB/day</span>
+raw/year               =                   <span class="nu">730 TB/year</span>
+columnar + compression = ~8x             = <span class="nu">~90 TB/year</span>  <span class="cm"># this is the number that matters</span>
+
+<span class="cm"># Bandwidth</span>
+ingest at peak         = 60k x 1 KB      = <span class="nu">60 MB/s</span>   <span class="cm"># trivial. Ingest is not the hard part.</span>
+
+<span class="cm"># Query side</span>
+dashboards             = 500 concurrent users, ~1 query each per 10 s = <span class="nu">50 queries/s</span>
+each scanning          = 90 days x 2B events, filtered to a few columns
+                         <span class="cm"># -> obviously columnar, obviously pre-aggregated. See step 6.</span>
+</code></pre>
+  <p><strong>What the arithmetic already decided.</strong> 60 MB/s of ingest is small — a handful of machines. 90 TB/year compressed rules out a transactional database and points at object storage plus a columnar engine. And 50 concurrent analytical queries each scanning 90 days of events is the actual problem, which tells you where to spend your deep dive later. <em>That is the entire purpose of step 2: it told you which part of the system is interesting before you drew anything.</em></p>
+
+  <h3 style="margin-top:34px">Step 3 — Interface</h3>
+  <div class="codehead"><span>Four operations is enough</span><button class="copy" type="button">Copy</button></div>
+<pre><code>POST /v1/events
+  body: { events: [ { event_id, user_id, name, ts, properties{} } ], ... }
+  <span class="cm"># BATCHED — clients buffer and send up to 100 at once. This single decision</span>
+  <span class="cm"># cuts request volume ~100x and is worth saying out loud.</span>
+  <span class="cm"># event_id is CLIENT-GENERATED (a UUID) — that is what makes ingest idempotent.</span>
+  -> <span class="nu">202 Accepted</span>    <span class="cm"># 202, not 200: we have durably queued it, not processed it.</span>
+
+GET /v1/metrics?metric=signups&amp;from=&amp;to=&amp;granularity=hour&amp;group_by=country
+  -> time series, served from pre-aggregated rollups
+
+POST /v1/query        <span class="cm"># ad-hoc analytical query, async</span>
+  -> { query_id }     <span class="cm"># and GET /v1/query/{id} to poll — because a 40 s query</span>
+                      <span class="cm"># cannot be a synchronous HTTP request</span>
+
+GET /v1/realtime?metric=active_users
+  -> current value from the streaming path
+</code></pre>
+  <p>Three design decisions are already embedded there, and each is worth stating: <strong>batching</strong> at the client, a <strong>client-generated event id</strong> for deduplication, and <strong>202 rather than 200</strong>, which is you telling the interviewer that ingest is decoupled from processing.</p>
+
+  <h3 style="margin-top:34px">Step 4 — Where state lives</h3>
+  <p>The most important step. For each thing that exists, name the store, the partition key, and the consistency it needs.</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>State</th><th>Lives in</th><th>Partitioned by</th><th>Consistency</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Raw events</strong> (source of truth)</td><td>An append-only log, then object storage</td><td><code>hash(user_id)</code> — keeps one user's events ordered</td><td>Durable and ordered per key; nothing stronger</td></tr>
+        <tr><td><strong>Query-optimized events</strong></td><td>Columnar files, partitioned by day</td><td>Date, then clustered by event name</td><td>Derived. Rebuildable from the log.</td></tr>
+        <tr><td><strong>Pre-aggregated rollups</strong></td><td>The same columnar store, or a small serving database</td><td>Metric + time bucket</td><td>Derived, minutes stale, and that was in the requirements</td></tr>
+        <tr><td><strong>Real-time counters</strong></td><td>In-memory store</td><td>Metric key</td><td>Approximate and seconds-fresh. Explicitly allowed to be slightly wrong.</td></tr>
+        <tr><td><strong>Deduplication set</strong></td><td>In-memory store with TTL</td><td><code>event_id</code></td><td>Best-effort over a bounded window — see the deep dive</td></tr>
+        <tr><td><strong>Schema registry</strong></td><td>Small relational database</td><td>—</td><td>Strong. It is tiny and correctness matters.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Read that table again</strong>, because it is the design. Exactly one thing is a source of truth; everything else is derived and rebuildable. That is the log-as-backbone shape from Book 4, and it means a bug in the aggregation layer is fixed by a replay rather than by an incident.</p>
+
+  <h3 style="margin-top:34px">Step 5 — The paths</h3>
+  <div class="diagram">
+    <div class="dflow">
+      <div class="dcol"><div class="node">SDKs<small>batch, retry,<br>buffer on disk</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node pri">Ingest service<small>validate, stamp,<br>write to log, 202</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node pri">The log<small>partitioned by user,<br>7-day retention</small></div></div>
+      <div class="arrow">→<span>two consumers</span></div>
+      <div class="dcol"><div class="node">Batch writer<small>dedupe, compact,<br>→ columnar, 5 min</small></div><div class="node ml">Stream processor<small>windowed counters,<br>→ seconds</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node store">Lake + rollups<small>90 TB/yr, tiered</small></div><div class="node store">Counter store</div></div>
+    </div>
+    <div class="dcap">One log, two consumers with different freshness and different correctness guarantees. Everything downstream of the log is disposable.</div>
+  </div>
+
+  <p><strong>The write path, hop by hop:</strong> the SDK buffers events locally and flushes every few seconds or every 100 events, retrying with backoff and persisting to local disk so an app restart does not lose them. Ingest validates against the schema registry, stamps a server-side receive timestamp (never trust the client's clock — but keep the client's timestamp too, because that is the event time you will window on), appends to the log partitioned by <code>hash(user_id)</code>, and returns 202. <strong>Nothing downstream can make ingest fail</strong>, which was requirement two.</p>
+  <p><strong>The read path</strong> for a dashboard: check whether the requested metric and granularity exist as a rollup — nearly always yes — and serve it. If not, fall through to a scan of the columnar store with predicate and partition pruning, and if that is going to take more than a couple of seconds, it becomes an async query with an id to poll.</p>
+
+  <div class="callout warnbox">
+    <div class="ct">A turn I considered and rejected — say these out loud</div>
+    <p><strong>Writing straight from ingest into the columnar store, skipping the log.</strong> Fewer moving parts, one less system to run. Rejected for three reasons: it couples ingest availability to the warehouse's availability, which breaks the "ingest must never fail" requirement; it produces the small-files problem immediately, since you would be writing thousands of tiny files a second; and it makes the real-time path impossible, because there is nothing to tail. <em>Naming a rejected option with its reasons is worth more than any component you add.</em></p>
+    <p><strong>Also rejected: a full Lambda architecture</strong> with separate batch and speed layers each computing every metric, reconciled later. It is the textbook answer and it means maintaining two implementations of the same logic that must agree — which they never quite do. Here the streaming path handles only a handful of named counters where approximate-and-fast is explicitly acceptable, and everything else has one implementation. That is closer to a Kappa architecture, and the justification is operational simplicity rather than elegance.</p>
+  </div>
+
+  <h3 style="margin-top:34px">Step 6 — The bottleneck, taken to the bottom</h3>
+  <p>Step 2 already told us where to look: the query side, and specifically the fact that 50 concurrent queries scanning 90 days of a 2-billion-events-per-day dataset is not something you brute-force. So this is the deep dive.</p>
+  <p><strong>The arithmetic first.</strong> 90 days × 2B events = 180 billion rows. Even columnar, even with pruning, a query touching three columns over that range reads on the order of a terabyte. At a few GB/s of scan throughput per node that is minutes, not the required two seconds — and there are 50 of them at once. <em>Scanning cannot be the answer for dashboards.</em></p>
+  <p><strong>So the answer is pre-aggregation, and the interesting question becomes which aggregates to build.</strong> The cost of a rollup is the product of its dimensions: metric × time bucket × every combination of grouping columns. Ten dimensions with 100 values each is a combinatorial explosion, so you cannot pre-aggregate everything. Three concrete moves:</p>
+  <ul>
+    <li><strong>Roll up on a fixed small set of dimensions</strong> chosen from actual dashboard usage — typically four or five, not ten. Anything outside that set falls through to the async query path, and that is an acceptable product answer.</li>
+    <li><strong>Roll up hierarchically</strong>: minute → hour → day. A 90-day query reads 90 daily rows, not 130,000 minute rows. Queries choose the coarsest granularity that satisfies the request.</li>
+    <li><strong>Use sketches for the metrics that do not sum.</strong> This is the subtle one and it is where the deep dive earns its keep: counts and sums are additive, so daily rollups combine trivially. <strong>Distinct counts are not</strong> — you cannot add yesterday's unique users to today's. The answer is a probabilistic sketch such as HyperLogLog, which <em>is</em> mergeable, at roughly 12 KB per sketch and about 2% error. Percentiles have the same problem and the same shape of answer with t-digest.</li>
+  </ul>
+  <p>Then the second bottleneck, which is deduplication. At-least-once delivery means duplicates, and analytics that double-counts is worse than useless. The naive answer — keep every <code>event_id</code> ever seen — is 730 billion ids a year and does not work. The real answer is layered: <strong>deduplicate within a bounded window</strong> (say 24 hours) in an in-memory store, which catches essentially every duplicate since retries happen within seconds; then <strong>deduplicate exactly during compaction</strong>, when you are already rewriting a day's data and can drop repeats within the file cheaply. Exact where it is cheap, approximate where it is not, and be explicit about which is which.</p>
+
+  <h3 style="margin-top:34px">Step 7 — Operating it</h3>
+  <ul>
+    <li><strong>Measure:</strong> ingest rate and 202-latency; <em>consumer lag</em> on both paths, which is the single most important number in the system; rollup freshness (how far behind is the newest complete bucket); query latency by percentile; and the ratio of queries served from rollups versus scans, which tells you when your dimension set has drifted from reality.</li>
+    <li><strong>Alert on:</strong> lag growth rate rather than absolute lag, ingest error rate, and rollup staleness exceeding the promise made in step 1. Alert on the symptoms users feel, not on CPU.</li>
+    <li><strong>Degraded modes,</strong> defined in advance: if the stream processor dies, real-time counters go stale and dashboards keep working — say that. If the columnar store is unavailable, ingest continues into the log and nothing is lost, only delayed. If ingest itself saturates, shed load at the edge with a 429 and let clients buffer, which they already do.</li>
+    <li><strong>The thing I flagged as out of scope, now returning:</strong> GDPR deletion against an immutable event log is a genuine conflict. The standard resolution is <strong>crypto-shredding</strong> — encrypt each user's personal fields with a per-user key and delete the key, which renders the data unreadable without rewriting history. Mentioning this unprompted is a strong signal, and it shows you noticed the tension rather than ignored it.</li>
+  </ul>
+</section>
+
+<section id="second">
+  <div class="chapnum">Chapter four</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">The same method on a different shape of system</h2>
+  <p>The analytics platform was write-heavy and batch-tolerant — comfortable territory. Here is the method compressed on something with the opposite shape, so you can see that the steps do the work rather than the domain knowledge.</p>
+  <p><strong>Prompt:</strong> <em>"Design a notification service — email, push and SMS — used by every team in the company."</em></p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th class="num">Step</th><th>The answer, and what forced it</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td><strong>Scope.</strong> Send a notification to a user across channels; respect per-user preferences and quiet hours; never send the same thing twice; support both immediate and scheduled sends. Non-functional: a transactional message (password reset) must arrive in seconds; a marketing blast may take minutes; <strong>duplicate sends are the cardinal sin</strong>. Out of scope: content authoring, template design, deliverability tuning.</td></tr>
+        <tr><td class="num">2</td><td><strong>Estimate.</strong> 50M users, 5 notifications/user/day = 250M/day ≈ 3,000/s average, 10,000/s peak. But blasts are bursty: one campaign to 20M users arrives as a single request and must not starve password resets. <em>That observation — one workload with two wildly different urgencies — is the whole design.</em></td></tr>
+        <tr><td class="num">3</td><td><strong>Interface.</strong> <code>POST /notifications</code> with a template id, recipient, channel preference, an <strong>idempotency key</strong>, and a priority. Returns 202 and a notification id. Plus a status endpoint, because "did it send?" is the first question every calling team asks.</td></tr>
+        <tr><td class="num">4</td><td><strong>State.</strong> Notification records in a relational store partitioned by user (they need real status transitions and queries). User preferences in a small, heavily-cached store — read on every send, changed rarely. Deduplication keys in an in-memory store with a TTL. Templates in object storage. Delivery receipts arriving asynchronously from providers, matched back by id.</td></tr>
+        <tr><td class="num">5</td><td><strong>Paths.</strong> API → validate and dedupe on the idempotency key → persist → enqueue on a <strong>priority-partitioned queue</strong> → workers per channel → provider. Receipts flow back on a separate path and update status. The priority partitioning is the key move: <em>separate queues, not a priority field</em>, so a 20-million-message campaign physically cannot delay a password reset.</td></tr>
+        <tr><td class="num">6</td><td><strong>Bottleneck: the providers.</strong> They rate limit you, they fail intermittently, and they are the only part you do not control. So: a token bucket per provider to stay inside their limits, a circuit breaker so a dead provider does not consume all your workers, fallback to a secondary provider per channel, and retries with jitter. The deep dive is that <strong>a retry against a provider can duplicate a real send</strong> — if the request timed out you do not know whether the email went. Resolution: pass your idempotency key to the provider where supported, and where not, mark the notification <code>unknown</code> and reconcile against delivery receipts rather than blindly retrying. Same shape as the payment problem, and worth pointing that out.</td></tr>
+        <tr><td class="num">7</td><td><strong>Operate.</strong> Measure queue depth per priority class, send latency by class, provider error rates, and delivery-receipt rates. Degraded mode: shed marketing traffic entirely and keep transactional flowing — and say that explicitly, because knowing which traffic you would drop is the answer to a question most candidates cannot answer at all.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Different domain, same seven steps, and again the interesting part came out of step 2 — the observation that one system carries two workloads with incompatible urgency. <strong>The method finds the interesting part for you. That is what it is for.</strong></p>
+</section>
+
+<section id="talking">
+  <div class="chapnum">Chapter five</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">Doing it out loud</h2>
+  <p>The method is half of it. The other half is that a design is evaluated by a person who has to reconstruct your reasoning afterwards from notes. Some of this is interview-specific, but most of it is just how to present a design to colleagues.</p>
+
+  <h3>Narrate the structure, not just the content</h3>
+  <p>Say what you are about to do before you do it. <em>"I'll scope it, then do the numbers, then talk about where state lives — and I'd like to spend most of the time on the query side, because I suspect that's the hard part."</em> This costs ten seconds and it does two things: it lets the other person redirect you early if you are heading somewhere unproductive, and it makes your reasoning reconstructable later.</p>
+
+  <h3>Make assumptions out loud rather than asking permission for each</h3>
+  <p><em>"I'll assume 40 events per user per day — tell me if that's wildly off."</em> This is better than silence and better than a stream of clarifying questions. You are showing that you know which numbers are assumptions and which are derived.</p>
+
+  <h3>Name the option you did not take</h3>
+  <p>The single highest-value verbal habit. <em>"There are three ways to do this. I'm taking B because the freshness requirement is minutes rather than seconds; A would win if it were seconds, and C is what I'd do if we also needed exactly-once."</em> The rejected options demonstrate range in a way the chosen one cannot.</p>
+
+  <h3>Let numbers do the arguing</h3>
+  <p>Never say "that won't scale." Say <em>"that's 180 billion rows scanned per query, which at a few gigabytes a second is minutes, and we promised two seconds."</em> The first is an opinion and invites a debate; the second is arithmetic and ends one.</p>
+
+  <div class="callout">
+    <div class="ct">Six ways designs go wrong, in order of frequency</div>
+    <ol>
+      <li><strong>Boxes with unlabelled arrows.</strong> Every arrow needs a protocol and a payload, or it is decoration.</li>
+      <li><strong>No numbers.</strong> Sharding without ever computing that the data does not fit on one machine.</li>
+      <li><strong>Component stacking.</strong> Kafka, Redis, Cassandra and Spark in one breath, with no reason given for any of them. Expect "why not just Postgres?" — and have the answer.</li>
+      <li><strong>Designing for 100× the stated scale.</strong> Over-engineering reads as poor judgment, not ambition.</li>
+      <li><strong>Ignoring the failure question.</strong> Every design should have an answer to "what happens when this component is down", for at least the two most important components.</li>
+      <li><strong>Defending a choice past its evidence.</strong> When someone pushes twice on the same point, they are usually handing you something. Take it.</li>
+    </ol>
+  </div>
+
+  <div class="booknav">
+    <a href="https://claude.ai/code/artifact/4317cd19-b8ca-46a1-a86d-e9a1dd32e36c" target="_blank" rel="noopener"><span class="dir">Next — Book six</span><span class="nm">Data &amp; ML platforms</span><span class="ds">The method applied to your own territory: warehouses and lakehouses, pipeline design, feature stores, model serving, and what makes an ML system different from a normal one.</span></a>
+    <a href="https://claude.ai/code/artifact/0dc9f7fb-3c27-4649-a5af-9ff9adc13300" target="_blank" rel="noopener"><span class="dir">Back — Book four</span><span class="nm">How data moves</span><span class="ds">Networks, queues, logs, and delivery semantics.</span></a>
+  </div>
+</main>
+</div>
+<script>
+(function(){"use strict";
+ var root=document.documentElement,KEY="foundations.theme";
+ try{var v=localStorage.getItem(KEY); if(v==="light"||v==="dark") root.setAttribute("data-theme",v);}catch(e){}
+ var b=document.getElementById("themebtn");
+ if(b) b.addEventListener("click",function(){
+   var c=root.getAttribute("data-theme"), n=c==="light"?"dark":(c==="dark"?null:"light");
+   if(n){root.setAttribute("data-theme",n);} else {root.removeAttribute("data-theme");}
+   try{localStorage.setItem(KEY,n||"system");}catch(e){}
+ });
+ document.querySelectorAll(".copy").forEach(function(btn){
+   btn.addEventListener("click",function(){
+     var pre=btn.closest(".codehead")&&btn.closest(".codehead").nextElementSibling;
+     if(!pre||!navigator.clipboard) return;
+     navigator.clipboard.writeText(pre.innerText).then(function(){
+       var o=btn.textContent; btn.textContent="Copied"; setTimeout(function(){btn.textContent=o;},1400);
+     },function(){});
+   });
+ });
+ var links=[].slice.call(document.querySelectorAll('nav.toc a[href^="#"]'));
+ var secs=links.map(function(a){return document.querySelector(a.getAttribute("href"));}).filter(Boolean);
+ if("IntersectionObserver" in window && secs.length){
+   var o=new IntersectionObserver(function(es){es.forEach(function(e){
+     if(!e.isIntersecting) return;
+     links.forEach(function(a){a.classList.toggle("on",a.getAttribute("href")==="#"+e.target.id);});
+   });},{rootMargin:"-15% 0px -75% 0px"});
+   secs.forEach(function(s){o.observe(s);});
+ }
+})();
+</script>

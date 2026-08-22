@@ -1,0 +1,602 @@
+<title>How Data Moves</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:ital,wght@0,400..700;1,400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* ============ tokens: light is the base, both themes defined at token level ============ */
+:root{
+  --ground:#EDEFF3;
+  --paper:#FAFBFC;
+  --paper-2:#F2F4F7;
+  --sunk:#E4E8EE;
+  --ink:#101720;
+  --ink-2:#3B4654;
+  --ink-3:#6B7787;
+  --rule:#D3D9E2;
+  --rule-soft:#E2E7EE;
+  --teal:#12707A;
+  --teal-bright:#0E8A96;
+  --teal-wash:#DDEEF0;
+  --ochre:#A96C15;
+  --ochre-wash:#F5EAD6;
+  --violet:#5C41A8;
+  --violet-wash:#E9E4F6;
+  --good:#2A6B43;
+  --warn:#A05A12;
+  --crit:#9B2C2C;
+  --code-bg:#151C25;
+  --code-ink:#DCE3EC;
+  --code-dim:#7D8BA0;
+  --code-key:#7FC7C2;
+  --code-str:#D9A75F;
+  --code-num:#B0A2E8;
+  --shadow:0 1px 2px rgba(16,23,32,.06), 0 8px 24px -12px rgba(16,23,32,.18);
+  --grid-line:rgba(16,23,32,.045);
+
+  --f-display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --f-body:"Newsreader",Georgia,"Times New Roman",serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+
+  --rail:288px;
+  --measure:68ch;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0D1216;
+    --paper:#151B21;
+    --paper-2:#1B222A;
+    --sunk:#111820;
+    --ink:#E6EBF1;
+    --ink-2:#AEB9C6;
+    --ink-3:#7C8895;
+    --rule:#2A333D;
+    --rule-soft:#222A33;
+    --teal:#4FBAC2;
+    --teal-bright:#6FD2D8;
+    --teal-wash:#123037;
+    --ochre:#DBA254;
+    --ochre-wash:#33270F;
+    --violet:#A28DE8;
+    --violet-wash:#231C3C;
+    --good:#68C08A;
+    --warn:#DBA254;
+    --crit:#E28787;
+    --code-bg:#0B1015;
+    --code-ink:#D6DEE8;
+    --code-dim:#6C7A8C;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+    --grid-line:rgba(230,235,241,.04);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0D1216;
+  --paper:#151B21;
+  --paper-2:#1B222A;
+  --sunk:#111820;
+  --ink:#E6EBF1;
+  --ink-2:#AEB9C6;
+  --ink-3:#7C8895;
+  --rule:#2A333D;
+  --rule-soft:#222A33;
+  --teal:#4FBAC2;
+  --teal-bright:#6FD2D8;
+  --teal-wash:#123037;
+  --ochre:#DBA254;
+  --ochre-wash:#33270F;
+  --violet:#A28DE8;
+  --violet-wash:#231C3C;
+  --good:#68C08A;
+  --warn:#DBA254;
+  --crit:#E28787;
+  --code-bg:#0B1015;
+  --code-ink:#D6DEE8;
+  --code-dim:#6C7A8C;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+  --grid-line:rgba(230,235,241,.04);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background-color:var(--ground);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size:28px 28px;
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:17px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+@media (max-width:900px){ body{font-size:16px} }
+
+h1,h2,h3,h4,.dsp{font-family:var(--f-display);font-weight:600;line-height:1.15;text-wrap:balance;letter-spacing:-.015em;margin:0}
+code,kbd,pre,.mono{font-family:var(--f-mono)}
+a{color:var(--teal);text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{color:var(--teal-bright)}
+:focus-visible{outline:2px solid var(--teal-bright);outline-offset:3px;border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important;scroll-behavior:auto !important}}
+html{scroll-behavior:smooth}
+
+/* ============ shell ============ */
+.shell{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);gap:0;align-items:start;max-width:1500px;margin:0 auto}
+.rail{position:sticky;top:0;height:100vh;overflow-y:auto;padding:26px 20px 60px 26px;border-right:1px solid var(--rule);background:var(--ground);background:color-mix(in srgb, var(--ground) 82%, var(--paper));backdrop-filter:blur(6px)}
+.main{min-width:0;padding:0 clamp(20px,4vw,64px) 140px}
+@media (max-width:1040px){
+  .shell{grid-template-columns:1fr}
+  .rail{position:static;height:auto;border-right:none;border-bottom:1px solid var(--rule);padding:20px}
+  .rail-scroll{max-height:none}
+}
+
+.brandmark{display:flex;align-items:baseline;gap:9px;margin-bottom:4px}
+.brandmark .n{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);border:1px solid var(--teal);padding:2px 6px;border-radius:3px}
+.brandmark .t{font-family:var(--f-display);font-size:19px;font-weight:600}
+.rail p.sub{font-size:13px;color:var(--ink-3);margin:6px 0 18px;line-height:1.45}
+
+nav.toc{display:flex;flex-direction:column;gap:2px}
+nav.toc .grp{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px;display:flex;align-items:center;gap:8px}
+nav.toc .grp::after{content:"";flex:1;height:1px;background:var(--rule)}
+nav.toc a{display:flex;gap:9px;align-items:baseline;font-family:var(--f-display);font-size:14px;color:var(--ink-2);text-decoration:none;padding:5px 8px;border-radius:5px;border-left:2px solid transparent;transition:background .15s,color .15s}
+nav.toc a .num{font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3);min-width:22px;font-variant-numeric:tabular-nums}
+nav.toc a:hover{background:var(--paper-2);color:var(--ink)}
+nav.toc a.on{background:var(--teal-wash);color:var(--teal);border-left-color:var(--teal);font-weight:600}
+nav.toc a.on .num{color:var(--teal)}
+
+.railbtns{display:flex;gap:8px;margin-top:22px;flex-wrap:wrap}
+.btn{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;background:var(--paper);border:1px solid var(--rule);color:var(--ink-2);padding:7px 11px;border-radius:5px;cursor:pointer;transition:border-color .15s,color .15s}
+.btn:hover{border-color:var(--teal);color:var(--teal)}
+
+/* ============ hero ============ */
+.hero{padding:clamp(48px,8vh,96px) 0 40px;border-bottom:1px solid var(--rule);max-width:var(--measure)}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:"";width:22px;height:1px;background:var(--teal)}
+.hero h1{font-size:clamp(38px,6.4vw,68px);margin:18px 0 0;letter-spacing:-.035em;font-weight:700}
+.hero h1 em{font-style:normal;color:var(--teal)}
+.hero .lede{font-size:clamp(18px,2.1vw,21px);color:var(--ink-2);margin:22px 0 0;max-width:60ch}
+.statrow{display:flex;flex-wrap:wrap;gap:0;margin:38px 0 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.statrow div{flex:1 1 130px;padding:16px 18px 16px 0;border-right:1px solid var(--rule-soft)}
+.statrow div:last-child{border-right:none}
+.statrow .k{font-family:var(--f-mono);font-size:26px;font-variant-numeric:tabular-nums;color:var(--ink);letter-spacing:-.02em}
+.statrow .l{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin-top:4px}
+
+/* ============ sections ============ */
+section{padding:64px 0 8px;scroll-margin-top:20px}
+.sec-head{max-width:var(--measure);margin-bottom:26px}
+.sec-head h2{font-size:clamp(27px,3.4vw,38px);margin-top:12px;letter-spacing:-.028em}
+.sec-head p{color:var(--ink-2);margin:12px 0 0}
+h3{font-size:22px;margin:38px 0 10px;max-width:var(--measure)}
+h4{font-size:16.5px;margin:26px 0 8px;font-weight:600;max-width:var(--measure)}
+p,ul,ol{max-width:var(--measure)}
+p{margin:0 0 14px}
+ul,ol{padding-left:22px;margin:0 0 16px}
+li{margin:0 0 7px}
+li::marker{color:var(--ink-3)}
+strong{font-weight:600;color:var(--ink)}
+em.term{font-style:normal;font-family:var(--f-mono);font-size:.88em;background:var(--sunk);padding:1px 5px;border-radius:3px;color:var(--ink)}
+hr.rule{border:none;border-top:1px solid var(--rule);margin:44px 0;max-width:var(--measure)}
+
+/* ============ components ============ */
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:20px 22px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.wide{max-width:1080px}
+
+.tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--rule);color:var(--ink-3);background:var(--paper)}
+.tag.t-ml{color:var(--violet);border-color:var(--violet);background:var(--violet-wash)}
+.tag.t-sd{color:var(--teal);border-color:var(--teal);background:var(--teal-wash)}
+.tag.t-dsa{color:var(--ochre);border-color:var(--ochre);background:var(--ochre-wash)}
+.tag.t-beh{color:var(--ink-2);border-color:var(--rule);background:var(--paper-2)}
+
+.callout{border-left:3px solid var(--teal);background:var(--paper);padding:16px 20px;border-radius:0 7px 7px 0;margin:20px 0;max-width:var(--measure)}
+.callout .ct{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);margin-bottom:6px}
+.callout p:last-child,.callout ul:last-child{margin-bottom:0}
+.callout.warnbox{border-left-color:var(--warn)}
+.callout.warnbox .ct{color:var(--warn)}
+.callout.mlbox{border-left-color:var(--violet)}
+.callout.mlbox .ct{color:var(--violet)}
+
+pre{background:var(--code-bg);color:var(--code-ink);border-radius:8px;padding:18px 20px;overflow-x:auto;font-size:13.2px;line-height:1.62;border:1px solid var(--rule);margin:16px 0;max-width:1080px}
+pre code{color:inherit;background:none;padding:0;font-size:inherit}
+code{background:var(--sunk);padding:1.5px 5px;border-radius:3px;font-size:.87em}
+.cm{color:var(--code-dim);font-style:italic}
+.kw{color:var(--code-key)}
+.st{color:var(--code-str)}
+.nu{color:var(--code-num)}
+.codehead{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--code-bg);border:1px solid var(--rule);border-bottom:none;border-radius:8px 8px 0 0;padding:9px 16px;margin:18px 0 -16px;max-width:1080px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--code-dim)}
+.codehead + pre{border-radius:0 0 8px 8px;margin-top:0}
+.copy{background:none;border:1px solid var(--code-dim);color:var(--code-dim);font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--code-ink);border-color:var(--code-ink)}
+
+.tbl-wrap{overflow-x:auto;margin:18px 0;max-width:1080px;border:1px solid var(--rule);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:11px 14px;border-bottom:1px solid var(--rule);background:var(--paper-2);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--rule-soft);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.num,th.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td code{font-size:12.5px}
+
+/* box-and-arrow diagram */
+.diagram{overflow-x:auto;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:22px;margin:20px 0;max-width:1080px}
+.dflow{display:flex;align-items:stretch;gap:0;min-width:min-content}
+.dcol{display:flex;flex-direction:column;gap:10px;justify-content:center;min-width:132px}
+.node{border:1px solid var(--rule);background:var(--paper-2);border-radius:6px;padding:9px 12px;font-family:var(--f-mono);font-size:11.5px;line-height:1.35;text-align:center;color:var(--ink)}
+.node small{display:block;color:var(--ink-3);font-size:10px;margin-top:3px}
+.node.pri{border-color:var(--teal);background:var(--teal-wash);color:var(--teal)}
+.node.ml{border-color:var(--violet);background:var(--violet-wash);color:var(--violet)}
+.node.store{border-style:dashed}
+.arrow{display:flex;align-items:center;justify-content:center;min-width:44px;color:var(--ink-3);font-family:var(--f-mono);font-size:12px;position:relative}
+.arrow span{position:absolute;top:calc(50% - 22px);font-size:9.5px;letter-spacing:.06em;white-space:nowrap;color:var(--ink-3)}
+.dcap{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);margin-top:14px;text-align:center}
+
+/* checklist */
+.check{display:flex;gap:11px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--rule-soft)}
+.check:last-child{border-bottom:none}
+.check input{appearance:none;width:17px;height:17px;min-width:17px;margin-top:4px;border:1.5px solid var(--rule);border-radius:4px;cursor:pointer;background:var(--paper);position:relative}
+.check input:checked{background:var(--teal);border-color:var(--teal)}
+.check input:checked::after{content:"✓";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--paper);font-size:12px;font-weight:700}
+.check label{cursor:pointer;font-size:15px;line-height:1.5}
+.check input:checked + label{color:var(--ink-3);text-decoration:line-through;text-decoration-color:var(--rule)}
+
+/* day grid */
+.daygrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin:20px 0;max-width:1080px}
+@media (max-width:760px){.daygrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.day{background:var(--paper);border:1px solid var(--rule);border-radius:7px;padding:9px 10px 11px;min-height:104px;display:flex;flex-direction:column;gap:5px}
+.day .d{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.day .w{font-family:var(--f-display);font-size:12.5px;font-weight:600;line-height:1.25}
+.day .m{font-family:var(--f-mono);font-size:9.5px;color:var(--ink-3);line-height:1.4;margin-top:auto}
+.day.k-sd{border-top:3px solid var(--teal)}
+.day.k-ml{border-top:3px solid var(--violet)}
+.day.k-dsa{border-top:3px solid var(--ochre)}
+.day.k-mix{border-top:3px solid var(--ink-3)}
+.day.rest{background:var(--sunk);border-style:dashed}
+
+/* q&a */
+details.qa{border:1px solid var(--rule);border-radius:7px;background:var(--paper);margin:9px 0;max-width:1080px;overflow:hidden}
+details.qa summary{cursor:pointer;padding:13px 18px;font-family:var(--f-display);font-weight:500;font-size:15.5px;list-style:none;display:flex;gap:12px;align-items:flex-start}
+details.qa summary::-webkit-details-marker{display:none}
+details.qa summary::before{content:"+";font-family:var(--f-mono);color:var(--teal);font-size:15px;line-height:1.35}
+details.qa[open] summary::before{content:"−"}
+details.qa[open] summary{border-bottom:1px solid var(--rule-soft)}
+details.qa .body{padding:14px 18px 4px 42px}
+details.qa .body p,details.qa .body ul{max-width:64ch}
+
+.kbar{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-family:var(--f-mono);font-size:11px;color:var(--ink-3);margin:14px 0}
+.legend i{display:inline-block;width:22px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.footer{border-top:1px solid var(--rule);margin-top:70px;padding:28px 0 0;font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);max-width:var(--measure)}
+.progressbar{height:4px;background:var(--sunk);border-radius:2px;overflow:hidden;margin-top:10px}
+.progressbar i{display:block;height:100%;background:var(--teal);width:0;transition:width .3s}
+.railprog{font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3);margin-top:16px;letter-spacing:.06em}
+
+/* ---- added: numbered timeline, definition grid, part dividers ---- */
+.stepline{list-style:none;counter-reset:sl;padding:0;margin:22px 0;max-width:1080px;border-left:1px solid var(--rule)}
+.stepline li{counter-increment:sl;position:relative;padding:0 0 22px 34px;margin:0}
+.stepline li::before{content:counter(sl);position:absolute;left:-13px;top:1px;width:25px;height:25px;border-radius:50%;background:var(--paper);border:1px solid var(--rule);color:var(--ink-3);font-family:var(--f-mono);font-size:11px;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.stepline li.hot::before{background:var(--teal-wash);border-color:var(--teal);color:var(--teal)}
+.stepline li b{font-family:var(--f-display);font-size:16px;display:block;margin-bottom:4px}
+.stepline li p{margin:0 0 8px;max-width:66ch}
+.stepline li:last-child{padding-bottom:0}
+
+.deflist{display:grid;grid-template-columns:minmax(140px,190px) 1fr;gap:0;max-width:1080px;border:1px solid var(--rule);border-radius:8px;overflow:hidden;margin:20px 0;background:var(--paper)}
+.deflist dt{font-family:var(--f-mono);font-size:12px;padding:12px 14px;border-bottom:1px solid var(--rule-soft);background:var(--paper-2);color:var(--ink);display:flex;align-items:flex-start}
+.deflist dd{margin:0;padding:12px 16px;border-bottom:1px solid var(--rule-soft);font-size:14.8px;line-height:1.55}
+.deflist dt:last-of-type,.deflist dd:last-of-type{border-bottom:none}
+@media (max-width:640px){.deflist{grid-template-columns:1fr}.deflist dt{border-bottom:none;padding-bottom:2px;background:none}}
+
+.partbreak{max-width:1080px;margin:86px 0 0;padding:26px 0 0;border-top:2px solid var(--ink)}
+.partbreak .pn{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal)}
+.partbreak h2{font-size:clamp(30px,4.6vw,46px);margin:10px 0 0;letter-spacing:-.03em}
+.partbreak p{color:var(--ink-2);margin:12px 0 0;max-width:62ch;font-size:18px}
+nav.toc .part{font-family:var(--f-display);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);margin:22px 0 2px;padding-top:12px;border-top:1px solid var(--rule)}
+nav.toc .part:first-of-type{margin-top:14px}
+
+.lc{display:grid;grid-template-columns:52px 1fr auto;gap:0 12px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--rule-soft);font-size:14.5px}
+.lc:last-child{border-bottom:none}
+.lc .no{font-family:var(--f-mono);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;text-align:right}
+.lc .df{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;padding:2px 6px;border-radius:3px;border:1px solid var(--rule);color:var(--ink-3);white-space:nowrap}
+.lc .df.e{color:var(--good);border-color:var(--good)}
+.lc .df.m{color:var(--warn);border-color:var(--warn)}
+.lc .df.h{color:var(--crit);border-color:var(--crit)}
+.lc .st{font-weight:600}
+
+/* ---- book series layout ---- */
+.bookhead{max-width:var(--measure);padding:clamp(44px,7vh,80px) 0 34px;border-bottom:1px solid var(--rule)}
+.serieskicker{display:flex;align-items:center;gap:12px;font-family:var(--f-mono);font-size:11px;letter-spacing:.17em;text-transform:uppercase;color:var(--teal)}
+.serieskicker .of{color:var(--ink-3)}
+.bookhead h1{font-size:clamp(36px,6vw,62px);margin:20px 0 0;letter-spacing:-.035em;font-weight:700}
+.bookhead .lede{font-size:clamp(17.5px,2vw,20.5px);color:var(--ink-2);margin:20px 0 0;max-width:62ch}
+.readmeta{display:flex;gap:22px;flex-wrap:wrap;margin-top:26px;font-family:var(--f-mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+
+.chapnum{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.chapnum::before{content:"";width:20px;height:1px;background:var(--teal)}
+
+.booknav{display:flex;gap:14px;flex-wrap:wrap;margin:64px 0 0;padding-top:26px;border-top:2px solid var(--ink);max-width:1080px}
+.booknav a{flex:1 1 260px;text-decoration:none;border:1px solid var(--rule);border-radius:8px;padding:16px 18px;background:var(--paper);transition:border-color .15s}
+.booknav a:hover{border-color:var(--teal)}
+.booknav .dir{font-family:var(--f-mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3)}
+.booknav .nm{font-family:var(--f-display);font-size:17px;font-weight:600;color:var(--ink);margin-top:6px;display:block}
+.booknav .ds{font-size:14px;color:var(--ink-2);margin-top:5px;display:block;line-height:1.45}
+
+.translate{display:grid;grid-template-columns:1fr auto 1fr;gap:0;max-width:1080px;border:1px solid var(--rule);border-radius:8px;overflow:hidden;margin:22px 0;background:var(--paper)}
+.translate .th{font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);padding:10px 16px;background:var(--paper-2);border-bottom:1px solid var(--rule)}
+.translate .th.mid{background:var(--paper-2);border-bottom:1px solid var(--rule)}
+.translate .a,.translate .b{padding:13px 16px;border-bottom:1px solid var(--rule-soft);font-size:14.8px;line-height:1.5}
+.translate .a{background:color-mix(in srgb, var(--ochre-wash) 45%, var(--paper))}
+.translate .m{display:flex;align-items:center;justify-content:center;padding:0 12px;color:var(--teal);font-family:var(--f-mono);font-size:13px;border-bottom:1px solid var(--rule-soft)}
+.translate .a:last-of-type,.translate .b:last-of-type,.translate .m:last-of-type{border-bottom:none}
+@media (max-width:720px){.translate{grid-template-columns:1fr}.translate .m{padding:4px 0;justify-content:flex-start;padding-left:16px}.translate .th.mid{display:none}}
+
+.stage{border:1px solid var(--rule);border-radius:8px;background:var(--paper);padding:20px 22px;margin:22px 0;max-width:1080px}
+.stage .sh{display:flex;align-items:baseline;gap:12px;margin-bottom:12px}
+.stage .sn{font-family:var(--f-mono);font-size:11px;color:var(--paper);background:var(--teal);border-radius:4px;padding:3px 8px;letter-spacing:.08em}
+.stage .st{font-family:var(--f-display);font-size:19px;font-weight:600}
+.stage .why{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-top:14px;padding-top:12px;border-top:1px solid var(--rule-soft)}
+</style>
+
+<!--TITLE:How Data Moves-->
+<div class="shell">
+<aside class="rail">
+  <div class="brandmark"><span class="n">04</span><span class="t">How Data Moves</span></div>
+  <p class="sub">Book four. Networks, services, queues and logs — and what "exactly-once" really means.</p>
+  <nav class="toc" id="toc">
+    <div class="part">This book</div>
+    <a href="#journey"><span class="num">1</span>One request, end to end</a>
+    <a href="#apis"><span class="num">2</span>How services talk</a>
+    <a href="#lb"><span class="num">3</span>Load balancing</a>
+    <a href="#async"><span class="num">4</span>Sync, async, and queues</a>
+    <a href="#delivery"><span class="num">5</span>Delivery and idempotency</a>
+    <a href="#streaming"><span class="num">6</span>Streaming, precisely</a>
+    <a href="#logbackbone"><span class="num">7</span>The log as backbone</a>
+    <a href="#resilience"><span class="num">8</span>Keeping it up</a>
+    <div class="part">The series</div>
+    <a href="https://claude.ai/code/artifact/61085f36-c009-483c-b656-ff361d4af85f" target="_blank" rel="noopener"><span class="num">—</span>Reading path</a>
+    <a href="https://claude.ai/code/artifact/d348a3ac-1f3d-41d9-a2e0-0879604ed14b" target="_blank" rel="noopener"><span class="num">01</span>Pipelines → systems</a>
+    <a href="https://claude.ai/code/artifact/c4a17c5d-ebd0-4b10-8316-715b075174f5" target="_blank" rel="noopener"><span class="num">02</span>What a server is</a>
+    <a href="https://claude.ai/code/artifact/55b4f674-b971-4fdf-94cd-94a4acff915e" target="_blank" rel="noopener"><span class="num">03</span>How data is stored</a>
+    <a href="https://claude.ai/code/artifact/5dae95fb-629e-427e-99ea-4376f02dc4e6" target="_blank" rel="noopener"><span class="num">05</span>Designing, step by step</a>
+    <a href="https://claude.ai/code/artifact/4317cd19-b8ca-46a1-a86d-e9a1dd32e36c" target="_blank" rel="noopener"><span class="num">06</span>Data &amp; ML platforms</a>
+  </nav>
+  <div class="railbtns"><button class="btn" id="themebtn" type="button">Theme</button></div>
+</aside>
+<main class="main">
+
+<header class="bookhead">
+  <div class="serieskicker">Foundations · Book four <span class="of">of six</span></div>
+  <h1>How data moves.</h1>
+  <p class="lede">Book three covered data sitting still. This one covers it in flight — between a browser and a server, between two services, and through a queue that decouples them. Roughly half of it will be familiar in substance and unfamiliar in vocabulary, because a Kafka consumer group and an HTTP retry are solving the same problem at different scales. The other half — the network itself — is genuinely new, and it is short.</p>
+  <div class="readmeta"><span>~45 min read</span><span>Assumes Books 1–3</span><span>Half review, half new</span></div>
+</header>
+
+<section id="journey">
+  <div class="chapnum">Chapter one</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">One request, end to end</h2>
+  <p>"You type a URL and press enter — what happens?" has been an interview question for twenty years because a full answer touches everything. Here it is as a spine you can hang the rest of the book on.</p>
+
+  <ol class="stepline">
+    <li class="hot"><b>The URL is parsed</b>
+      <p><code>https://api.example.com:443/v1/users?id=42#top</code> splits into scheme (which sets the default port and demands encryption), host, port, path, query, and fragment. The fragment after <code>#</code> is <strong>never sent to the server</strong> — browser-only. That detail alone decides analytics questions.</p></li>
+    <li class="hot"><b>DNS turns the hostname into an IP address</b>
+      <p>Browser cache, then OS cache, then a recursive resolver which — if it has nothing cached — walks the hierarchy: root, then the <code>.com</code> servers, then the authoritative server for <code>example.com</code>. Each answer carries a <strong>TTL</strong> governing how long it may be cached.</p>
+      <p>Why it matters in design: DNS is the first place you can do load balancing and failover, by returning different addresses to different regions. And the TTL is why DNS failover is never instant — clients keep the old address until it expires. Modern services prefer <strong>anycast</strong>: one address announced from many locations, with the network routing to the nearest.</p></li>
+    <li><b>TCP connects — the three-way handshake</b>
+      <p><code>SYN</code>, <code>SYN-ACK</code>, <code>ACK</code>: one full round trip before any data moves. One millisecond inside a datacenter, seventy across a continent. This is why connection reuse and pooling matter so much, and why a service that opens a fresh connection per request is slow for reasons unrelated to its code.</p>
+      <p>TCP gives ordered, reliable, congestion-controlled delivery. It costs you <strong>head-of-line blocking</strong> — one lost packet stalls everything behind it. UDP gives none of the guarantees and none of the cost, which is why video calls and DNS use it and handle loss themselves.</p></li>
+    <li><b>TLS negotiates encryption</b>
+      <p>The client offers cipher suites, the server presents a certificate chain, the client validates it, both derive a shared key. TLS 1.3 does this in <strong>one round trip</strong>. In practice this happens at the CDN or load balancer close to the user, so the expensive handshake crosses a short distance.</p></li>
+    <li class="hot"><b>The request reaches a load balancer, not a server</b>
+      <p>Chapter three. The address you resolved almost certainly belongs to a load balancer.</p></li>
+    <li><b>A server handles it</b>
+      <p>The kernel accepts the connection, the app reads it off a socket, routes it to a handler — and the handler mostly calls other things. As Book 2 established, nearly all of the wall-clock time is spent waiting on those calls.</p></li>
+    <li><b>Caching decides whether any of this happens again</b>
+      <p><code>Cache-Control: max-age=3600</code> lets any cache reuse the response for an hour. <code>ETag</code> plus <code>If-None-Match</code> lets a client ask "has it changed?" and get a tiny <code>304 Not Modified</code> instead of the body. Getting these headers right removes more load than most code optimizations.</p></li>
+  </ol>
+</section>
+
+<section id="apis">
+  <div class="chapnum">Chapter two</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">How services talk to each other</h2>
+
+  <h3>HTTP methods, and the property that matters</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Method</th><th class="num">Idempotent?</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td><code>GET</code></td><td class="num">yes</td><td>Read, no side effects. A GET that mutates will be triggered by crawlers and prefetchers.</td></tr>
+        <tr><td><code>POST</code></td><td class="num"><strong>no</strong></td><td>Create, or "do something". The only non-idempotent method — which is exactly why it needs idempotency keys.</td></tr>
+        <tr><td><code>PUT</code></td><td class="num">yes</td><td>Replace the whole resource at a known address. Sending it twice leaves the same state.</td></tr>
+        <tr><td><code>PATCH</code></td><td class="num">depends</td><td>Partial update. Idempotent if you write absolute values, not if you write increments.</td></tr>
+        <tr><td><code>DELETE</code></td><td class="num">yes</td><td>Remove. The second call returns 404, but the <em>state</em> is the same — that is what idempotent means.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Idempotency is the load-bearing concept in this entire book</strong>, and you already own it: an Airflow task that can be re-run without duplicating rows is idempotent, which is what makes retries safe. Same property, same reason, different scale.</p>
+  <p>Status codes worth knowing precisely, because the distinctions get asked: <strong>401</strong> means not authenticated, <strong>403</strong> means authenticated but not allowed. <strong>502</strong> means a bad response from upstream, <strong>503</strong> means unavailable — try later, <strong>504</strong> means upstream timed out. Those two triples separate people who have debugged production from people who have not.</p>
+
+  <h3>Three ways to shape an API</h3>
+  <div class="deflist">
+    <dt>REST</dt><dd>Resources as URLs, verbs as HTTP methods, JSON bodies. Universal, cacheable by every proxy in existence, debuggable with curl. Costs: over-fetching, under-fetching, and the N+1 pattern where a list view triggers one request per item.</dd>
+    <dt>gRPC</dt><dd>Binary protobuf over HTTP/2 with a strict schema and generated clients. Much smaller payloads, faster serialization, native bidirectional streaming. The default for internal service-to-service traffic. Costs: not human-readable, needs a proxy for browsers, and schema evolution takes discipline — the same discipline you apply to an Avro schema registry.</dd>
+    <dt>GraphQL</dt><dd>The client asks for exactly the fields it needs in one round trip. Excellent for mobile and for many-shaped frontends. Costs: caching is hard (everything is a POST to one endpoint) and an unbounded query is an accidental denial of service, so you need depth limits and query cost analysis.</dd>
+  </div>
+  <p><strong>Pagination</strong> deserves its own mention because designs get it wrong constantly. Offset pagination (<code>LIMIT 20 OFFSET 4000</code>) is easy and wrong at scale: the database still scans the skipped rows, and any insert shifts every offset so users see duplicates. Use <strong>cursor pagination</strong> — pass the last seen sorted key and ask for what comes after it. It is O(1) regardless of depth and stable under concurrent writes.</p>
+</section>
+
+<section id="lb">
+  <div class="chapnum">Chapter three</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">Load balancing</h2>
+  <p>A load balancer is a scheduler for requests. You already understand the job — it is what YARN or Kubernetes does for your executors, one abstraction layer up.</p>
+
+  <div class="translate">
+    <div class="th">Layer 4 — transport</div><div class="th mid"></div><div class="th">Layer 7 — application</div>
+    <div class="a">Forwards TCP connections by address and port. Cannot see the URL.</div><div class="m">vs</div><div class="b">Terminates the connection and reads the HTTP request.</div>
+    <div class="a">Very fast, very simple.</div><div class="m">→</div><div class="b">Can route by path or header, retry idempotent requests, terminate TLS, compress, rate limit, and do sticky sessions.</div>
+    <div class="a">Cannot retry a failed request — it doesn't know what a request <em>is</em>.</div><div class="m">→</div><div class="b">Slower per request, and vastly more useful. This is what you almost always want.</div>
+  </div>
+
+  <p><strong>Algorithms:</strong> round-robin (simple, ignores that requests differ in cost), least-connections (usually the best default), consistent hashing on a key (when you want cache affinity — the same user hitting the same node), and <strong>power of two random choices</strong> — pick two backends at random and send to the less loaded one, which gets most of the benefit of least-connections without maintaining global state. That last one is a genuinely elegant result and worth knowing by name.</p>
+
+  <div class="callout warnbox">
+    <div class="ct">Health checks, and the trap in them</div>
+    <p>A <em>shallow</em> check asks "does the port accept a connection?" — which will happily route traffic to a process whose database pool is exhausted and which fails every request. So you make the check <em>deep</em>, verifying dependencies. Now one slow database marks your entire fleet unhealthy simultaneously, and the load balancer has nowhere to send anything. Both failure modes are real and they are opposites.</p>
+    <p>The resolution: <strong>a shallow check for routing decisions, and a separate deep check for alerting.</strong> Take a node out of rotation only for problems specific to that node. This is a small design detail that reliably distinguishes people who have operated a service.</p>
+  </div>
+</section>
+
+<section id="async">
+  <div class="chapnum">Chapter four</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">Synchronous, asynchronous, and the queue</h2>
+  <p>The most consequential structural decision in most designs is which work happens <em>while the user waits</em> and which happens after. Get it wrong in one direction and the product feels broken; wrong in the other and it feels slow.</p>
+
+  <p><strong>Do it synchronously</strong> when the caller needs the result to continue, when it is fast and reliable, or when failure must be reported immediately. <strong>Do it asynchronously</strong> when the work is slow, when it can fail and be retried, when several systems care about the event, or when you want to absorb a spike rather than pass it downstream.</p>
+
+  <p>The classic example: a user uploads a photo. Synchronously, you store the bytes and return — a few hundred milliseconds. Asynchronously, you generate thumbnails, run moderation, extract metadata, and update feeds. If you did all of that synchronously, the upload would take thirty seconds and fail whenever the moderation service hiccupped.</p>
+
+  <h3>Queue or log? — and you already use both</h3>
+  <div class="translate">
+    <div class="th">Queue (SQS, RabbitMQ)</div><div class="th mid"></div><div class="th">Log (Kafka, Kinesis)</div>
+    <div class="a">Distributes work. A message is consumed once and is gone.</div><div class="m">vs</div><div class="b">An append-only, partitioned, ordered sequence. Many independent consumer groups read at their own offsets.</div>
+    <div class="a">Consumers compete for messages; adding consumers adds throughput.</div><div class="m">→</div><div class="b">Consumers are independent; a new one can start from the beginning of history.</div>
+    <div class="a">No replay. Once acknowledged, it is gone.</div><div class="m">→</div><div class="b"><strong>Replay is the whole point</strong> — which is your backfill.</div>
+    <div class="a">Use for: task distribution, work that one worker should do once.</div><div class="m">→</div><div class="b">Use for: events several systems care about, anything you might want to reprocess, and anything where order within a key matters.</div>
+  </div>
+  <p>The heuristic: <strong>if more than one system cares about the event, or if you might ever want to reprocess it, use a log.</strong> Which is most of the time in data-heavy architectures, and is why Kafka became infrastructure rather than a component.</p>
+
+  <h3>Ordering, and the price of it</h3>
+  <p>Kafka guarantees order <em>within a partition</em>, not across a topic. So if order matters per user, you partition by <code>user_id</code> — and you accept that one very active user is now one hot partition. That is the skew trade again, and it is unavoidable: <strong>ordering and parallelism are in direct tension</strong>, and you buy one with the other.</p>
+</section>
+
+<section id="delivery">
+  <div class="chapnum">Chapter five</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">Delivery semantics, and the myth of exactly-once</h2>
+  <p>Three levels, and only one of them is real in the general case.</p>
+  <ul>
+    <li><strong>At-most-once.</strong> Send and forget. Losses are acceptable — maybe for some metrics.</li>
+    <li><strong>At-least-once.</strong> Retry until acknowledged. This is the real world, and it produces duplicates, because the acknowledgement can be lost after the work was done.</li>
+    <li><strong>Exactly-once.</strong> Does not exist over a network, as a delivery guarantee. What exists is <strong>at-least-once delivery plus idempotent processing</strong>.</li>
+  </ul>
+
+  <div class="callout">
+    <div class="ct">Why it cannot exist, in one paragraph</div>
+    <p>You send a message and get no reply. Two things are indistinguishable from where you stand: the message never arrived, or it arrived, was processed, and the acknowledgement was lost. If you retry, you may duplicate. If you do not, you may lose. <strong>No protocol resolves that ambiguity</strong> — the information simply is not available to you. So you choose which failure to accept, and the universal choice is: retry (accepting duplicates) and make the processing idempotent (so duplicates do not matter).</p>
+  </div>
+
+  <h3>Idempotency in practice</h3>
+  <p>The standard mechanism: the client generates a unique key, sends it with the request (<code>Idempotency-Key: 7f3e…</code>), and the server stores <em>key → result</em> before doing the work. A repeat of the same key returns the stored result rather than re-executing. Every payment API on earth works this way.</p>
+  <p>The variants, in the order you should consider them: <strong>make the operation naturally idempotent</strong> (set a value rather than increment it — the best answer where possible); <strong>deduplicate on a natural key</strong> (a unique constraint on the event id, letting the database reject the duplicate); or <strong>store processed ids</strong> explicitly. All three are things you have done in a pipeline to make it re-runnable.</p>
+
+  <h3>What Kafka's "exactly-once" actually covers</h3>
+  <p>Kafka does offer exactly-once <em>processing</em> semantics, and it is worth knowing precisely what that means because it is frequently overstated. It is built from two things: an <strong>idempotent producer</strong> (each producer has an id and per-partition sequence numbers, so the broker discards duplicates from retries) and <strong>transactions</strong> that atomically commit the output records and the consumer offsets together, with downstream readers set to read only committed data.</p>
+  <p>So a read-process-write pipeline that stays <em>inside</em> Kafka gets real exactly-once. The moment your side effect leaves that boundary — an email, a payment, a row in someone else's database — you are back to at-least-once plus an idempotency key. Saying that sentence answers the follow-up before it is asked.</p>
+
+  <h3>The dual-write problem, and the outbox</h3>
+  <p>Here is a bug that appears in almost every first design: you write a row to your database and publish an event about it. Two systems, two writes, no transaction across them. If the database commit succeeds and the publish fails, the event is lost forever and the two systems disagree permanently.</p>
+  <p>The fix is the <strong>outbox pattern</strong>: write the event into an <code>outbox</code> table <em>in the same transaction</em> as the data change. A separate process then reads the outbox — often by tailing the write-ahead log — and publishes. Atomicity comes free because both writes are in one local transaction.</p>
+  <p>Which is change data capture, which is the next chapter, and which you already run.</p>
+</section>
+
+<section id="streaming">
+  <div class="chapnum">Chapter six</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">Streaming, stated precisely</h2>
+  <p>This chapter is mostly review for you. Its value is that it gives your existing knowledge the exact words a design interview expects, so read it for vocabulary rather than for concepts.</p>
+
+  <div class="deflist">
+    <dt>Event time vs processing time</dt><dd>An event happened at 10:00 and arrived at 10:07 because a phone was in a tunnel. Windowing on <em>processing</em> time is easy and gives wrong answers; windowing on <em>event</em> time is correct and forces you to decide how long to wait.</dd>
+    <dt>Watermark</dt><dd>The formal answer to "how long do I wait": an assertion that no more events older than time T are expected, so windows up to T can be closed. It is a heuristic — aggressive means dropped data, conservative means stale results.</dd>
+    <dt>Allowed lateness</dt><dd>A grace period after the watermark during which stragglers still update an already-emitted result. Requires downstream consumers that can handle a correction — which is a product decision, not just a technical one.</dd>
+    <dt>Window types</dt><dd><strong>Tumbling</strong> (fixed, non-overlapping: "per minute"), <strong>sliding</strong> (fixed, overlapping: "last 5 minutes, computed every minute"), <strong>session</strong> (grouped by a gap in activity: "one user's browsing session").</dd>
+    <dt>Checkpointing</dt><dd>A consistent snapshot of all operator state, taken by flowing barriers through the dataflow, paired with the source offsets that state corresponds to. On failure, restore and replay from those offsets. This is why replayable sources are a requirement rather than a nicety.</dd>
+    <dt>Backpressure</dt><dd>Slowness propagating upstream so a slow sink does not cause unbounded buffering. Monitor <em>lag</em>, not just throughput — throughput can look healthy while you fall further behind every minute.</dd>
+  </div>
+
+  <p>The design-round framing to carry: <strong>batch is a special case of streaming with a very long window.</strong> When someone asks you to design a system that computes something over recent events, the real questions are which time you window on, how long you wait for stragglers, where the state lives, and what happens on restart. You know all four answers already.</p>
+</section>
+
+<section id="logbackbone">
+  <div class="chapnum">Chapter seven</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">The log as the backbone of an architecture</h2>
+  <p>Here is an idea that ties this whole series together, and it will feel natural to you in a way it does not to most people.</p>
+  <p>An append-only log has now appeared four times in four different disguises: the write-ahead log that gives a database durability, the replication stream that keeps followers in sync, the immutable file that an LSM tree writes, and the Kafka topic your pipelines read. <strong>That is not a coincidence. It is the same structure, and it is the most useful primitive in distributed systems</strong>, because it is the only one that is simultaneously fast to write, cheap to replicate, and replayable.</p>
+
+  <div class="diagram">
+    <div class="dflow">
+      <div class="dcol"><div class="node store">Source of truth<small>transactional DB</small></div></div>
+      <div class="arrow">→<span>CDC from the WAL</span></div>
+      <div class="dcol"><div class="node pri">The log<small>ordered, replayable,<br>partitioned by key</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node">Search index</div><div class="node">Cache</div><div class="node">Warehouse</div><div class="node ml">Feature store</div></div>
+    </div>
+    <div class="dcap">Every derived system is a function of the log. Rebuilding one means replaying from the beginning — which is backfill, and it is why this shape is worth so much.</div>
+  </div>
+
+  <p>Once you see an architecture this way, several things stop being mysterious:</p>
+  <ul>
+    <li><strong>Why is the search index allowed to be stale?</strong> Because it is <em>derived</em>. It is a materialized view over the log, and staleness is lag.</li>
+    <li><strong>How do you fix a corrupted downstream system?</strong> Delete it and replay. You do this already when a dbt model is wrong.</li>
+    <li><strong>Why does the dual-write problem disappear?</strong> Because there is only one write — to the source of truth — and everything else follows from the log.</li>
+    <li><strong>Why is a cache invalidation strategy suddenly easy?</strong> Because the log tells you exactly what changed, in order. Consuming a change stream is far more reliable than guessing TTLs.</li>
+  </ul>
+  <p>This is the same shape as your medallion or bronze-silver-gold architecture: one immutable source, many derived views, all rebuildable. You have been doing event-sourced architecture in batch. Saying that in an interview — <em>"I'd treat the search index and the cache as derived views over a change stream rather than as things to write to directly"</em> — reads as a senior instinct.</p>
+</section>
+
+<section id="resilience">
+  <div class="chapnum">Chapter eight</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">Keeping it up when something fails</h2>
+  <p>In batch, a failure means a late table. Online, a failure means a cascade, because everything is calling everything else while under load. These are the standard defences, and each one exists because of a specific way systems die.</p>
+
+  <div class="stage">
+    <div class="sh"><span class="sn">1</span><span class="st">Timeouts on every network call</span></div>
+    <p>An unbounded call is a thread leak waiting for traffic. Without a timeout, a slow dependency consumes every thread you own and your service stops serving <em>everything</em>, not just the affected path. Set them deliberately — a timeout longer than your own SLO is a timeout that does nothing.</p>
+  </div>
+  <div class="stage">
+    <div class="sh"><span class="sn">2</span><span class="st">Retries with backoff — and jitter</span></div>
+    <p>Retry, but wait longer each time. And add randomness, because <strong>backoff without jitter synchronizes your clients</strong>: they all fail at once, all wait exactly two seconds, and all retry in the same millisecond, producing a wave that keeps the recovering service down. Full jitter — sleep a random duration between zero and the backoff — is the standard fix.</p>
+    <div class="why">Also: only retry idempotent operations. This is where chapter five earns its keep.</div>
+  </div>
+  <div class="stage">
+    <div class="sh"><span class="sn">3</span><span class="st">Circuit breakers</span></div>
+    <p>After N consecutive failures, stop calling for T seconds and fail immediately. Counter-intuitive and correct: when a dependency is dying, the kindest thing you can do is stop sending it traffic. It also protects you, since fast failure frees the threads that would otherwise queue up.</p>
+  </div>
+  <div class="stage">
+    <div class="sh"><span class="sn">4</span><span class="st">Bulkheads</span></div>
+    <p>Separate connection pools and thread pools per dependency, so the failing one cannot starve the healthy ones. Named after ship compartments, for exactly the reason you would guess.</p>
+  </div>
+  <div class="stage">
+    <div class="sh"><span class="sn">5</span><span class="st">Load shedding, and graceful degradation</span></div>
+    <p>When saturated, reject early at the edge. A fast 503 is far better than a request that queues for thirty seconds holding resources and then times out anyway. And define what the <em>degraded</em> experience is: serve stale cache, drop personalization, return the unranked list. Being able to say what your system looks like at 50% capacity is a product-minded answer that most candidates never give.</p>
+  </div>
+
+  <div class="callout warnbox">
+    <div class="ct">The failure mode all of these prevent</div>
+    <p><strong>Cascading failure.</strong> One service slows. Its callers' threads pile up waiting. They slow. Their callers pile up. Within a minute an entire architecture is down because of one unhealthy dependency at the bottom — and it stays down after the original problem is fixed, because every client is now retrying furiously at once. Every mechanism above exists to break one link in that chain, and naming the chain is what makes the mechanisms coherent rather than a checklist.</p>
+  </div>
+
+  <div class="booknav">
+    <a href="https://claude.ai/code/artifact/5dae95fb-629e-427e-99ea-4376f02dc4e6" target="_blank" rel="noopener"><span class="dir">Next — Book five</span><span class="nm">Designing a system, step by step</span><span class="ds">The payoff. One system taken through all seven steps slowly, from a single box to a full architecture — including the turns that get rejected and why.</span></a>
+    <a href="https://claude.ai/code/artifact/55b4f674-b971-4fdf-94cd-94a4acff915e" target="_blank" rel="noopener"><span class="dir">Back — Book three</span><span class="nm">How data is stored</span><span class="ds">Databases, from an empty file up.</span></a>
+  </div>
+</main>
+</div>
+<script>
+(function(){"use strict";
+ var root=document.documentElement,KEY="foundations.theme";
+ try{var v=localStorage.getItem(KEY); if(v==="light"||v==="dark") root.setAttribute("data-theme",v);}catch(e){}
+ var b=document.getElementById("themebtn");
+ if(b) b.addEventListener("click",function(){
+   var c=root.getAttribute("data-theme"), n=c==="light"?"dark":(c==="dark"?null:"light");
+   if(n){root.setAttribute("data-theme",n);} else {root.removeAttribute("data-theme");}
+   try{localStorage.setItem(KEY,n||"system");}catch(e){}
+ });
+ var links=[].slice.call(document.querySelectorAll('nav.toc a[href^="#"]'));
+ var secs=links.map(function(a){return document.querySelector(a.getAttribute("href"));}).filter(Boolean);
+ if("IntersectionObserver" in window && secs.length){
+   var o=new IntersectionObserver(function(es){es.forEach(function(e){
+     if(!e.isIntersecting) return;
+     links.forEach(function(a){a.classList.toggle("on",a.getAttribute("href")==="#"+e.target.id);});
+   });},{rootMargin:"-15% 0px -75% 0px"});
+   secs.forEach(function(s){o.observe(s);});
+ }
+})();
+</script>
