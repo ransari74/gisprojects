@@ -1,6 +1,6 @@
 <section id="framework">
   <div class="sec-head">
-    <div class="eyebrow">Section 01</div>
+    <div class="eyebrow">Section 09 · System design</div>
     <h2>The framework</h2>
     <p>A design interview is not a test of whether you know what Kafka is. It is a test of whether you can take an under-specified problem, make the ambiguity explicit, and drive to a defensible design while thinking out loud. The structure below is what stops you from wandering.</p>
   </div>
@@ -50,7 +50,7 @@
       <li><strong>Buzzword stacking.</strong> Naming Kafka, Redis, Cassandra and Spark in one breath without a reason each. Expect "why not just Postgres?" — and have the answer.</li>
       <li><strong>No numbers.</strong> Sharding without ever computing that the data doesn't fit on one machine.</li>
       <li><strong>Designing for 100× the stated scale.</strong> Over-engineering reads as poor judgment, not ambition.</li>
-      <li><strong>Going silent while thinking.</strong> Fifteen quiet seconds is fine. Ninety is a failed signal on communication.</li>
+      <li><strong>Going silent while thinking.</strong> A few seconds is fine and normal. A long unexplained silence isn't — not because a stopwatch is running, but because the interviewer can't write down what they can't hear. "Let me think about the write path for a moment" costs nothing and buys all the silence you need.</li>
       <li><strong>Defending a choice past its evidence.</strong> When the interviewer pushes twice, they are usually handing you something. Take it.</li>
     </ul>
   </div>
@@ -59,7 +59,7 @@
   <div class="grid g2 wide" style="margin-top:18px">
     <div class="card"><span class="tag t-sd">Problem navigation</span><p style="margin-top:10px">Did you scope, prioritize, and drive — or wait to be steered? Senior candidates run the clock themselves.</p></div>
     <div class="card"><span class="tag t-sd">Technical depth</span><p style="margin-top:10px">One component taken to the bottom: the data structure, the failure mode, the actual bytes. Breadth without a dive reads junior.</p></div>
-    <div class="card"><span class="tag t-sd">Tradeoff reasoning</span><p style="margin-top:10px">Alternatives named and rejected <em>for a stated reason tied to the requirements</em>. This is the single highest-weighted axis at senior and above.</p></div>
+    <div class="card"><span class="tag t-sd">Tradeoff reasoning</span><p style="margin-top:10px">Alternatives named and rejected <em>for a stated reason tied to the requirements</em>. Companies weight their axes differently and none publish the weights — but this is the axis that most reliably distinguishes a senior write-up from a mid-level one, because it is the part an interviewer can quote back an hour later.</p></div>
     <div class="card"><span class="tag t-sd">Communication</span><p style="margin-top:10px">Could a peer follow your diagram without you? Did you check in before long tangents?</p></div>
   </div>
 </section>

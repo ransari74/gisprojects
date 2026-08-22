@@ -1,6 +1,6 @@
 <section id="mldepth">
   <div class="sec-head">
-    <div class="eyebrow">Section 07 · The AI track</div>
+    <div class="eyebrow">Section 17 · AI &amp; ML</div>
     <h2>AI depth questions</h2>
     <p>These are the follow-ups that come after your diagram is on the board — the ones that decide whether the round reads as "designed a system" or "understands the system". Answer each in two or three sentences, then stop. Open one, answer it out loud before reading, then check.</p>
   </div>
@@ -12,7 +12,8 @@
 
   <details class="qa"><summary>What is the KV cache actually caching, and why does it dominate memory?</summary><div class="body">
     <p>During generation, each new token attends to all previous tokens. Their key and value projections don't change, so you compute them once and keep them — turning per-token work from O(n²) into O(n). Without it, generating 1,000 tokens means re-running the prompt 1,000 times.</p>
-    <p>The cost is <code>2 × layers × kv_dim × bytes</code> per token, per concurrent sequence — hundreds of KB per token at 70B scale, so a few thousand tokens is over a gigabyte <em>per user in flight</em>. It grows with concurrency and context, while weights are paid once. That's why the KV cache, not the model, sets your batch size. <strong>Grouped-query attention</strong> (many query heads sharing a few KV heads) is the standard fix and shrinks the cache several-fold at negligible quality cost; MQA is the extreme where all heads share one KV head.</p>
+    <p>The cost is <code>2 × layers × kv_dim × bytes</code> per token, per concurrent sequence — hundreds of KB per token at 70B scale, so a few thousand tokens is over a gigabyte <em>per user in flight</em>. It grows with concurrency and context, while weights are paid once. That's why the KV cache, not the model, sets your batch size. <strong>Grouped-query attention</strong> (many query heads sharing a few KV heads) is the standard fix and shrinks the cache several-fold at negligible quality cost; MQA is the extreme where all heads share one KV head. The third answer, now worth naming, is <strong>MLA</strong> (multi-head latent attention, used by the DeepSeek models): rather than reducing how many KV heads exist, it compresses <em>what is stored</em> — K and V are jointly projected into one shared low-rank latent plus a small decoupled RoPE key, and per-head K/V are reconstructed at inference. That cuts the cache by well over an order of magnitude versus same-shape MHA, at the cost of extra FLOPs and a much more awkward interaction with tensor parallelism, which is why GQA remains the industry default.</p>
+    <p>One derivation worth being able to do live: attention's arithmetic intensity during decode is <code>n_query_heads / n_kv_heads</code> — the GQA group size — <strong>independent of batch size and context length</strong>. So batching fixes the weight-matmul bottleneck but cannot fix the attention bottleneck, because every sequence has its own KV cache. That single fact is the structural argument for GQA, for MLA, for FP8 KV caches, and for prefix sharing.</p>
   </div></details>
 
   <details class="qa"><summary>RAG, fine-tuning, or a longer prompt — how do you choose?</summary><div class="body">
@@ -44,7 +45,7 @@
       <li><strong>Data quality</strong> — null rates, cardinality explosions, a schema change upstream. Most "model degradation" is actually an upstream pipeline that changed a unit or started sending nulls.</li>
       <li><strong>Delayed-label metrics</strong> — recompute AUC on a rolling window as labels land, and alert on the trend.</li>
     </ul>
-    <p>Distinguish <strong>data drift</strong> (inputs moved, P(X) changed) from <strong>concept drift</strong> (the relationship moved, P(y|X) changed). Data drift may be harmless; concept drift always requires retraining. And keep a <strong>holdout of un-personalized traffic</strong> so you have an unbiased baseline to compare against.</p>
+    <p>Distinguish <strong>data drift</strong> (inputs moved, P(X) changed) from <strong>concept drift</strong> (the relationship moved, P(y|X) changed). Data drift may be harmless; concept drift usually requires retraining — though not if it is confined to a region of the input space that carries no traffic, which is worth saying rather than claiming "always". And keep a <strong>holdout of un-personalized traffic</strong> so you have an unbiased baseline to compare against.</p>
   </div></details>
 
   <details class="qa"><summary>A feature is missing at serving time. What does your system do?</summary><div class="body">
@@ -70,7 +71,7 @@
 
   <details class="qa"><summary>How do you evaluate an LLM feature that has no single right answer?</summary><div class="body">
     <p>Build a layered harness rather than looking for one number. <strong>Deterministic checks first</strong> — schema validity, does it compile, did it cite a real id, regex constraints. These catch most regressions and cost nothing. <strong>Then a golden set</strong> of a few hundred inputs with human-written references, scored by an LLM judge with a rubric — and calibrate that judge against human labels on a sample, reporting agreement, because an uncalibrated judge is just a vibe. <strong>Then pairwise comparison</strong> of the new version against the current one, which is far more reliable than absolute scoring. <strong>Then online</strong>: thumbs, retry rate, conversation abandonment, escalation to a human.</p>
-    <p>Two things to say that signal experience: <strong>control the temperature to 0 for eval runs</strong> so you're measuring the change and not sampling noise, and <strong>keep a regression suite of every past failure</strong> — production incidents become test cases, exactly as in normal software.</p>
+    <p>Two things to say that signal experience: <strong>pin the temperature for eval runs</strong> so you're measuring the change and not sampling noise — while noting that temperature 0 is not true determinism on a GPU (batching and kernel nondeterminism still move outputs), and that if you serve at temperature above 0 then a temperature-0 eval measures a model you don't ship, so run several seeds and report variance; and <strong>keep a regression suite of every past failure</strong> — production incidents become test cases, exactly as in normal software.</p>
   </div></details>
 
   <details class="qa"><summary>What is prompt injection, and how do you actually defend against it?</summary><div class="body">
@@ -103,8 +104,9 @@
   </div></details>
 
   <details class="qa"><summary>Explain a mixture-of-experts model in the way an interviewer wants to hear it.</summary><div class="body">
-    <p>Replace the dense feed-forward block with many expert blocks plus a router that sends each token to the top-k experts (usually k=2). Total parameters grow enormously while <em>active</em> parameters per token stay small — so you get the quality of a much larger model at roughly the compute of a small one.</p>
-    <p>The systems cost is the part worth naming: <strong>all experts must be resident in memory even though most are idle</strong>, so MoE trades memory for compute, which is the opposite of what most serving setups are optimized for. Add load-balancing losses to stop the router collapsing onto a few experts, and expect expert-parallel communication overhead across GPUs. It is a throughput-and-quality win, not a memory win.</p>
+    <p>Replace the dense feed-forward block with many expert blocks plus a router that sends each token to the top-k experts. (Say "top-k", not "k=2" — that was the Mixtral generation; current fine-grained MoE designs route to 6–8 of many smaller experts plus one or two always-on shared experts.) Total parameters grow enormously while <em>active</em> parameters per token stay small — so you get the quality of a much larger model at roughly the compute of a small one.</p>
+    <p>The systems cost is the part worth naming: <strong>all experts must be resident in memory even though most are idle</strong>, so MoE trades memory for compute, which is the opposite of what most serving setups are optimized for. Add load balancing to stop the router collapsing onto a few experts — an auxiliary loss classically, or the newer loss-free bias-adjustment schemes — and expect expert-parallel all-to-all communication across GPUs. It is a throughput-and-quality win, not a memory win.</p>
+    <p><strong>The serving gotcha, which is the part that shows systems thinking:</strong> at small batch sizes MoE has <em>worse</em> arithmetic intensity than a dense model with the same active parameter count, because you read many experts' weights to serve very few tokens. MoE needs large batches to pay off. So "should we serve an MoE model?" is really "will our traffic keep the batches full?"</p>
   </div></details>
 
   <details class="qa"><summary>How do you decide between batch and real-time inference?</summary><div class="body">

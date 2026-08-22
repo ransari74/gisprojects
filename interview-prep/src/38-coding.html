@@ -1,6 +1,6 @@
 <section id="coding">
   <div class="sec-head">
-    <div class="eyebrow">Section 09</div>
+    <div class="eyebrow">Section 08 · Algorithms</div>
     <h2>Running the coding hour</h2>
     <p>Two candidates produce the same working function and get different scores. The difference is the twelve minutes before the first line of code and the four minutes after the last one.</p>
   </div>
@@ -33,7 +33,7 @@
 
   <h3>The bugs that actually cost points</h3>
   <ul>
-    <li><strong>Off-by-one in binary search.</strong> Use the <code>lo &lt; hi</code> form in §08 every time and stop reinventing it.</li>
+    <li><strong>Off-by-one in binary search.</strong> Use the <code>lo &lt; hi</code> form in §04 every time and stop reinventing it.</li>
     <li><strong>Mutating a list while iterating it.</strong> Iterate over a copy or build a new list.</li>
     <li><strong>Appending a reference instead of a copy</strong> in backtracking — <code>res.append(path)</code> instead of <code>res.append(path[:])</code>. Every result ends up identical and empty.</li>
     <li><strong>Marking visited on pop instead of on push</strong> in BFS — nodes enter the queue multiple times and the complexity quietly becomes exponential.</li>

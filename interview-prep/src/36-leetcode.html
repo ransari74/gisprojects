@@ -1,0 +1,302 @@
+
+<section id="leetcode">
+  <div class="sec-head">
+    <div class="eyebrow">Section 06 · Algorithms</div>
+    <h2>The LeetCode ladder</h2>
+    <p>175 problems, organized by pattern rather than by difficulty, each list ordered from most foundational to hardest. Every number and title here was verified against a full problem index rather than copied from a community list — several popular mirrors contain wrong numbers, and a wrong number in a study plan costs you an evening.</p>
+  </div>
+
+  <h3>Which curated list, and why it matters less than you think</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>List</th><th class="num">Size</th><th>Organized by</th><th>Best for</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Blind 75</strong></td><td class="num">75</td><td>Topic</td><td>Maximum famous-problem density per hour. Note that <em>its own author stopped recommending it in 2022</em> in favour of Grind 75 — it's a starting point now, not an endpoint. Also has no easy on-ramp: it drops you into hards.</td></tr>
+        <tr><td><strong>Grind 75</strong></td><td class="num">75, or regenerated</td><td>Difficulty progression</td><td>A fixed deadline and a wish for someone else to make the schedule. Better ordering than Blind 75; the cost is that you thrash between patterns day to day, which is the opposite of how most people build recognition.</td></tr>
+        <tr><td><strong>NeetCode 150</strong></td><td class="num">150</td><td>18 pattern buckets</td><td><strong>The consensus default.</strong> Pattern-blocked, superset of Blind 75, and a free video solution for every problem — the best learning-efficiency combination available. A handful of entries are LeetCode Premium-locked.</td></tr>
+        <tr><td><strong>Top Interview 150</strong></td><td class="num">150</td><td>Topic</td><td>LeetCode's own plan, drawn from their interview-frequency data. Its virtue is the <em>unglamorous</em> problems the influencer lists skip — Text Justification, H-Index, Simplify Path — which is exactly what Amazon and Microsoft phone screens are full of. Weakest pedagogy of the four.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The list below is a merge, pattern-blocked in the NeetCode style, with the Top Interview 150's practical additions folded in. If you have less than four weeks, do only the <strong>bolded</strong> problems — 48 of them, two or three per pattern, chosen because each teaches one idea the rest of its group reuses.</p>
+
+  <div class="callout">
+    <div class="ct">How to work the ladder</div>
+    <p>Do a pattern <em>in a block</em> of five to seven problems — that's what builds the template into your fingers. Then <strong>interleave on review days</strong>: shuffle problems from different patterns, because in the real interview nobody tells you which pattern it is, and classifying it is the actual skill being tested. Rate every attempt and follow the spacing schedule in §07; an untracked ladder becomes a list of problems you once saw.</p>
+  </div>
+
+  <h3>The ladder</h3>
+  <p style="color:var(--ink-3);font-size:14.5px;max-width:var(--measure)">Bold = the "if you only do three" picks. <span class="tag" style="font-size:9px;padding:1px 5px">premium</span> = requires LeetCode Premium; free equivalents exist on NeetCode's site. <strong>72 Edit Distance</strong> is currently labelled Medium by LeetCode but is Hard in difficulty — most guides still list it as Hard.</p>
+  <div class="railprog" style="margin:14px 0 24px"><span id="lccount">0 / 175 solved</span><span class="progressbar"><i id="lcbar"></i></span></div>
+
+  <h4>Arrays &amp; hashing</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">The base case for everything: a hash map converts a nested-loop search into one pass.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">217</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc217" data-g="lc"><label for="lc217">&nbsp;Contains Duplicate</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">242</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc242" data-g="lc"><label for="lc242">&nbsp;Valid Anagram</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">1</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc1" data-g="lc"><label for="lc1" class="st">&nbsp;Two Sum</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">169</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc169" data-g="lc"><label for="lc169">&nbsp;Majority Element</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">49</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc49" data-g="lc"><label for="lc49">&nbsp;Group Anagrams</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">347</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc347" data-g="lc"><label for="lc347">&nbsp;Top K Frequent Elements</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">238</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc238" data-g="lc"><label for="lc238" class="st">&nbsp;Product of Array Except Self</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">271</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc271" data-g="lc"><label for="lc271">&nbsp;Encode and Decode Strings</label></span> <span class="tag" style="font-size:9px;padding:1px 5px">premium</span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">128</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc128" data-g="lc"><label for="lc128" class="st">&nbsp;Longest Consecutive Sequence</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">36</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc36" data-g="lc"><label for="lc36">&nbsp;Valid Sudoku</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">380</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc380" data-g="lc"><label for="lc380">&nbsp;Insert Delete GetRandom O(1)</label></span></span><span class="df m">Med</span></div>
+  </div>
+  <h4>Two pointers</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Converging or same-direction pointers on sorted or partitionable data.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">125</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc125" data-g="lc"><label for="lc125" class="st">&nbsp;Valid Palindrome</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">283</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc283" data-g="lc"><label for="lc283">&nbsp;Move Zeroes</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">88</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc88" data-g="lc"><label for="lc88">&nbsp;Merge Sorted Array</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">26</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc26" data-g="lc"><label for="lc26">&nbsp;Remove Duplicates from Sorted Array</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">680</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc680" data-g="lc"><label for="lc680">&nbsp;Valid Palindrome II</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">167</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc167" data-g="lc"><label for="lc167">&nbsp;Two Sum II - Input Array Is Sorted</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">11</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc11" data-g="lc"><label for="lc11">&nbsp;Container With Most Water</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">15</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc15" data-g="lc"><label for="lc15" class="st">&nbsp;3Sum</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">75</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc75" data-g="lc"><label for="lc75">&nbsp;Sort Colors</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">42</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc42" data-g="lc"><label for="lc42" class="st">&nbsp;Trapping Rain Water</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Sliding window</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Contiguous subarray or substring, with a cheap validity invariant.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">121</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc121" data-g="lc"><label for="lc121">&nbsp;Best Time to Buy and Sell Stock</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">643</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc643" data-g="lc"><label for="lc643">&nbsp;Maximum Average Subarray I</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">3</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc3" data-g="lc"><label for="lc3" class="st">&nbsp;Longest Substring Without Repeating Characters</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">209</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc209" data-g="lc"><label for="lc209">&nbsp;Minimum Size Subarray Sum</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">424</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc424" data-g="lc"><label for="lc424" class="st">&nbsp;Longest Repeating Character Replacement</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">567</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc567" data-g="lc"><label for="lc567">&nbsp;Permutation in String</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">438</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc438" data-g="lc"><label for="lc438">&nbsp;Find All Anagrams in a String</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">1004</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc1004" data-g="lc"><label for="lc1004">&nbsp;Max Consecutive Ones III</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">76</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc76" data-g="lc"><label for="lc76" class="st">&nbsp;Minimum Window Substring</label></span></span><span class="df h">Hard</span></div>
+    <div class="lc"><span class="no">239</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc239" data-g="lc"><label for="lc239">&nbsp;Sliding Window Maximum</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Binary search</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Sorted input — or any monotone predicate, including over the answer space.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">704</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc704" data-g="lc"><label for="lc704" class="st">&nbsp;Binary Search</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">35</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc35" data-g="lc"><label for="lc35">&nbsp;Search Insert Position</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">278</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc278" data-g="lc"><label for="lc278">&nbsp;First Bad Version</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">74</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc74" data-g="lc"><label for="lc74">&nbsp;Search a 2D Matrix</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">153</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc153" data-g="lc"><label for="lc153">&nbsp;Find Minimum in Rotated Sorted Array</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">33</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc33" data-g="lc"><label for="lc33" class="st">&nbsp;Search in Rotated Sorted Array</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">162</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc162" data-g="lc"><label for="lc162">&nbsp;Find Peak Element</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">875</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc875" data-g="lc"><label for="lc875" class="st">&nbsp;Koko Eating Bananas</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">1011</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc1011" data-g="lc"><label for="lc1011">&nbsp;Capacity To Ship Packages Within D Days</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">981</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc981" data-g="lc"><label for="lc981">&nbsp;Time Based Key-Value Store</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">410</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc410" data-g="lc"><label for="lc410">&nbsp;Split Array Largest Sum</label></span></span><span class="df h">Hard</span></div>
+    <div class="lc"><span class="no">4</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc4" data-g="lc"><label for="lc4">&nbsp;Median of Two Sorted Arrays</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Stack &amp; monotonic stack</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Nesting, and 'next greater/smaller' — each index pushed and popped once.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">20</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc20" data-g="lc"><label for="lc20" class="st">&nbsp;Valid Parentheses</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">496</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc496" data-g="lc"><label for="lc496">&nbsp;Next Greater Element I</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">155</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc155" data-g="lc"><label for="lc155">&nbsp;Min Stack</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">150</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc150" data-g="lc"><label for="lc150">&nbsp;Evaluate Reverse Polish Notation</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">1249</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc1249" data-g="lc"><label for="lc1249">&nbsp;Minimum Remove to Make Valid Parentheses</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">739</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc739" data-g="lc"><label for="lc739" class="st">&nbsp;Daily Temperatures</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">735</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc735" data-g="lc"><label for="lc735">&nbsp;Asteroid Collision</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">71</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc71" data-g="lc"><label for="lc71">&nbsp;Simplify Path</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">853</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc853" data-g="lc"><label for="lc853">&nbsp;Car Fleet</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">227</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc227" data-g="lc"><label for="lc227">&nbsp;Basic Calculator II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">84</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc84" data-g="lc"><label for="lc84" class="st">&nbsp;Largest Rectangle in Histogram</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Linked list</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Three subroutines — reverse, find middle, merge — recombined endlessly.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">206</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc206" data-g="lc"><label for="lc206" class="st">&nbsp;Reverse Linked List</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">21</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc21" data-g="lc"><label for="lc21">&nbsp;Merge Two Sorted Lists</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">876</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc876" data-g="lc"><label for="lc876">&nbsp;Middle of the Linked List</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">141</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc141" data-g="lc"><label for="lc141">&nbsp;Linked List Cycle</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">2</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc2" data-g="lc"><label for="lc2">&nbsp;Add Two Numbers</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">19</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc19" data-g="lc"><label for="lc19">&nbsp;Remove Nth Node From End of List</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">143</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc143" data-g="lc"><label for="lc143" class="st">&nbsp;Reorder List</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">138</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc138" data-g="lc"><label for="lc138">&nbsp;Copy List with Random Pointer</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">142</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc142" data-g="lc"><label for="lc142">&nbsp;Linked List Cycle II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">146</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc146" data-g="lc"><label for="lc146" class="st">&nbsp;LRU Cache</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">23</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc23" data-g="lc"><label for="lc23">&nbsp;Merge k Sorted Lists</label></span></span><span class="df h">Hard</span></div>
+    <div class="lc"><span class="no">25</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc25" data-g="lc"><label for="lc25">&nbsp;Reverse Nodes in k-Group</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Trees</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">What to return up, what to pass down — and level-by-level BFS.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">104</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc104" data-g="lc"><label for="lc104" class="st">&nbsp;Maximum Depth of Binary Tree</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">226</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc226" data-g="lc"><label for="lc226">&nbsp;Invert Binary Tree</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">543</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc543" data-g="lc"><label for="lc543">&nbsp;Diameter of Binary Tree</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">235</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc235" data-g="lc"><label for="lc235">&nbsp;Lowest Common Ancestor of a BST</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">102</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc102" data-g="lc"><label for="lc102" class="st">&nbsp;Binary Tree Level Order Traversal</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">199</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc199" data-g="lc"><label for="lc199">&nbsp;Binary Tree Right Side View</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">98</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc98" data-g="lc"><label for="lc98">&nbsp;Validate Binary Search Tree</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">230</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc230" data-g="lc"><label for="lc230">&nbsp;Kth Smallest Element in a BST</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">236</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc236" data-g="lc"><label for="lc236" class="st">&nbsp;Lowest Common Ancestor of a Binary Tree</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">105</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc105" data-g="lc"><label for="lc105">&nbsp;Construct Binary Tree from Preorder and Inorder Traversal</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">124</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc124" data-g="lc"><label for="lc124">&nbsp;Binary Tree Maximum Path Sum</label></span></span><span class="df h">Hard</span></div>
+    <div class="lc"><span class="no">297</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc297" data-g="lc"><label for="lc297">&nbsp;Serialize and Deserialize Binary Tree</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Tries</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Prefix structure — and the trick of indexing the dictionary instead of the input.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">14</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc14" data-g="lc"><label for="lc14">&nbsp;Longest Common Prefix</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">208</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc208" data-g="lc"><label for="lc208" class="st">&nbsp;Implement Trie (Prefix Tree)</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">211</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc211" data-g="lc"><label for="lc211" class="st">&nbsp;Design Add and Search Words Data Structure</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">648</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc648" data-g="lc"><label for="lc648">&nbsp;Replace Words</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">720</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc720" data-g="lc"><label for="lc720">&nbsp;Longest Word in Dictionary</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">1268</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc1268" data-g="lc"><label for="lc1268">&nbsp;Search Suggestions System</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">421</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc421" data-g="lc"><label for="lc421">&nbsp;Maximum XOR of Two Numbers in an Array</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">212</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc212" data-g="lc"><label for="lc212" class="st">&nbsp;Word Search II</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Heap, top-K &amp; intervals</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Maintain an invariant across a stream; or sort by start and sweep.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">703</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc703" data-g="lc"><label for="lc703">&nbsp;Kth Largest Element in a Stream</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">1046</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc1046" data-g="lc"><label for="lc1046">&nbsp;Last Stone Weight</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">252</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc252" data-g="lc"><label for="lc252">&nbsp;Meeting Rooms</label></span> <span class="tag" style="font-size:9px;padding:1px 5px">premium</span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">215</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc215" data-g="lc"><label for="lc215" class="st">&nbsp;Kth Largest Element in an Array</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">973</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc973" data-g="lc"><label for="lc973">&nbsp;K Closest Points to Origin</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">56</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc56" data-g="lc"><label for="lc56" class="st">&nbsp;Merge Intervals</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">57</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc57" data-g="lc"><label for="lc57">&nbsp;Insert Interval</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">435</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc435" data-g="lc"><label for="lc435">&nbsp;Non-overlapping Intervals</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">253</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc253" data-g="lc"><label for="lc253">&nbsp;Meeting Rooms II</label></span> <span class="tag" style="font-size:9px;padding:1px 5px">premium</span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">621</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc621" data-g="lc"><label for="lc621">&nbsp;Task Scheduler</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">295</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc295" data-g="lc"><label for="lc295" class="st">&nbsp;Find Median from Data Stream</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Backtracking</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Choose, recurse, undo. One template, ten specializations.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">78</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc78" data-g="lc"><label for="lc78" class="st">&nbsp;Subsets</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">46</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc46" data-g="lc"><label for="lc46">&nbsp;Permutations</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">39</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc39" data-g="lc"><label for="lc39" class="st">&nbsp;Combination Sum</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">17</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc17" data-g="lc"><label for="lc17">&nbsp;Letter Combinations of a Phone Number</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">22</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc22" data-g="lc"><label for="lc22">&nbsp;Generate Parentheses</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">77</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc77" data-g="lc"><label for="lc77">&nbsp;Combinations</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">90</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc90" data-g="lc"><label for="lc90">&nbsp;Subsets II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">40</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc40" data-g="lc"><label for="lc40">&nbsp;Combination Sum II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">79</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc79" data-g="lc"><label for="lc79" class="st">&nbsp;Word Search</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">131</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc131" data-g="lc"><label for="lc131">&nbsp;Palindrome Partitioning</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">51</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc51" data-g="lc"><label for="lc51">&nbsp;N-Queens</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Graphs</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Grids are graphs. BFS for shortest, topo sort for dependencies, DSU for connectivity.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">733</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc733" data-g="lc"><label for="lc733">&nbsp;Flood Fill</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">200</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc200" data-g="lc"><label for="lc200" class="st">&nbsp;Number of Islands</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">994</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc994" data-g="lc"><label for="lc994">&nbsp;Rotting Oranges</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">133</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc133" data-g="lc"><label for="lc133">&nbsp;Clone Graph</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">417</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc417" data-g="lc"><label for="lc417">&nbsp;Pacific Atlantic Water Flow</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">207</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc207" data-g="lc"><label for="lc207" class="st">&nbsp;Course Schedule</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">210</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc210" data-g="lc"><label for="lc210">&nbsp;Course Schedule II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">547</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc547" data-g="lc"><label for="lc547">&nbsp;Number of Provinces</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">684</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc684" data-g="lc"><label for="lc684">&nbsp;Redundant Connection</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">721</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc721" data-g="lc"><label for="lc721">&nbsp;Accounts Merge</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">743</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc743" data-g="lc"><label for="lc743">&nbsp;Network Delay Time</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">127</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc127" data-g="lc"><label for="lc127" class="st">&nbsp;Word Ladder</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Dynamic programming · 1-D</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">State, transition, base case, fill order — say all four out loud.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">70</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc70" data-g="lc"><label for="lc70" class="st">&nbsp;Climbing Stairs</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">746</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc746" data-g="lc"><label for="lc746">&nbsp;Min Cost Climbing Stairs</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">198</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc198" data-g="lc"><label for="lc198">&nbsp;House Robber</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">213</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc213" data-g="lc"><label for="lc213">&nbsp;House Robber II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">91</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc91" data-g="lc"><label for="lc91">&nbsp;Decode Ways</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">322</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc322" data-g="lc"><label for="lc322" class="st">&nbsp;Coin Change</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">279</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc279" data-g="lc"><label for="lc279">&nbsp;Perfect Squares</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">139</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc139" data-g="lc"><label for="lc139">&nbsp;Word Break</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">152</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc152" data-g="lc"><label for="lc152">&nbsp;Maximum Product Subarray</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">300</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc300" data-g="lc"><label for="lc300" class="st">&nbsp;Longest Increasing Subsequence</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">416</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc416" data-g="lc"><label for="lc416">&nbsp;Partition Equal Subset Sum</label></span></span><span class="df m">Med</span></div>
+  </div>
+  <h4>Dynamic programming · 2-D</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">The two-string grid, and DP with modes.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">62</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc62" data-g="lc"><label for="lc62">&nbsp;Unique Paths</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">64</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc64" data-g="lc"><label for="lc64">&nbsp;Minimum Path Sum</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">1143</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc1143" data-g="lc"><label for="lc1143" class="st">&nbsp;Longest Common Subsequence</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">5</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc5" data-g="lc"><label for="lc5">&nbsp;Longest Palindromic Substring</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">647</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc647" data-g="lc"><label for="lc647">&nbsp;Palindromic Substrings</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">518</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc518" data-g="lc"><label for="lc518">&nbsp;Coin Change II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">494</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc494" data-g="lc"><label for="lc494">&nbsp;Target Sum</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">309</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc309" data-g="lc"><label for="lc309" class="st">&nbsp;Best Time to Buy and Sell Stock with Cooldown</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">221</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc221" data-g="lc"><label for="lc221">&nbsp;Maximal Square</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">72</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc72" data-g="lc"><label for="lc72" class="st">&nbsp;Edit Distance</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">115</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc115" data-g="lc"><label for="lc115">&nbsp;Distinct Subsequences</label></span></span><span class="df h">Hard</span></div>
+    <div class="lc"><span class="no">312</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc312" data-g="lc"><label for="lc312">&nbsp;Burst Balloons</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Greedy</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Locally optimal is globally optimal — and you must be able to say why.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">122</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc122" data-g="lc"><label for="lc122">&nbsp;Best Time to Buy and Sell Stock II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">53</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc53" data-g="lc"><label for="lc53" class="st">&nbsp;Maximum Subarray</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">55</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc55" data-g="lc"><label for="lc55" class="st">&nbsp;Jump Game</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">45</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc45" data-g="lc"><label for="lc45">&nbsp;Jump Game II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">134</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc134" data-g="lc"><label for="lc134" class="st">&nbsp;Gas Station</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">763</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc763" data-g="lc"><label for="lc763">&nbsp;Partition Labels</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">846</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc846" data-g="lc"><label for="lc846">&nbsp;Hand of Straights</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">678</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc678" data-g="lc"><label for="lc678">&nbsp;Valid Parenthesis String</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">402</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc402" data-g="lc"><label for="lc402">&nbsp;Remove K Digits</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">135</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc135" data-g="lc"><label for="lc135">&nbsp;Candy</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Bit manipulation</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">XOR cancels; the lowest set bit is x &amp; -x.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">136</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc136" data-g="lc"><label for="lc136" class="st">&nbsp;Single Number</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">191</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc191" data-g="lc"><label for="lc191">&nbsp;Number of 1 Bits</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">190</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc190" data-g="lc"><label for="lc190">&nbsp;Reverse Bits</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">338</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc338" data-g="lc"><label for="lc338" class="st">&nbsp;Counting Bits</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">268</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc268" data-g="lc"><label for="lc268">&nbsp;Missing Number</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">231</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc231" data-g="lc"><label for="lc231">&nbsp;Power of Two</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">67</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc67" data-g="lc"><label for="lc67">&nbsp;Add Binary</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">371</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc371" data-g="lc"><label for="lc371" class="st">&nbsp;Sum of Two Integers</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">137</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc137" data-g="lc"><label for="lc137">&nbsp;Single Number II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">201</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc201" data-g="lc"><label for="lc201">&nbsp;Bitwise AND of Numbers Range</label></span></span><span class="df m">Med</span></div>
+  </div>
+  <h4>Math, matrix &amp; prefix sums</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">In-place index gymnastics, and prefix sum + hash map.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">66</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc66" data-g="lc"><label for="lc66">&nbsp;Plus One</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">9</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc9" data-g="lc"><label for="lc9">&nbsp;Palindrome Number</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">202</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc202" data-g="lc"><label for="lc202">&nbsp;Happy Number</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">303</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc303" data-g="lc"><label for="lc303">&nbsp;Range Sum Query - Immutable</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">189</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc189" data-g="lc"><label for="lc189">&nbsp;Rotate Array</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">48</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc48" data-g="lc"><label for="lc48" class="st">&nbsp;Rotate Image</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">54</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc54" data-g="lc"><label for="lc54">&nbsp;Spiral Matrix</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">73</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc73" data-g="lc"><label for="lc73">&nbsp;Set Matrix Zeroes</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">560</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc560" data-g="lc"><label for="lc560" class="st">&nbsp;Subarray Sum Equals K</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">304</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc304" data-g="lc"><label for="lc304">&nbsp;Range Sum Query 2D - Immutable</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">50</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc50" data-g="lc"><label for="lc50" class="st">&nbsp;Pow(x, n)</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">43</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc43" data-g="lc"><label for="lc43">&nbsp;Multiply Strings</label></span></span><span class="df m">Med</span></div>
+  </div>
+  <h3>Mapping the ladder onto the 28 days</h3>
+  <p>The realistic rate is <strong>4–5 problems in a 75-minute block</strong> if you're doing them properly — attempt, study, note, and re-implement the previous day's misses. Six a day is a 4–6 hour commitment, which is a full-time schedule; the honest version of this plan is below.</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th class="num">Days</th><th>Pattern block</th><th class="num">Problems</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1–2</td><td>Arrays &amp; hashing → two pointers</td><td class="num">217, 242, 1, 49, 347, 238, 128 · 125, 283, 88, 167, 11, 15</td></tr>
+        <tr><td class="num">3–4</td><td>Sliding window</td><td class="num">121, 3, 209, 424, 567, 438, 1004, 76</td></tr>
+        <tr><td class="num">5–6</td><td>Stack &amp; monotonic stack → binary search</td><td class="num">20, 155, 150, 1249, 739, 853, 84 · 704, 35, 74, 153</td></tr>
+        <tr><td class="num">7</td><td><strong>Review</strong> — interleaved, from blank</td><td class="num">1, 238, 128, 15, 42, 3, 424, 76, 739, 84</td></tr>
+        <tr><td class="num">8–9</td><td>Binary search on answer → math, matrix, prefix sums</td><td class="num">33, 162, 875, 1011, 981 · 48, 54, 73, 560, 50</td></tr>
+        <tr><td class="num">10–12</td><td>Linked list → trees</td><td class="num">206, 21, 141, 2, 19, 143, 138, 146, 23 · 104, 226, 543, 102, 199, 98</td></tr>
+        <tr><td class="num">13</td><td>Trees, harder</td><td class="num">230, 236, 105, 124, 297</td></tr>
+        <tr><td class="num">14</td><td><strong>Review + mock #1</strong></td><td class="num">33, 875, 560, 143, 146, 23, 102</td></tr>
+        <tr><td class="num">15–16</td><td>Tries → heap &amp; top-K</td><td class="num">208, 211, 1268, 212 · 703, 215, 973, 295</td></tr>
+        <tr><td class="num">17–19</td><td>Intervals → backtracking</td><td class="num">56, 57, 435, 621 · 78, 46, 39, 17, 22, 40, 79, 131</td></tr>
+        <tr><td class="num">20</td><td>Graphs</td><td class="num">733, 200, 994, 133, 207, 210, 547, 127</td></tr>
+        <tr><td class="num">21</td><td><strong>Review + mock #2</strong></td><td class="num">236, 105, 212, 215, 295, 79, 207</td></tr>
+        <tr><td class="num">22–23</td><td>DP 1-D</td><td class="num">70, 746, 198, 91, 322, 139, 152, 300, 416</td></tr>
+        <tr><td class="num">24–25</td><td>DP 2-D → greedy</td><td class="num">62, 1143, 5, 309, 72 · 53, 55, 45, 134, 763</td></tr>
+        <tr><td class="num">26</td><td>Bit manipulation, then timed set</td><td class="num">136, 191, 338, 268, 371 + 2 × 45 min timed</td></tr>
+        <tr><td class="num">27–28</td><td><strong>Mocks #3 and #4</strong>, then recall only</td><td class="num">322, 139, 300, 1143, 72, 53, 134</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>That's roughly <strong>110 problems in 28 days</strong> — the bolded core plus the connective tissue — with the remaining 65 as the stretch set. If you have two hours a day rather than three, run the same order over <strong>eight weeks at three a day</strong> and keep every review day. Do not compress by deleting the review days; that is the single most common way this plan fails, and it fails quietly, because you'll feel productive right up until the interview.</p>
+
+  <div class="callout warnbox">
+    <div class="ct">On problem counts, honestly</div>
+    <p>The recurring story on interview forums is someone who solved 250–300 problems and still failed, then passed after a smaller number done deliberately with mocks and re-solves. The mechanism isn't mysterious: interviews test whether you can <em>classify</em> an unfamiliar problem and <em>communicate</em> a solution under time pressure, and raw problem count trains neither. Budget at least a quarter of your algorithm hours for re-solves and mock conditions rather than new problems. And if you are starting from genuinely rusty fundamentals, be honest that this is a 3–6 month project rather than a 28-day one — the 28-day plan assumes you can already write a BFS without looking it up.</p>
+  </div>
+</section>

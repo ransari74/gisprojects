@@ -1,6 +1,6 @@
 <section id="blocks">
   <div class="sec-head">
-    <div class="eyebrow">Section 03</div>
+    <div class="eyebrow">Section 11 · System design</div>
     <h2>Building blocks</h2>
     <p>The vocabulary. For each one you should be able to say, unprompted: what problem it solves, what it costs you, and the one failure mode that bites in production. That triple is the difference between naming a component and understanding it.</p>
   </div>
@@ -44,6 +44,7 @@
     <li><strong>Geography</strong> — locality and data residency, at the cost of cross-region joins.</li>
   </ul>
   <p>Plain <code>hash(key) % N</code> remaps nearly every key when <code>N</code> changes. Consistent hashing places nodes and keys on a ring so adding a node only moves <code>K/N</code> keys; virtual nodes even out the distribution.</p>
+  <p>Know two neighbors of the idea, because "why a ring?" is a fair question. <strong>Rendezvous (highest-random-weight) hashing</strong> computes <code>hash(key, node)</code> for every node and takes the maximum — same K/N movement property, no ring and no virtual nodes to manage, at O(N) per lookup, which is fine for tens of nodes and not for thousands. <strong>Bounded-load consistent hashing</strong> adds a per-node capacity cap and spills past it, which is the answer when one key is genuinely hot and more vnodes won't help.</p>
 
   <div class="codehead"><span>consistent_hash.py · the version you can write in an interview</span><button class="copy" type="button">Copy</button></div>
 <pre><code><span class="kw">import</span> bisect, hashlib
@@ -57,7 +58,9 @@
             self.add(n)
 
     <span class="kw">def</span> _hash(self, key):
-        <span class="kw">return</span> int(hashlib.md5(key.encode()).hexdigest()[:<span class="nu">8</span>], <span class="nu">16</span>)
+        <span class="cm"># Full 128-bit digest, not a truncated prefix. With 100 nodes x 150 vnodes,</span>
+        <span class="cm"># a 32-bit space collides often enough to corrupt the ring silently.</span>
+        <span class="kw">return</span> int(hashlib.md5(key.encode()).hexdigest(), <span class="nu">16</span>)
 
     <span class="kw">def</span> add(self, node):
         <span class="kw">for</span> i <span class="kw">in</span> range(self.vnodes):        <span class="cm"># virtual nodes smooth the distribution</span>
@@ -69,17 +72,31 @@
         <span class="kw">for</span> i <span class="kw">in</span> range(self.vnodes):
             h = self._hash(<span class="st">f"{node}#{i}"</span>)
             <span class="kw">del</span> self.ring[h]
-            self.sorted_keys.remove(h)
+            <span class="kw">del</span> self.sorted_keys[bisect.bisect_left(self.sorted_keys, h)]   <span class="cm"># O(log n), not a scan</span>
 
     <span class="kw">def</span> get(self, key):
         <span class="kw">if</span> <span class="kw">not</span> self.ring: <span class="kw">return</span> <span class="kw">None</span>
         h = self._hash(key)
-        i = bisect.bisect(self.sorted_keys, h) % len(self.sorted_keys)  <span class="cm"># wrap the ring</span>
+        <span class="cm"># bisect_LEFT: we want the first node at or after h. bisect_right would</span>
+        <span class="cm"># skip past a node whose hash equals the key's exactly.</span>
+        i = bisect.bisect_left(self.sorted_keys, h) % len(self.sorted_keys)
         <span class="kw">return</span> self.ring[self.sorted_keys[i]]
 
-<span class="cm"># Follow-up they will ask: "a node dies — what happens to its data?"</span>
-<span class="cm"># Answer: replicate each key to the next R distinct physical nodes clockwise.</span>
-<span class="cm"># That is exactly what Dynamo/Cassandra do, and it is why R is a tunable.</span>
+    <span class="kw">def</span> get_replicas(self, key, r=<span class="nu">3</span>):
+        <span class="cm"># The follow-up they always ask: a node dies -- where is the data?</span>
+        <span class="cm"># Walk clockwise collecting R DISTINCT PHYSICAL nodes, skipping further</span>
+        <span class="cm"># vnodes of a node already chosen. Forget that and all three "replicas"</span>
+        <span class="cm"># can land on one machine, which is the classic implementation bug.</span>
+        <span class="kw">if</span> <span class="kw">not</span> self.ring: <span class="kw">return</span> []
+        start, out = bisect.bisect_left(self.sorted_keys, self._hash(key)), []
+        <span class="kw">for</span> step <span class="kw">in</span> range(len(self.sorted_keys)):
+            node = self.ring[self.sorted_keys[(start + step) % len(self.sorted_keys)]]
+            <span class="kw">if</span> node <span class="kw">not</span> <span class="kw">in</span> out:
+                out.append(node)
+                <span class="kw">if</span> len(out) == r: <span class="kw">break</span>
+        <span class="kw">return</span> out
+
+<span class="cm"># That is exactly what Dynamo and Cassandra do, and it is why R is a tunable.</span>
 </code></pre>
 
   <h3>Replication and consistency</h3>
@@ -94,18 +111,18 @@
       </tbody>
     </table>
   </div>
-  <p><strong>CAP, said correctly:</strong> during a network <em>partition</em> you choose availability or consistency. That's it — CAP says nothing about the 99.9% of the time there is no partition. <strong>PACELC</strong> is the sentence that actually matters in an interview: <em>if Partitioned, choose A or C; Else, choose Latency or Consistency.</em> Most systems are PA/EL (Dynamo, Cassandra) or PC/EC (Spanner, traditional RDBMS).</p>
-  <p><strong>The consistency ladder</strong>, weakest to strongest: eventual → read-your-writes → monotonic reads → causal → linearizable. Name the weakest one that satisfies the product. "Likes can be eventually consistent; the balance after a transfer cannot" is exactly the sentence they want.</p>
+  <p><strong>CAP, said correctly</strong> — and define the terms, because CAP uses them in a specific technical sense: <em>consistency</em> here means <strong>linearizability</strong> (every read sees the most recent completed write, as if there were one copy), not ACID's C; <em>availability</em> means <strong>every non-failing node returns a non-error response</strong>, which is a bar so high that almost no production system actually meets it. With those definitions: during a network <em>partition</em> you choose availability or consistency. That's it — CAP says nothing about the 99.9% of the time there is no partition. <strong>PACELC</strong> is the sentence that actually matters in an interview: <em>if Partitioned, choose A or C; Else, choose Latency or Consistency.</em> Most systems are PA/EL (Dynamo, Cassandra) or PC/EC (Spanner, traditional RDBMS).</p>
+  <p><strong>The consistency hierarchy</strong> is not a single line, and saying so correctly is a real signal. Eventual consistency is the floor. Above it sit the four <em>session guarantees</em> — read-your-writes, monotonic reads, monotonic writes, writes-follow-reads — which are <strong>mutually incomparable</strong>: none implies another, and you pick the ones your product needs. Above those: causal, then sequential, then linearizable. Multi-object transactions are a <em>separate, orthogonal</em> axis — read committed &lt; snapshot isolation &lt; serializable &lt; strict serializability (see §02). Name the weakest guarantee that satisfies the product: "likes can be eventually consistent, but a user must read their own comment immediately, and the balance after a transfer needs serializable" is exactly the sentence they want.</p>
 
   <h3>Storage engines: pick one and know why</h3>
   <div class="tbl-wrap">
     <table>
       <thead><tr><th>Engine</th><th>Write path</th><th>Read path</th><th>Choose it for</th></tr></thead>
       <tbody>
-        <tr><td><strong>B-tree</strong> (Postgres, MySQL/InnoDB)</td><td>In-place update, random I/O, WAL first</td><td>O(log n), one seek to the leaf</td><td>Transactions, joins, secondary indexes, read-modify-write. Your default until proven otherwise.</td></tr>
-        <tr><td><strong>LSM tree</strong> (Cassandra, RocksDB, HBase)</td><td>Append to memtable → flush sorted files → compact</td><td>Check memtable, then each level; Bloom filters skip files</td><td>Write-heavy workloads, time series, huge datasets. Cost: read amplification and compaction pauses.</td></tr>
+        <tr><td><strong>B-tree</strong> (Postgres, MySQL/InnoDB)</td><td>In-place update, random I/O, WAL first</td><td>O(log<sub>B</sub> n) levels — one leaf read, <em>if</em> the internal pages are already in the buffer pool</td><td>Transactions, joins, secondary indexes, read-modify-write. Your default until proven otherwise.</td></tr>
+        <tr><td><strong>LSM tree</strong> (Cassandra, RocksDB, HBase)</td><td>Append to memtable → flush sorted files → compact</td><td>Check memtable, then each level; Bloom filters skip files</td><td>Write-heavy workloads, time series, huge datasets. Costs: read amplification, <strong>10–30× write amplification</strong> under leveled compaction, and compaction pauses that surface as p99 spikes. Wins on space: immutable sorted files pack densely, while B-tree pages sit 50–70% full. The general framing is the <strong>RUM conjecture</strong> — you optimize two of Read, Update, and Memory overhead, never all three.</td></tr>
         <tr><td><strong>Columnar</strong> (BigQuery, Redshift, Parquet)</td><td>Batch, immutable</td><td>Scan a few columns over billions of rows</td><td>Analytics and ML training data. Never for point lookups.</td></tr>
-        <tr><td><strong>Document</strong> (MongoDB, DynamoDB)</td><td>Whole-document write</td><td>Key or index lookup</td><td>Access patterns known in advance, schema per tenant, no cross-entity joins.</td></tr>
+        <tr><td><strong>Document</strong> (MongoDB, Couchbase)</td><td>Whole-document write</td><td>Key or index lookup</td><td>Access patterns known in advance, schema per tenant, no cross-entity joins. <em>DynamoDB is a wide-column key-value store, not a document store — it does partial attribute updates and has a very different consistency model.</em></td></tr>
       </tbody>
     </table>
   </div>
@@ -136,31 +153,48 @@
   </div>
 
   <div class="codehead"><span>token_bucket.lua · atomic in Redis, which is the real question</span><button class="copy" type="button">Copy</button></div>
-<pre><code><span class="cm">-- KEYS[1]=bucket key  ARGV: rate(tok/s), capacity, now(s), requested</span>
-<span class="kw">local</span> rate, cap, now, want = tonumber(ARGV[<span class="nu">1</span>]), tonumber(ARGV[<span class="nu">2</span>]), tonumber(ARGV[<span class="nu">3</span>]), tonumber(ARGV[<span class="nu">4</span>])
-<span class="kw">local</span> b = redis.call(<span class="st">'HMGET'</span>, KEYS[<span class="nu">1</span>], <span class="st">'tokens'</span>, <span class="st">'ts'</span>)
+<pre><code><span class="cm">-- KEYS[1]=bucket key    ARGV: rate(tokens/s), capacity, requested</span>
+<span class="kw">local</span> rate, cap, want = tonumber(ARGV[<span class="nu">1</span>]), tonumber(ARGV[<span class="nu">2</span>]), tonumber(ARGV[<span class="nu">3</span>])
+
+<span class="cm">-- Take the clock from REDIS, not from the caller. App servers have skewed</span>
+<span class="cm">-- clocks, and a caller-supplied `now` that runs backwards drains the bucket</span>
+<span class="cm">-- by arithmetic alone. "Where does the time come from" is the follow-up here.</span>
+<span class="kw">local</span> t   = redis.call(<span class="st">'TIME'</span>)
+<span class="kw">local</span> now = tonumber(t[<span class="nu">1</span>]) + tonumber(t[<span class="nu">2</span>]) / <span class="nu">1000000</span>
+
+<span class="kw">local</span> b      = redis.call(<span class="st">'HMGET'</span>, KEYS[<span class="nu">1</span>], <span class="st">'tokens'</span>, <span class="st">'ts'</span>)
 <span class="kw">local</span> tokens = tonumber(b[<span class="nu">1</span>]) <span class="kw">or</span> cap
 <span class="kw">local</span> ts     = tonumber(b[<span class="nu">2</span>]) <span class="kw">or</span> now
 
-tokens = math.min(cap, tokens + (now - ts) * rate)   <span class="cm">-- refill for elapsed time</span>
-<span class="kw">local</span> allowed = tokens >= want
-<span class="kw">if</span> allowed <span class="kw">then</span> tokens = tokens - want <span class="kw">end</span>
+<span class="kw">local</span> elapsed = math.max(<span class="nu">0</span>, now - ts)                  <span class="cm">-- clamp: never refill negatively</span>
+tokens = math.min(cap, tokens + elapsed * rate)
 
-redis.call(<span class="st">'HMSET'</span>, KEYS[<span class="nu">1</span>], <span class="st">'tokens'</span>, tokens, <span class="st">'ts'</span>, now)
-redis.call(<span class="st">'EXPIRE'</span>, KEYS[<span class="nu">1</span>], math.ceil(cap / rate) * <span class="nu">2</span>)  <span class="cm">-- reclaim idle buckets</span>
-<span class="kw">return</span> { allowed <span class="kw">and</span> <span class="nu">1</span> <span class="kw">or</span> <span class="nu">0</span>, tokens }
+<span class="kw">local</span> allowed, retry_after = <span class="nu">0</span>, <span class="nu">0</span>
+<span class="kw">if</span> tokens >= want <span class="kw">then</span>
+  tokens, allowed = tokens - want, <span class="nu">1</span>
+<span class="kw">else</span>
+  retry_after = (want - tokens) / rate                    <span class="cm">-- tell the client WHEN to come back</span>
+<span class="kw">end</span>
+
+redis.call(<span class="st">'HSET'</span>, KEYS[<span class="nu">1</span>], <span class="st">'tokens'</span>, tokens, <span class="st">'ts'</span>, now)
+redis.call(<span class="st">'EXPIRE'</span>, KEYS[<span class="nu">1</span>], math.ceil(cap / rate) * <span class="nu">2</span>)  <span class="cm">-- an idle bucket refills to full anyway</span>
+
+<span class="cm">-- Return STRINGS: Redis truncates Lua numbers to integers on the wire,</span>
+<span class="cm">-- which would silently destroy the fractional retry_after.</span>
+<span class="kw">return</span> { allowed, tostring(tokens), tostring(retry_after) }
 </code></pre>
-  <p>The follow-ups: <em>where does this run?</em> (at the edge/gateway, before your app burns CPU) · <em>what if Redis is down?</em> (fail open for availability, fail closed for abuse protection — say which and why) · <em>how do you avoid a round trip per request?</em> (local buckets per node with <code>limit/N</code>, periodically reconciled — approximate but cheap).</p>
+  <p>The follow-ups: <em>where does this run?</em> (at the edge/gateway, before your app burns CPU) · <em>what if Redis is down?</em> (fail open for availability, fail closed for abuse protection — say which and why) · <em>how do you avoid a round trip per request?</em> (local buckets per node with <code>limit/N</code>, periodically reconciled — approximate but cheap) · <em>what about one abusive tenant?</em> (their key lives on one shard, so a hot tenant is a hot shard — split the key into <code>k</code> sub-buckets chosen at random and enforce <code>limit/k</code> on each).</p>
 
   <h3>Bloom filters</h3>
   <p>A bit array plus <em>k</em> hash functions. Answers "definitely not present" or "maybe present" in O(k) with no false negatives. For <em>n</em> items and false-positive rate <em>p</em>: <code>m = -n·ln(p) / (ln2)²</code> bits and <code>k = (m/n)·ln2</code>. Practically: <strong>~10 bits per element gives ~1% false positives</strong> — one billion keys in about 1.2 GB. Uses: skipping SSTable reads in an LSM tree, avoiding cache penetration, "have I seen this URL" in a crawler.</p>
+  <p><strong>The follow-up is always deletion.</strong> You cannot remove an element from a standard Bloom filter — clearing its bits would break every other element that shares one. The three answers: a <strong>counting Bloom filter</strong> (4-bit counters instead of bits, 4× the space), a <strong>cuckoo filter</strong> (supports deletion, similar space, and gives you a lookup structure rather than just a membership bit), or <strong>rebuild and swap</strong> periodically, which is what most systems actually do. Also know that the false-positive rate degrades as you insert past the <em>n</em> you sized for — which is why RocksDB builds one filter per SSTable rather than one per database.</p>
 
   <h3>Proximity and geospatial indexing</h3>
   <p>Worth knowing cold — it turns up in ride-hailing, delivery, "nearby friends", and store locators.</p>
   <ul>
-    <li><strong>Geohash</strong> — interleave latitude and longitude bits into a base-32 string. A shared prefix means spatial proximity, so a plain B-tree prefix scan becomes a proximity query and it works in any boring database. Weakness: cells near a boundary are far apart in string space, so query the cell <em>and its eight neighbors</em>.</li>
+    <li><strong>Geohash</strong> — interleave latitude and longitude bits into a base-32 string. Cells are rectangles, not squares (precision 6 ≈ 1.2 km × 0.6 km at the equator) and they narrow toward the poles, so size precision off the shorter side. A shared prefix means spatial proximity, so a plain B-tree prefix scan becomes a proximity query and it works in any boring database. Weakness: cells near a boundary are far apart in string space, so query the cell <em>and its eight neighbors</em>.</li>
     <li><strong>Quadtree</strong> — recursively split a cell into four until it holds fewer than <em>k</em> points. Adapts to density, which geohash doesn't: Manhattan and the Pacific get very different tree depths. In-memory, needs rebuilding.</li>
-    <li><strong>S2 / H3</strong> — Google's and Uber's cell systems. H3's hexagons have uniform neighbor distance, which is why it wins for demand aggregation and surge pricing.</li>
+    <li><strong>S2 / H3</strong> — Google's and Uber's cell systems. H3's hexagons have uniform <em>neighbor distance</em> (every neighbour's centroid is equidistant, unlike a square grid's diagonals), which is why it wins for demand aggregation and surge pricing. Two caveats worth volunteering: cell areas still vary roughly 2× within a resolution, and the icosahedral projection forces exactly <strong>12 pentagons</strong> per resolution.</li>
     <li><strong>The moving-object trick</strong> — don't index the drivers, index a grid and let drivers publish location every 3–5 s into a Redis <code>GEOADD</code> / hash keyed by cell. Reads are "give me cells within radius"; writes are cheap overwrites, and staleness of a few seconds is invisible to the user.</li>
   </ul>
 

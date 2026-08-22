@@ -1,7 +1,7 @@
 
 <section id="designs2">
   <div class="sec-head">
-    <div class="eyebrow">Section 12 · System design</div>
+    <div class="eyebrow">Section 13 · System design</div>
     <h2>Four harder designs</h2>
     <p>These four are chosen because each one forces a concept the first four don't: time-based work distribution, conflict resolution without a lock, extreme write compression, and correctness where being wrong costs money.</p>
   </div>
@@ -106,7 +106,7 @@ compressed/year                            ≈ <span class="nu">440 TB/year</spa
 </code></pre>
 
   <p><strong>The architecture</strong> is a specialized LSM tree: agents push samples to an ingest tier, which appends to a write-ahead log and accumulates a <strong>head block</strong> in memory (the last couple of hours, uncompressed and queryable). Periodically the head block is compressed and written out as an immutable block to object storage, with its own index. Queries fan out across the blocks covering the time range, plus the head block, and merge. Old blocks are compacted and downsampled by a background job.</p>
-  <p>A series is identified by its <strong>label set</strong> — <code>http_requests{service="api", region="us-east", status="500"}</code> — and lookup is an inverted index: label pair → posting list of series ids, intersected across the query's matchers. This is literally the search-engine design from §14 applied to metrics, and pointing that out is a nice moment of synthesis.</p>
+  <p>A series is identified by its <strong>label set</strong> — <code>http_requests{service="api", region="us-east", status="500"}</code> — and lookup is an inverted index: label pair → posting list of series ids, intersected across the query's matchers. This is literally the search-engine design from §15 applied to metrics, and pointing that out is a nice moment of synthesis.</p>
 
   <h4>Deep dive: cardinality is the thing that kills these systems</h4>
   <p>Every distinct combination of label values is a separate series with its own index entry and its own memory. Adding one label with a high-cardinality value — <code>user_id</code>, <code>request_id</code>, a raw URL with ids in it — multiplies your series count by millions and takes the cluster down. <strong>This is the number one production failure of every metrics system</strong>, and naming it unprompted is a strong signal. Defenses: enforce a per-metric series limit at ingest and reject beyond it, strip unbounded labels at the agent, expose cardinality as a first-class metric, and route genuinely high-cardinality data to a logging or tracing system instead — those are designed for it, and metrics are not.</p>

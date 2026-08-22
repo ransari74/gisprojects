@@ -309,24 +309,34 @@ nav.toc .part:first-of-type{margin-top:14px}
   <p class="sub">A one-month FAANG interview build: system design, AI/ML systems, and algorithms — with worked examples you can read straight through.</p>
 
   <nav class="toc" id="toc">
-    <div class="grp">The plan</div>
+    <div class="part">Orientation</div>
     <a href="#plan"><span class="num">00</span>The 28-day calendar</a>
-    <div class="grp">System design</div>
-    <a href="#framework"><span class="num">01</span>The framework</a>
-    <a href="#numbers"><span class="num">02</span>Numbers &amp; capacity math</a>
-    <a href="#blocks"><span class="num">03</span>Building blocks</a>
-    <a href="#designs"><span class="num">04</span>Four worked designs</a>
-    <div class="grp">The AI track</div>
-    <a href="#mlframework"><span class="num">05</span>ML design framework</a>
-    <a href="#mldesigns"><span class="num">06</span>Four worked ML designs</a>
-    <a href="#mldepth"><span class="num">07</span>AI depth questions</a>
-    <div class="grp">Algorithms</div>
-    <a href="#dsa"><span class="num">08</span>The 14 patterns</a>
-    <a href="#coding"><span class="num">09</span>Running the coding hour</a>
-    <div class="grp">The loop</div>
-    <a href="#behavioral"><span class="num">10</span>Behavioral &amp; the story bank</a>
-    <a href="#mocks"><span class="num">11</span>Mocks &amp; self-grading</a>
-    <a href="#cheat"><span class="num">12</span>The one-page recall sheet</a>
+    <div class="part">Foundations</div>
+    <a href="#request"><span class="num">01</span>How a page loads</a>
+    <a href="#dbfoundations"><span class="num">02</span>Databases from scratch</a>
+    <a href="#bigo"><span class="num">03</span>Complexity, properly</a>
+    <div class="part">Algorithms</div>
+    <a href="#dsa"><span class="num">04</span>The 14 core patterns</a>
+    <a href="#patterns2"><span class="num">05</span>Six more patterns</a>
+    <a href="#leetcode"><span class="num">06</span>The LeetCode ladder</a>
+    <a href="#review"><span class="num">07</span>The review system</a>
+    <a href="#coding"><span class="num">08</span>Running the coding hour</a>
+    <div class="part">System design</div>
+    <a href="#framework"><span class="num">09</span>The framework</a>
+    <a href="#numbers"><span class="num">10</span>Numbers &amp; capacity math</a>
+    <a href="#blocks"><span class="num">11</span>Building blocks</a>
+    <a href="#designs"><span class="num">12</span>Four worked designs</a>
+    <a href="#designs2"><span class="num">13</span>Four harder designs</a>
+    <div class="part">AI &amp; ML</div>
+    <a href="#mlframework"><span class="num">14</span>ML design framework</a>
+    <a href="#mldesigns"><span class="num">15</span>Four worked ML designs</a>
+    <a href="#llmsystems"><span class="num">16</span>LLM &amp; agent systems</a>
+    <a href="#mldepth"><span class="num">17</span>AI depth questions</a>
+    <div class="part">The loop</div>
+    <a href="#behavioral"><span class="num">18</span>Behavioral &amp; stories</a>
+    <a href="#mocks"><span class="num">19</span>Mocks &amp; self-grading</a>
+    <a href="#companies"><span class="num">20</span>Company by company</a>
+    <a href="#cheat"><span class="num">21</span>The recall sheet</a>
   </nav>
 
   <div class="railbtns">
@@ -344,15 +354,15 @@ nav.toc .part:first-of-type{margin-top:14px}
   <p class="lede">Most prep fails because it is a reading list. This is a schedule with a rehearsal in it: every day pairs one system-design or ML-systems topic with a timed algorithm block, and every weekend ends in a mock you grade yourself against a rubric. Read it in order, or jump to the section you are weak in.</p>
   <div class="statrow">
     <div><div class="k">28</div><div class="l">days planned</div></div>
-    <div><div class="k">8</div><div class="l">worked designs</div></div>
-    <div><div class="k">14</div><div class="l">algo patterns</div></div>
-    <div><div class="k">4</div><div class="l">graded mocks</div></div>
+    <div><div class="k">12</div><div class="l">worked designs</div></div>
+    <div><div class="k">22</div><div class="l">algo patterns</div></div>
+    <div><div class="k">175</div><div class="l">problems, mapped</div></div>
   </div>
 </header>
 
 <section id="plan">
   <div class="sec-head">
-    <div class="eyebrow">Section 00</div>
+    <div class="eyebrow">Section 00 · Orientation</div>
     <h2>The 28-day calendar</h2>
     <p>Built for roughly <strong>3 hours on weekdays and 5 on weekends</strong>. If you have less, keep the algorithm block and the weekend mocks — drop the second design read instead. The order matters: distributed-systems vocabulary in weeks 1–2 is what makes the ML designs in week 3 say anything interesting.</p>
   </div>
@@ -406,7 +416,7 @@ nav.toc .part:first-of-type{margin-top:14px}
     <div class="day k-mix"><div class="d">Day 25</div><div class="w">Repair week: your gap list only</div><div class="m">Nothing new. Only what you missed.</div></div>
     <div class="day k-dsa"><div class="d">Day 26</div><div class="w">Timed set: 2 × 45 min</div><div class="m">Full interview conditions, no IDE</div></div>
     <div class="day k-mix"><div class="d">Day 27</div><div class="w">Mocks #3 and #4</div><div class="m">One SD, one ML, back to back</div></div>
-    <div class="day rest"><div class="d">Day 28</div><div class="w">Recall sheet &amp; rest</div><div class="m">Read §12 aloud. Sleep. Stop studying.</div></div>
+    <div class="day rest"><div class="d">Day 28</div><div class="w">Recall sheet &amp; rest</div><div class="m">Read §21 aloud. Sleep. Stop studying.</div></div>
   </div>
 
   <div class="callout">
@@ -642,13 +652,13 @@ nav.toc .part:first-of-type{margin-top:14px}
       <tbody>
         <tr><td><strong>Relational</strong></td><td>Postgres, MySQL</td><td>You need transactions, joins, ad-hoc queries, or you don't yet know the access patterns. <em>The correct default.</em></td><td>You genuinely exceed one machine's write throughput and can't shard cleanly.</td></tr>
         <tr><td><strong>Wide-column</strong></td><td>Cassandra, ScyllaDB, HBase</td><td>Massive write volume, time-series or event data, known query patterns, linear scale-out, multi-region writes.</td><td>You need joins, ad-hoc queries, or strong consistency by default.</td></tr>
-        <tr><td><strong>Document</strong></td><td>MongoDB, DynamoDB</td><td>Self-contained documents, schema varying per record, access always by key or a known index.</td><td>Relationships matter. Modeling a graph as documents ends badly.</td></tr>
-        <tr><td><strong>Key-value</strong></td><td>Redis, Memcached, DynamoDB</td><td>Caching, sessions, counters, rate limits, queues, leaderboards. Sub-millisecond.</td><td>It's your source of truth and you can't tolerate loss (unless configured carefully).</td></tr>
+        <tr><td><strong>Document</strong></td><td>MongoDB, Couchbase</td><td>Self-contained documents, schema varying per record, access always by key or a known index.</td><td>Relationships matter. Modeling a graph as documents ends badly.</td></tr>
+        <tr><td><strong>Key-value / wide-column</strong></td><td>Redis, Memcached, DynamoDB</td><td>Caching, sessions, counters, rate limits, queues, leaderboards. Sub-millisecond.</td><td>It's your source of truth and you can't tolerate loss (unless configured carefully).</td></tr>
         <tr><td><strong>Search</strong></td><td>Elasticsearch, OpenSearch</td><td>Full-text relevance, faceting, aggregations over text.</td><td>As a primary store. It's a derived index — rebuild it from the real database.</td></tr>
         <tr><td><strong>Time-series</strong></td><td>Prometheus, InfluxDB, TimescaleDB</td><td>Metrics: timestamped numbers, written constantly, queried by range, downsampled as they age.</td><td>Anything with updates or relationships.</td></tr>
         <tr><td><strong>Graph</strong></td><td>Neo4j, Neptune</td><td>Multi-hop traversals — fraud rings, social distance, recommendations over a graph.</td><td>One hop. A join does that fine.</td></tr>
         <tr><td><strong>Columnar / OLAP</strong></td><td>BigQuery, Snowflake, ClickHouse</td><td>Analytics scanning billions of rows over a few columns; ML training data.</td><td>Point lookups or per-row updates.</td></tr>
-        <tr><td><strong>Vector</strong></td><td>pgvector, Pinecone, Qdrant, FAISS</td><td>Similarity over embeddings — semantic search, recommendation retrieval, RAG.</td><td>Exact-match lookups. Use a real index next to it (§14).</td></tr>
+        <tr><td><strong>Vector</strong></td><td>pgvector, Pinecone, Qdrant, FAISS</td><td>Similarity over embeddings — semantic search, recommendation retrieval, RAG.</td><td>Exact-match lookups. Use a real index next to it (§15).</td></tr>
       </tbody>
     </table>
   </div>
@@ -777,12 +787,12 @@ left = <span class="nu">0</span>
 </div>
 <section id="dsa">
   <div class="sec-head">
-    <div class="eyebrow">Section 08</div>
-    <h2>The 14 patterns</h2>
+    <div class="eyebrow">Section 04 · Algorithms</div>
+    <h2>The sixteen core patterns</h2>
     <p>Interview algorithm problems are recombinations of a small number of patterns. The skill being tested is <strong>recognition speed</strong> — mapping a novel problem statement onto a template you already own within the first two minutes. Learn the trigger phrases first; the code is the easy half.</p>
   </div>
 
-  <h3>Recognition table — read this one until it's automatic</h3>
+  <h3>Recognition table — read this one until it is automatic</h3>
   <div class="tbl-wrap">
     <table>
       <thead><tr><th>When you see…</th><th>Reach for</th><th class="num">Typical</th></tr></thead>
@@ -1008,8 +1018,8 @@ left = <span class="nu">0</span>
 <span class="cm"># Kruskal's MST is: sort edges by weight, union them, skip the False ones.</span>
 </code></pre>
 
-  <div class="codehead"><span>8 · backtracking — one shape, three problems</span><button class="copy" type="button">Copy</button></div>
-<pre><code><span class="kw">def</span> combination_sum(candidates, target):
+  <div class="codehead"><span>8 · backtracking — one shape, three problems (this is LC 40, Combination Sum II)</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">def</span> combination_sum_ii(candidates, target):
     <span class="st">"""choose -> recurse -> UNDO. The undo is what makes it backtracking."""</span>
     candidates.sort()                    <span class="cm"># enables both pruning and dedup</span>
     res, path = [], []
@@ -1030,6 +1040,12 @@ left = <span class="nu">0</span>
     backtrack(<span class="nu">0</span>, target)
     <span class="kw">return</span> res
 
+<span class="cm"># This exact code is LeetCode 40 (each candidate used ONCE, duplicates skipped).</span>
+<span class="cm"># LeetCode 39, where a candidate may be REUSED, is one character different:</span>
+<span class="cm">#     backtrack(i, remaining - candidates[i])     # i, not i+1</span>
+<span class="cm"># and you drop the duplicate-skip line. Knowing which line encodes "reuse"</span>
+<span class="cm"># and which encodes "no duplicates" is the whole family.</span>
+<span class="cm">#</span>
 <span class="cm"># Subsets: append path[:] at EVERY node instead of only at the base case.</span>
 <span class="cm"># Permutations: iterate all indices with a `used` array instead of `start`.</span>
 </code></pre>
@@ -1366,9 +1382,402 @@ sub = mask
     <li><strong>Rate limiter</strong> — the token bucket from §11, in-process rather than in Redis.</li>
   </ol>
 </section>
+
+<section id="leetcode">
+  <div class="sec-head">
+    <div class="eyebrow">Section 06 · Algorithms</div>
+    <h2>The LeetCode ladder</h2>
+    <p>175 problems, organized by pattern rather than by difficulty, each list ordered from most foundational to hardest. Every number and title here was verified against a full problem index rather than copied from a community list — several popular mirrors contain wrong numbers, and a wrong number in a study plan costs you an evening.</p>
+  </div>
+
+  <h3>Which curated list, and why it matters less than you think</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>List</th><th class="num">Size</th><th>Organized by</th><th>Best for</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Blind 75</strong></td><td class="num">75</td><td>Topic</td><td>Maximum famous-problem density per hour. Note that <em>its own author stopped recommending it in 2022</em> in favour of Grind 75 — it's a starting point now, not an endpoint. Also has no easy on-ramp: it drops you into hards.</td></tr>
+        <tr><td><strong>Grind 75</strong></td><td class="num">75, or regenerated</td><td>Difficulty progression</td><td>A fixed deadline and a wish for someone else to make the schedule. Better ordering than Blind 75; the cost is that you thrash between patterns day to day, which is the opposite of how most people build recognition.</td></tr>
+        <tr><td><strong>NeetCode 150</strong></td><td class="num">150</td><td>18 pattern buckets</td><td><strong>The consensus default.</strong> Pattern-blocked, superset of Blind 75, and a free video solution for every problem — the best learning-efficiency combination available. A handful of entries are LeetCode Premium-locked.</td></tr>
+        <tr><td><strong>Top Interview 150</strong></td><td class="num">150</td><td>Topic</td><td>LeetCode's own plan, drawn from their interview-frequency data. Its virtue is the <em>unglamorous</em> problems the influencer lists skip — Text Justification, H-Index, Simplify Path — which is exactly what Amazon and Microsoft phone screens are full of. Weakest pedagogy of the four.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The list below is a merge, pattern-blocked in the NeetCode style, with the Top Interview 150's practical additions folded in. If you have less than four weeks, do only the <strong>bolded</strong> problems — 48 of them, two or three per pattern, chosen because each teaches one idea the rest of its group reuses.</p>
+
+  <div class="callout">
+    <div class="ct">How to work the ladder</div>
+    <p>Do a pattern <em>in a block</em> of five to seven problems — that's what builds the template into your fingers. Then <strong>interleave on review days</strong>: shuffle problems from different patterns, because in the real interview nobody tells you which pattern it is, and classifying it is the actual skill being tested. Rate every attempt and follow the spacing schedule in §07; an untracked ladder becomes a list of problems you once saw.</p>
+  </div>
+
+  <h3>The ladder</h3>
+  <p style="color:var(--ink-3);font-size:14.5px;max-width:var(--measure)">Bold = the "if you only do three" picks. <span class="tag" style="font-size:9px;padding:1px 5px">premium</span> = requires LeetCode Premium; free equivalents exist on NeetCode's site. <strong>72 Edit Distance</strong> is currently labelled Medium by LeetCode but is Hard in difficulty — most guides still list it as Hard.</p>
+  <div class="railprog" style="margin:14px 0 24px"><span id="lccount">0 / 175 solved</span><span class="progressbar"><i id="lcbar"></i></span></div>
+
+  <h4>Arrays &amp; hashing</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">The base case for everything: a hash map converts a nested-loop search into one pass.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">217</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc217" data-g="lc"><label for="lc217">&nbsp;Contains Duplicate</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">242</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc242" data-g="lc"><label for="lc242">&nbsp;Valid Anagram</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">1</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc1" data-g="lc"><label for="lc1" class="st">&nbsp;Two Sum</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">169</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc169" data-g="lc"><label for="lc169">&nbsp;Majority Element</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">49</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc49" data-g="lc"><label for="lc49">&nbsp;Group Anagrams</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">347</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc347" data-g="lc"><label for="lc347">&nbsp;Top K Frequent Elements</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">238</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc238" data-g="lc"><label for="lc238" class="st">&nbsp;Product of Array Except Self</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">271</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc271" data-g="lc"><label for="lc271">&nbsp;Encode and Decode Strings</label></span> <span class="tag" style="font-size:9px;padding:1px 5px">premium</span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">128</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc128" data-g="lc"><label for="lc128" class="st">&nbsp;Longest Consecutive Sequence</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">36</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc36" data-g="lc"><label for="lc36">&nbsp;Valid Sudoku</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">380</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc380" data-g="lc"><label for="lc380">&nbsp;Insert Delete GetRandom O(1)</label></span></span><span class="df m">Med</span></div>
+  </div>
+  <h4>Two pointers</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Converging or same-direction pointers on sorted or partitionable data.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">125</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc125" data-g="lc"><label for="lc125" class="st">&nbsp;Valid Palindrome</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">283</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc283" data-g="lc"><label for="lc283">&nbsp;Move Zeroes</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">88</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc88" data-g="lc"><label for="lc88">&nbsp;Merge Sorted Array</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">26</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc26" data-g="lc"><label for="lc26">&nbsp;Remove Duplicates from Sorted Array</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">680</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc680" data-g="lc"><label for="lc680">&nbsp;Valid Palindrome II</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">167</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc167" data-g="lc"><label for="lc167">&nbsp;Two Sum II - Input Array Is Sorted</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">11</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc11" data-g="lc"><label for="lc11">&nbsp;Container With Most Water</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">15</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc15" data-g="lc"><label for="lc15" class="st">&nbsp;3Sum</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">75</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc75" data-g="lc"><label for="lc75">&nbsp;Sort Colors</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">42</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc42" data-g="lc"><label for="lc42" class="st">&nbsp;Trapping Rain Water</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Sliding window</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Contiguous subarray or substring, with a cheap validity invariant.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">121</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc121" data-g="lc"><label for="lc121">&nbsp;Best Time to Buy and Sell Stock</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">643</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc643" data-g="lc"><label for="lc643">&nbsp;Maximum Average Subarray I</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">3</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc3" data-g="lc"><label for="lc3" class="st">&nbsp;Longest Substring Without Repeating Characters</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">209</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc209" data-g="lc"><label for="lc209">&nbsp;Minimum Size Subarray Sum</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">424</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc424" data-g="lc"><label for="lc424" class="st">&nbsp;Longest Repeating Character Replacement</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">567</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc567" data-g="lc"><label for="lc567">&nbsp;Permutation in String</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">438</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc438" data-g="lc"><label for="lc438">&nbsp;Find All Anagrams in a String</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">1004</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc1004" data-g="lc"><label for="lc1004">&nbsp;Max Consecutive Ones III</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">76</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc76" data-g="lc"><label for="lc76" class="st">&nbsp;Minimum Window Substring</label></span></span><span class="df h">Hard</span></div>
+    <div class="lc"><span class="no">239</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc239" data-g="lc"><label for="lc239">&nbsp;Sliding Window Maximum</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Binary search</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Sorted input — or any monotone predicate, including over the answer space.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">704</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc704" data-g="lc"><label for="lc704" class="st">&nbsp;Binary Search</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">35</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc35" data-g="lc"><label for="lc35">&nbsp;Search Insert Position</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">278</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc278" data-g="lc"><label for="lc278">&nbsp;First Bad Version</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">74</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc74" data-g="lc"><label for="lc74">&nbsp;Search a 2D Matrix</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">153</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc153" data-g="lc"><label for="lc153">&nbsp;Find Minimum in Rotated Sorted Array</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">33</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc33" data-g="lc"><label for="lc33" class="st">&nbsp;Search in Rotated Sorted Array</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">162</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc162" data-g="lc"><label for="lc162">&nbsp;Find Peak Element</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">875</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc875" data-g="lc"><label for="lc875" class="st">&nbsp;Koko Eating Bananas</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">1011</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc1011" data-g="lc"><label for="lc1011">&nbsp;Capacity To Ship Packages Within D Days</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">981</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc981" data-g="lc"><label for="lc981">&nbsp;Time Based Key-Value Store</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">410</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc410" data-g="lc"><label for="lc410">&nbsp;Split Array Largest Sum</label></span></span><span class="df h">Hard</span></div>
+    <div class="lc"><span class="no">4</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc4" data-g="lc"><label for="lc4">&nbsp;Median of Two Sorted Arrays</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Stack &amp; monotonic stack</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Nesting, and 'next greater/smaller' — each index pushed and popped once.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">20</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc20" data-g="lc"><label for="lc20" class="st">&nbsp;Valid Parentheses</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">496</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc496" data-g="lc"><label for="lc496">&nbsp;Next Greater Element I</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">155</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc155" data-g="lc"><label for="lc155">&nbsp;Min Stack</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">150</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc150" data-g="lc"><label for="lc150">&nbsp;Evaluate Reverse Polish Notation</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">1249</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc1249" data-g="lc"><label for="lc1249">&nbsp;Minimum Remove to Make Valid Parentheses</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">739</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc739" data-g="lc"><label for="lc739" class="st">&nbsp;Daily Temperatures</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">735</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc735" data-g="lc"><label for="lc735">&nbsp;Asteroid Collision</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">71</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc71" data-g="lc"><label for="lc71">&nbsp;Simplify Path</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">853</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc853" data-g="lc"><label for="lc853">&nbsp;Car Fleet</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">227</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc227" data-g="lc"><label for="lc227">&nbsp;Basic Calculator II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">84</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc84" data-g="lc"><label for="lc84" class="st">&nbsp;Largest Rectangle in Histogram</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Linked list</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Three subroutines — reverse, find middle, merge — recombined endlessly.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">206</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc206" data-g="lc"><label for="lc206" class="st">&nbsp;Reverse Linked List</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">21</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc21" data-g="lc"><label for="lc21">&nbsp;Merge Two Sorted Lists</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">876</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc876" data-g="lc"><label for="lc876">&nbsp;Middle of the Linked List</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">141</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc141" data-g="lc"><label for="lc141">&nbsp;Linked List Cycle</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">2</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc2" data-g="lc"><label for="lc2">&nbsp;Add Two Numbers</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">19</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc19" data-g="lc"><label for="lc19">&nbsp;Remove Nth Node From End of List</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">143</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc143" data-g="lc"><label for="lc143" class="st">&nbsp;Reorder List</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">138</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc138" data-g="lc"><label for="lc138">&nbsp;Copy List with Random Pointer</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">142</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc142" data-g="lc"><label for="lc142">&nbsp;Linked List Cycle II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">146</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc146" data-g="lc"><label for="lc146" class="st">&nbsp;LRU Cache</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">23</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc23" data-g="lc"><label for="lc23">&nbsp;Merge k Sorted Lists</label></span></span><span class="df h">Hard</span></div>
+    <div class="lc"><span class="no">25</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc25" data-g="lc"><label for="lc25">&nbsp;Reverse Nodes in k-Group</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Trees</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">What to return up, what to pass down — and level-by-level BFS.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">104</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc104" data-g="lc"><label for="lc104" class="st">&nbsp;Maximum Depth of Binary Tree</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">226</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc226" data-g="lc"><label for="lc226">&nbsp;Invert Binary Tree</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">543</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc543" data-g="lc"><label for="lc543">&nbsp;Diameter of Binary Tree</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">235</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc235" data-g="lc"><label for="lc235">&nbsp;Lowest Common Ancestor of a BST</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">102</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc102" data-g="lc"><label for="lc102" class="st">&nbsp;Binary Tree Level Order Traversal</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">199</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc199" data-g="lc"><label for="lc199">&nbsp;Binary Tree Right Side View</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">98</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc98" data-g="lc"><label for="lc98">&nbsp;Validate Binary Search Tree</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">230</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc230" data-g="lc"><label for="lc230">&nbsp;Kth Smallest Element in a BST</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">236</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc236" data-g="lc"><label for="lc236" class="st">&nbsp;Lowest Common Ancestor of a Binary Tree</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">105</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc105" data-g="lc"><label for="lc105">&nbsp;Construct Binary Tree from Preorder and Inorder Traversal</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">124</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc124" data-g="lc"><label for="lc124">&nbsp;Binary Tree Maximum Path Sum</label></span></span><span class="df h">Hard</span></div>
+    <div class="lc"><span class="no">297</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc297" data-g="lc"><label for="lc297">&nbsp;Serialize and Deserialize Binary Tree</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Tries</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Prefix structure — and the trick of indexing the dictionary instead of the input.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">14</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc14" data-g="lc"><label for="lc14">&nbsp;Longest Common Prefix</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">208</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc208" data-g="lc"><label for="lc208" class="st">&nbsp;Implement Trie (Prefix Tree)</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">211</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc211" data-g="lc"><label for="lc211" class="st">&nbsp;Design Add and Search Words Data Structure</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">648</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc648" data-g="lc"><label for="lc648">&nbsp;Replace Words</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">720</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc720" data-g="lc"><label for="lc720">&nbsp;Longest Word in Dictionary</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">1268</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc1268" data-g="lc"><label for="lc1268">&nbsp;Search Suggestions System</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">421</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc421" data-g="lc"><label for="lc421">&nbsp;Maximum XOR of Two Numbers in an Array</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">212</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc212" data-g="lc"><label for="lc212" class="st">&nbsp;Word Search II</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Heap, top-K &amp; intervals</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Maintain an invariant across a stream; or sort by start and sweep.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">703</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc703" data-g="lc"><label for="lc703">&nbsp;Kth Largest Element in a Stream</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">1046</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc1046" data-g="lc"><label for="lc1046">&nbsp;Last Stone Weight</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">252</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc252" data-g="lc"><label for="lc252">&nbsp;Meeting Rooms</label></span> <span class="tag" style="font-size:9px;padding:1px 5px">premium</span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">215</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc215" data-g="lc"><label for="lc215" class="st">&nbsp;Kth Largest Element in an Array</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">973</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc973" data-g="lc"><label for="lc973">&nbsp;K Closest Points to Origin</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">56</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc56" data-g="lc"><label for="lc56" class="st">&nbsp;Merge Intervals</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">57</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc57" data-g="lc"><label for="lc57">&nbsp;Insert Interval</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">435</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc435" data-g="lc"><label for="lc435">&nbsp;Non-overlapping Intervals</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">253</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc253" data-g="lc"><label for="lc253">&nbsp;Meeting Rooms II</label></span> <span class="tag" style="font-size:9px;padding:1px 5px">premium</span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">621</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc621" data-g="lc"><label for="lc621">&nbsp;Task Scheduler</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">295</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc295" data-g="lc"><label for="lc295" class="st">&nbsp;Find Median from Data Stream</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Backtracking</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Choose, recurse, undo. One template, ten specializations.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">78</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc78" data-g="lc"><label for="lc78" class="st">&nbsp;Subsets</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">46</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc46" data-g="lc"><label for="lc46">&nbsp;Permutations</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">39</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc39" data-g="lc"><label for="lc39" class="st">&nbsp;Combination Sum</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">17</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc17" data-g="lc"><label for="lc17">&nbsp;Letter Combinations of a Phone Number</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">22</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc22" data-g="lc"><label for="lc22">&nbsp;Generate Parentheses</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">77</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc77" data-g="lc"><label for="lc77">&nbsp;Combinations</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">90</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc90" data-g="lc"><label for="lc90">&nbsp;Subsets II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">40</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc40" data-g="lc"><label for="lc40">&nbsp;Combination Sum II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">79</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc79" data-g="lc"><label for="lc79" class="st">&nbsp;Word Search</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">131</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc131" data-g="lc"><label for="lc131">&nbsp;Palindrome Partitioning</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">51</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc51" data-g="lc"><label for="lc51">&nbsp;N-Queens</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Graphs</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Grids are graphs. BFS for shortest, topo sort for dependencies, DSU for connectivity.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">733</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc733" data-g="lc"><label for="lc733">&nbsp;Flood Fill</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">200</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc200" data-g="lc"><label for="lc200" class="st">&nbsp;Number of Islands</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">994</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc994" data-g="lc"><label for="lc994">&nbsp;Rotting Oranges</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">133</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc133" data-g="lc"><label for="lc133">&nbsp;Clone Graph</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">417</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc417" data-g="lc"><label for="lc417">&nbsp;Pacific Atlantic Water Flow</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">207</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc207" data-g="lc"><label for="lc207" class="st">&nbsp;Course Schedule</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">210</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc210" data-g="lc"><label for="lc210">&nbsp;Course Schedule II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">547</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc547" data-g="lc"><label for="lc547">&nbsp;Number of Provinces</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">684</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc684" data-g="lc"><label for="lc684">&nbsp;Redundant Connection</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">721</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc721" data-g="lc"><label for="lc721">&nbsp;Accounts Merge</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">743</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc743" data-g="lc"><label for="lc743">&nbsp;Network Delay Time</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">127</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc127" data-g="lc"><label for="lc127" class="st">&nbsp;Word Ladder</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Dynamic programming · 1-D</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">State, transition, base case, fill order — say all four out loud.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">70</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc70" data-g="lc"><label for="lc70" class="st">&nbsp;Climbing Stairs</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">746</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc746" data-g="lc"><label for="lc746">&nbsp;Min Cost Climbing Stairs</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">198</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc198" data-g="lc"><label for="lc198">&nbsp;House Robber</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">213</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc213" data-g="lc"><label for="lc213">&nbsp;House Robber II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">91</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc91" data-g="lc"><label for="lc91">&nbsp;Decode Ways</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">322</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc322" data-g="lc"><label for="lc322" class="st">&nbsp;Coin Change</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">279</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc279" data-g="lc"><label for="lc279">&nbsp;Perfect Squares</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">139</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc139" data-g="lc"><label for="lc139">&nbsp;Word Break</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">152</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc152" data-g="lc"><label for="lc152">&nbsp;Maximum Product Subarray</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">300</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc300" data-g="lc"><label for="lc300" class="st">&nbsp;Longest Increasing Subsequence</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">416</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc416" data-g="lc"><label for="lc416">&nbsp;Partition Equal Subset Sum</label></span></span><span class="df m">Med</span></div>
+  </div>
+  <h4>Dynamic programming · 2-D</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">The two-string grid, and DP with modes.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">62</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc62" data-g="lc"><label for="lc62">&nbsp;Unique Paths</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">64</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc64" data-g="lc"><label for="lc64">&nbsp;Minimum Path Sum</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">1143</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc1143" data-g="lc"><label for="lc1143" class="st">&nbsp;Longest Common Subsequence</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">5</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc5" data-g="lc"><label for="lc5">&nbsp;Longest Palindromic Substring</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">647</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc647" data-g="lc"><label for="lc647">&nbsp;Palindromic Substrings</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">518</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc518" data-g="lc"><label for="lc518">&nbsp;Coin Change II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">494</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc494" data-g="lc"><label for="lc494">&nbsp;Target Sum</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">309</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc309" data-g="lc"><label for="lc309" class="st">&nbsp;Best Time to Buy and Sell Stock with Cooldown</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">221</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc221" data-g="lc"><label for="lc221">&nbsp;Maximal Square</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">72</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc72" data-g="lc"><label for="lc72" class="st">&nbsp;Edit Distance</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">115</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc115" data-g="lc"><label for="lc115">&nbsp;Distinct Subsequences</label></span></span><span class="df h">Hard</span></div>
+    <div class="lc"><span class="no">312</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc312" data-g="lc"><label for="lc312">&nbsp;Burst Balloons</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Greedy</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">Locally optimal is globally optimal — and you must be able to say why.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">122</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc122" data-g="lc"><label for="lc122">&nbsp;Best Time to Buy and Sell Stock II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">53</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc53" data-g="lc"><label for="lc53" class="st">&nbsp;Maximum Subarray</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">55</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc55" data-g="lc"><label for="lc55" class="st">&nbsp;Jump Game</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">45</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc45" data-g="lc"><label for="lc45">&nbsp;Jump Game II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">134</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc134" data-g="lc"><label for="lc134" class="st">&nbsp;Gas Station</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">763</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc763" data-g="lc"><label for="lc763">&nbsp;Partition Labels</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">846</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc846" data-g="lc"><label for="lc846">&nbsp;Hand of Straights</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">678</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc678" data-g="lc"><label for="lc678">&nbsp;Valid Parenthesis String</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">402</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc402" data-g="lc"><label for="lc402">&nbsp;Remove K Digits</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">135</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc135" data-g="lc"><label for="lc135">&nbsp;Candy</label></span></span><span class="df h">Hard</span></div>
+  </div>
+  <h4>Bit manipulation</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">XOR cancels; the lowest set bit is x &amp; -x.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">136</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc136" data-g="lc"><label for="lc136" class="st">&nbsp;Single Number</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">191</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc191" data-g="lc"><label for="lc191">&nbsp;Number of 1 Bits</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">190</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc190" data-g="lc"><label for="lc190">&nbsp;Reverse Bits</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">338</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc338" data-g="lc"><label for="lc338" class="st">&nbsp;Counting Bits</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">268</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc268" data-g="lc"><label for="lc268">&nbsp;Missing Number</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">231</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc231" data-g="lc"><label for="lc231">&nbsp;Power of Two</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">67</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc67" data-g="lc"><label for="lc67">&nbsp;Add Binary</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">371</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc371" data-g="lc"><label for="lc371" class="st">&nbsp;Sum of Two Integers</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">137</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc137" data-g="lc"><label for="lc137">&nbsp;Single Number II</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">201</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc201" data-g="lc"><label for="lc201">&nbsp;Bitwise AND of Numbers Range</label></span></span><span class="df m">Med</span></div>
+  </div>
+  <h4>Math, matrix &amp; prefix sums</h4>
+  <p style="margin:2px 0 10px;color:var(--ink-3);font-size:14.5px">In-place index gymnastics, and prefix sum + hash map.</p>
+  <div class="card" style="margin-bottom:26px;padding:8px 18px">
+    <div class="lc"><span class="no">66</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc66" data-g="lc"><label for="lc66">&nbsp;Plus One</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">9</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc9" data-g="lc"><label for="lc9">&nbsp;Palindrome Number</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">202</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc202" data-g="lc"><label for="lc202">&nbsp;Happy Number</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">303</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc303" data-g="lc"><label for="lc303">&nbsp;Range Sum Query - Immutable</label></span></span><span class="df e">Easy</span></div>
+    <div class="lc"><span class="no">189</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc189" data-g="lc"><label for="lc189">&nbsp;Rotate Array</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">48</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc48" data-g="lc"><label for="lc48" class="st">&nbsp;Rotate Image</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">54</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc54" data-g="lc"><label for="lc54">&nbsp;Spiral Matrix</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">73</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc73" data-g="lc"><label for="lc73">&nbsp;Set Matrix Zeroes</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">560</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc560" data-g="lc"><label for="lc560" class="st">&nbsp;Subarray Sum Equals K</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">304</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc304" data-g="lc"><label for="lc304">&nbsp;Range Sum Query 2D - Immutable</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">50</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc50" data-g="lc"><label for="lc50" class="st">&nbsp;Pow(x, n)</label></span></span><span class="df m">Med</span></div>
+    <div class="lc"><span class="no">43</span><span><span class="check" style="display:inline-flex;padding:0;border:none"><input type="checkbox" id="lc43" data-g="lc"><label for="lc43">&nbsp;Multiply Strings</label></span></span><span class="df m">Med</span></div>
+  </div>
+  <h3>Mapping the ladder onto the 28 days</h3>
+  <p>The realistic rate is <strong>4–5 problems in a 75-minute block</strong> if you're doing them properly — attempt, study, note, and re-implement the previous day's misses. Six a day is a 4–6 hour commitment, which is a full-time schedule; the honest version of this plan is below.</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th class="num">Days</th><th>Pattern block</th><th class="num">Problems</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1–2</td><td>Arrays &amp; hashing → two pointers</td><td class="num">217, 242, 1, 49, 347, 238, 128 · 125, 283, 88, 167, 11, 15</td></tr>
+        <tr><td class="num">3–4</td><td>Sliding window</td><td class="num">121, 3, 209, 424, 567, 438, 1004, 76</td></tr>
+        <tr><td class="num">5–6</td><td>Stack &amp; monotonic stack → binary search</td><td class="num">20, 155, 150, 1249, 739, 853, 84 · 704, 35, 74, 153</td></tr>
+        <tr><td class="num">7</td><td><strong>Review</strong> — interleaved, from blank</td><td class="num">1, 238, 128, 15, 42, 3, 424, 76, 739, 84</td></tr>
+        <tr><td class="num">8–9</td><td>Binary search on answer → math, matrix, prefix sums</td><td class="num">33, 162, 875, 1011, 981 · 48, 54, 73, 560, 50</td></tr>
+        <tr><td class="num">10–12</td><td>Linked list → trees</td><td class="num">206, 21, 141, 2, 19, 143, 138, 146, 23 · 104, 226, 543, 102, 199, 98</td></tr>
+        <tr><td class="num">13</td><td>Trees, harder</td><td class="num">230, 236, 105, 124, 297</td></tr>
+        <tr><td class="num">14</td><td><strong>Review + mock #1</strong></td><td class="num">33, 875, 560, 143, 146, 23, 102</td></tr>
+        <tr><td class="num">15–16</td><td>Tries → heap &amp; top-K</td><td class="num">208, 211, 1268, 212 · 703, 215, 973, 295</td></tr>
+        <tr><td class="num">17–19</td><td>Intervals → backtracking</td><td class="num">56, 57, 435, 621 · 78, 46, 39, 17, 22, 40, 79, 131</td></tr>
+        <tr><td class="num">20</td><td>Graphs</td><td class="num">733, 200, 994, 133, 207, 210, 547, 127</td></tr>
+        <tr><td class="num">21</td><td><strong>Review + mock #2</strong></td><td class="num">236, 105, 212, 215, 295, 79, 207</td></tr>
+        <tr><td class="num">22–23</td><td>DP 1-D</td><td class="num">70, 746, 198, 91, 322, 139, 152, 300, 416</td></tr>
+        <tr><td class="num">24–25</td><td>DP 2-D → greedy</td><td class="num">62, 1143, 5, 309, 72 · 53, 55, 45, 134, 763</td></tr>
+        <tr><td class="num">26</td><td>Bit manipulation, then timed set</td><td class="num">136, 191, 338, 268, 371 + 2 × 45 min timed</td></tr>
+        <tr><td class="num">27–28</td><td><strong>Mocks #3 and #4</strong>, then recall only</td><td class="num">322, 139, 300, 1143, 72, 53, 134</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>That's roughly <strong>110 problems in 28 days</strong> — the bolded core plus the connective tissue — with the remaining 65 as the stretch set. If you have two hours a day rather than three, run the same order over <strong>eight weeks at three a day</strong> and keep every review day. Do not compress by deleting the review days; that is the single most common way this plan fails, and it fails quietly, because you'll feel productive right up until the interview.</p>
+
+  <div class="callout warnbox">
+    <div class="ct">On problem counts, honestly</div>
+    <p>The recurring story on interview forums is someone who solved 250–300 problems and still failed, then passed after a smaller number done deliberately with mocks and re-solves. The mechanism isn't mysterious: interviews test whether you can <em>classify</em> an unfamiliar problem and <em>communicate</em> a solution under time pressure, and raw problem count trains neither. Budget at least a quarter of your algorithm hours for re-solves and mock conditions rather than new problems. And if you are starting from genuinely rusty fundamentals, be honest that this is a 3–6 month project rather than a 28-day one — the 28-day plan assumes you can already write a BFS without looking it up.</p>
+  </div>
+</section>
+
+<section id="review">
+  <div class="sec-head">
+    <div class="eyebrow">Section 07 · Algorithms</div>
+    <h2>The review system</h2>
+    <p>The difference between people who solve 300 problems and can't pass an interview and people who solve 120 and can is entirely here. Solving a problem once teaches you that problem. Solving it, forgetting it, and solving it again teaches you the pattern.</p>
+  </div>
+
+  <h3>Why re-solving beats reading more</h3>
+  <p>Recognition is not recall. Reading a solution produces a strong feeling of understanding that disappears within days, because you never practiced <em>retrieving</em> anything — you practiced following. The interview asks you to retrieve, from nothing, under observation. So the training has to be retrieval: blank page, timer, no reference.</p>
+  <p>The second reason is compression. The first time you solve "longest substring without repeating characters" you're solving a specific problem. The fourth time, across four different problems, you're recognizing <em>sliding window with a validity condition</em> — and that abstraction is what transfers to the problem you've never seen. You cannot form it from one exposure.</p>
+
+  <h3>The three-pass method for every problem</h3>
+  <ol class="stepline">
+    <li class="hot"><b>Pass 1 — attempt, hard-capped at 25 minutes</b>
+      <p>Read the problem. Spend two minutes stating the pattern you think it is and why. Then solve it. <strong>Stop at 25 minutes whether or not you're done</strong> — going longer trains you to grind, and interviews don't reward grinding. Before you look anything up, write down the exact sentence describing where you're stuck.</p>
+    </li>
+    <li class="hot"><b>Pass 2 — study, not read</b>
+      <p>Read the editorial or a strong solution until you can explain <em>why</em> it works, not just what it does. Then answer two questions in writing: <em>what was the insight I missed?</em> and <em>what in the problem statement should have pointed me at it?</em> The second question is the one that builds recognition speed. Close everything.</p>
+    </li>
+    <li class="hot"><b>Pass 3 — re-implement from blank, the next morning</b>
+      <p>Not the same day — the next day, from an empty file, with no reference. If you can't, you didn't learn it; that's information, not failure. Re-read once and re-attempt the day after. A problem is not "done" until you've written it clean from nothing.</p>
+    </li>
+  </ol>
+
+  <h3>The spacing schedule</h3>
+  <p>Every problem gets a rating when you finish, and the rating sets the next review date:</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Rating</th><th>Meaning</th><th class="num">Next review</th><th>Then</th></tr></thead>
+      <tbody>
+        <tr><td><strong>4 — clean</strong></td><td>Solved optimally inside the time cap, no hints, no bugs</td><td class="num">+21 days</td><td>Retire it if clean twice</td></tr>
+        <tr><td><strong>3 — slow</strong></td><td>Got there, but over time or with a compile-fix loop</td><td class="num">+7 days</td><td>Promote to 4 if the next attempt is clean</td></tr>
+        <tr><td><strong>2 — hinted</strong></td><td>Needed a nudge, then finished it yourself</td><td class="num">+3 days</td><td>—</td></tr>
+        <tr><td><strong>1 — read it</strong></td><td>Read the solution, or couldn't finish</td><td class="num">+1 day</td><td>Re-implement from blank tomorrow, no exceptions</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Any review that goes badly drops the rating back down and restarts the interval. In practice this means roughly <strong>60% new problems and 40% reviews</strong> through weeks 1–2, inverting by week 4 — which is exactly what you want going into a loop.</p>
+
+  <h3>The log</h3>
+  <p>One file, one row per attempt. This is the single highest-return five minutes of the day, because by week 3 it tells you your actual weak patterns rather than the ones you assume.</p>
+  <div class="codehead"><span>log.csv · the schema, and a scheduler you can run in ten seconds</span><button class="copy" type="button">Copy</button></div>
+<pre><code>date,problem,pattern,rating,minutes,note
+2026-03-02,LC 3 Longest Substring,sliding-window,3,22,"forgot to shrink while invalid"
+2026-03-02,LC 424 Char Replacement,sliding-window,1,25,"didn't see max-count trick"
+2026-03-03,LC 76 Min Window,sliding-window,2,25,"shrink WHILE valid, not until"
+
+<span class="cm">--------------------------------------------------------------------</span>
+
+<span class="cm"># due.py -- what to review today, and which pattern is actually weak.</span>
+<span class="kw">import</span> csv, collections
+<span class="kw">from</span> datetime <span class="kw">import</span> date, timedelta
+
+NEXT = {<span class="nu">1</span>: <span class="nu">1</span>, <span class="nu">2</span>: <span class="nu">3</span>, <span class="nu">3</span>: <span class="nu">7</span>, <span class="nu">4</span>: <span class="nu">21</span>}          <span class="cm"># rating -> days until review</span>
+
+latest, by_pattern = {}, collections.defaultdict(list)
+<span class="kw">with</span> open(<span class="st">"log.csv"</span>) <span class="kw">as</span> f:
+    <span class="kw">for</span> row <span class="kw">in</span> csv.DictReader(f):
+        latest[row[<span class="st">"problem"</span>]] = row              <span class="cm"># keep only the most recent attempt</span>
+        by_pattern[row[<span class="st">"pattern"</span>]].append(int(row[<span class="st">"rating"</span>]))
+
+today = date.today()
+due = []
+<span class="kw">for</span> problem, row <span class="kw">in</span> latest.items():
+    seen = date.fromisoformat(row[<span class="st">"date"</span>])
+    <span class="kw">if</span> seen + timedelta(days=NEXT[int(row[<span class="st">"rating"</span>])]) &lt;= today:
+        due.append((int(row[<span class="st">"rating"</span>]), problem, row[<span class="st">"note"</span>]))
+
+<span class="kw">for</span> rating, problem, note <span class="kw">in</span> sorted(due):        <span class="cm"># worst-rated first</span>
+    print(<span class="st">f"[{rating}] {problem:40s} {note}"</span>)
+
+print(<span class="st">"\nweakest patterns (mean rating):"</span>)
+<span class="kw">for</span> pattern, ratings <span class="kw">in</span> sorted(by_pattern.items(), key=<span class="kw">lambda</span> kv: sum(kv[<span class="nu">1</span>])/len(kv[<span class="nu">1</span>])):
+    print(<span class="st">f"  {sum(ratings)/len(ratings):.1f}  {pattern}  (n={len(ratings)})"</span>)
+</code></pre>
+
+  <div class="callout warnbox">
+    <div class="ct">Five ways people waste a month on this</div>
+    <ul>
+      <li><strong>Solving without a timer.</strong> Forty-five unhurried minutes on a medium teaches you nothing about performing in twenty-five observed ones.</li>
+      <li><strong>Reading solutions instead of attempting.</strong> Feels efficient, builds recognition without recall, and collapses under interview conditions.</li>
+      <li><strong>Chasing hards too early.</strong> The bulk of real interviews are mediums. Two clean mediums teach more than one heroic hard.</li>
+      <li><strong>Never redoing anything.</strong> The most common failure. If your list only grows, you are collecting problems, not learning patterns.</li>
+      <li><strong>Silent solving.</strong> You are training a skill you will perform out loud. Narrate every session, even alone, from day one — the first time you talk while coding should not be in an interview.</li>
+    </ul>
+  </div>
+
+  <h3>How many is enough</h3>
+  <p>Roughly <strong>120–150 problems solved to a rating of 4</strong>, spread across all twenty patterns, is a comfortable place to walk into a loop from. Two hundred shallow attempts is worse than a hundred deep ones. The honest test isn't a count at all: pick a random medium you've never seen, and see whether you can name the pattern within two minutes and produce a working solution within twenty-five. When that's reliably true, you're ready, whatever the number says.</p>
+</section>
 <section id="coding">
   <div class="sec-head">
-    <div class="eyebrow">Section 09</div>
+    <div class="eyebrow">Section 08 · Algorithms</div>
     <h2>Running the coding hour</h2>
     <p>Two candidates produce the same working function and get different scores. The difference is the twelve minutes before the first line of code and the four minutes after the last one.</p>
   </div>
@@ -1401,7 +1810,7 @@ sub = mask
 
   <h3>The bugs that actually cost points</h3>
   <ul>
-    <li><strong>Off-by-one in binary search.</strong> Use the <code>lo &lt; hi</code> form in §08 every time and stop reinventing it.</li>
+    <li><strong>Off-by-one in binary search.</strong> Use the <code>lo &lt; hi</code> form in §04 every time and stop reinventing it.</li>
     <li><strong>Mutating a list while iterating it.</strong> Iterate over a copy or build a new list.</li>
     <li><strong>Appending a reference instead of a copy</strong> in backtracking — <code>res.append(path)</code> instead of <code>res.append(path[:])</code>. Every result ends up identical and empty.</li>
     <li><strong>Marking visited on pop instead of on push</strong> in BFS — nodes enter the queue multiple times and the complexity quietly becomes exponential.</li>
@@ -1414,9 +1823,15 @@ sub = mask
   <p>Python unless you have a strong reason otherwise — the least syntax between your thinking and the whiteboard. Have these memorized so you never stall on mechanics: <code>collections.defaultdict / Counter / deque</code>, <code>heapq.heappush/heappop/nlargest</code>, <code>bisect.bisect_left/insort</code>, <code>sorted(x, key=lambda v: (-v[1], v[0]))</code>, <code>itertools.accumulate</code>, and <code>float('inf')</code>. Know that <code>list.pop(0)</code> is O(n) and <code>deque.popleft()</code> is O(1) — that one difference has failed real candidates.</p>
 </section>
 
+
+<div class="partbreak">
+  <div class="pn">Part III</div>
+  <h2>System design</h2>
+  <p>The framework, the arithmetic, the vocabulary, and eight designs worked end to end. Coding rounds mostly gate; design rounds mostly rank — which is why this part is the largest and why the deep dive inside each design matters more than the diagram.</p>
+</div>
 <section id="framework">
   <div class="sec-head">
-    <div class="eyebrow">Section 01</div>
+    <div class="eyebrow">Section 09 · System design</div>
     <h2>The framework</h2>
     <p>A design interview is not a test of whether you know what Kafka is. It is a test of whether you can take an under-specified problem, make the ambiguity explicit, and drive to a defensible design while thinking out loud. The structure below is what stops you from wandering.</p>
   </div>
@@ -1466,7 +1881,7 @@ sub = mask
       <li><strong>Buzzword stacking.</strong> Naming Kafka, Redis, Cassandra and Spark in one breath without a reason each. Expect "why not just Postgres?" — and have the answer.</li>
       <li><strong>No numbers.</strong> Sharding without ever computing that the data doesn't fit on one machine.</li>
       <li><strong>Designing for 100× the stated scale.</strong> Over-engineering reads as poor judgment, not ambition.</li>
-      <li><strong>Going silent while thinking.</strong> Fifteen quiet seconds is fine. Ninety is a failed signal on communication.</li>
+      <li><strong>Going silent while thinking.</strong> A few seconds is fine and normal. A long unexplained silence isn't — not because a stopwatch is running, but because the interviewer can't write down what they can't hear. "Let me think about the write path for a moment" costs nothing and buys all the silence you need.</li>
       <li><strong>Defending a choice past its evidence.</strong> When the interviewer pushes twice, they are usually handing you something. Take it.</li>
     </ul>
   </div>
@@ -1475,14 +1890,14 @@ sub = mask
   <div class="grid g2 wide" style="margin-top:18px">
     <div class="card"><span class="tag t-sd">Problem navigation</span><p style="margin-top:10px">Did you scope, prioritize, and drive — or wait to be steered? Senior candidates run the clock themselves.</p></div>
     <div class="card"><span class="tag t-sd">Technical depth</span><p style="margin-top:10px">One component taken to the bottom: the data structure, the failure mode, the actual bytes. Breadth without a dive reads junior.</p></div>
-    <div class="card"><span class="tag t-sd">Tradeoff reasoning</span><p style="margin-top:10px">Alternatives named and rejected <em>for a stated reason tied to the requirements</em>. This is the single highest-weighted axis at senior and above.</p></div>
+    <div class="card"><span class="tag t-sd">Tradeoff reasoning</span><p style="margin-top:10px">Alternatives named and rejected <em>for a stated reason tied to the requirements</em>. Companies weight their axes differently and none publish the weights — but this is the axis that most reliably distinguishes a senior write-up from a mid-level one, because it is the part an interviewer can quote back an hour later.</p></div>
     <div class="card"><span class="tag t-sd">Communication</span><p style="margin-top:10px">Could a peer follow your diagram without you? Did you check in before long tangents?</p></div>
   </div>
 </section>
 
 <section id="numbers">
   <div class="sec-head">
-    <div class="eyebrow">Section 02</div>
+    <div class="eyebrow">Section 10 · System design</div>
     <h2>Numbers &amp; capacity math</h2>
     <p>You need maybe twenty numbers memorized and one arithmetic habit. The habit: round everything to one significant figure and use powers of ten. Nobody has ever failed a loop for saying 100k QPS when the true answer was 116,530.</p>
   </div>
@@ -1492,15 +1907,17 @@ sub = mask
     <table>
       <thead><tr><th>Operation</th><th class="num">Time</th><th>What it implies</th></tr></thead>
       <tbody>
-        <tr><td>L1 / L2 cache reference</td><td class="num">~1 ns / ~4 ns</td><td>Free. Never a design consideration.</td></tr>
-        <tr><td>Main memory reference</td><td class="num">~100 ns</td><td>~10M random reads/sec/core. In-memory beats disk by ~1000×.</td></tr>
+        <tr><td>L1 / L2 cache reference</td><td class="num">~1 ns / ~4 ns</td><td>Free at the architecture level; decisive inside a hot loop or a storage-engine page layout.</td></tr>
+        <tr><td>Main memory reference</td><td class="num">~100 ns</td><td>~10M <em>dependent</em> random reads/sec/core; several times more with parallel misses in flight. In-memory beats disk by ~1000×.</td></tr>
         <tr><td>Read 1 MB sequentially from memory</td><td class="num">~10 µs</td><td>Memory bandwidth ≈ 100 GB/s on modern hardware.</td></tr>
-        <tr><td>SSD random read (4 KB)</td><td class="num">~100 µs</td><td>~10k–100k IOPS per device. This is why LSM trees batch writes.</td></tr>
+        <tr><td>NVMe random read (4 KB)</td><td class="num">~50–100 µs</td><td>At queue depth 1. A modern datacenter NVMe sustains <strong>500k–1M+ IOPS</strong> at depth — latency and throughput are different questions, and queue depth is the knob.</td></tr>
         <tr><td>Read 1 MB sequentially from SSD</td><td class="num">~200 µs</td><td>~1–5 GB/s. Sequential beats random by ~100×. Design for sequential.</td></tr>
         <tr><td>Round trip within a datacenter</td><td class="num">~0.5 ms</td><td>Your service-to-service tax. Ten hops = 5 ms floor.</td></tr>
         <tr><td>Disk seek (spinning)</td><td class="num">~10 ms</td><td>Archival only. If someone says HDD, they mean cold storage.</td></tr>
         <tr><td>Cross-country round trip (US)</td><td class="num">~70 ms</td><td>The reason CDNs and regional replicas exist. Physics, not engineering.</td></tr>
         <tr><td>Round trip across the world</td><td class="num">~150–250 ms</td><td>Any synchronous cross-continent call is a design smell.</td></tr>
+        <tr><td>Send 1 KB over a 10 Gbps link</td><td class="num">~1 µs</td><td>Serialization time is negligible next to the round trip. Bandwidth governs bulk transfer; latency governs requests.</td></tr>
+        <tr><td>TLS 1.3 handshake, new connection</td><td class="num">1 extra RTT</td><td>The tax keep-alive and connection pools exist to avoid. On a cold cross-country connection it roughly doubles first-byte latency.</td></tr>
       </tbody>
     </table>
   </div>
@@ -1542,7 +1959,7 @@ read QPS (avg)     = 25B / 100k s    = <span class="nu">250,000/s</span>
 read QPS (peak)    = <span class="nu">750,000/s</span>          <span class="cm"># read:write = 250:1 -> CDN + cache is the design</span>
 
 <span class="cm"># 2. Storage</span>
-photo (orig+derivs)= 2 MB
+photo (orig+derivs)= 2 MB          <span class="cm"># 500 KB original + thumb, feed and full-screen derivatives</span>
 storage/day        = 100M x 2 MB     = <span class="nu">200 TB/day</span>
 storage/year       = 200 TB x 365    ≈ <span class="nu">70 PB/year</span>   <span class="cm"># -> object store + lifecycle tiering, not a DB</span>
 
@@ -1553,11 +1970,13 @@ metadata/year      = 100M x 365 x 500 B ≈ <span class="nu">18 TB/year</span>  
 egress (peak)      = 750k reads/s x 200 KB (served size) ≈ <span class="nu">150 GB/s</span>
                      <span class="cm"># no origin serves that -> CDN offload at 95%+, origin sees ~7 GB/s</span>
 
-<span class="cm"># 4. Cache sizing (the 80/20 read)</span>
-hot set            = 20% of a day's reads over distinct photos
-                   ≈ 5B reads -> ~50M distinct hot photos x 200 KB = <span class="nu">10 TB</span>
-                     <span class="cm"># -> too big for RAM; cache metadata in Redis (50M x 500 B = 25 GB, easy),</span>
-                     <span class="cm">#    cache bytes at the CDN edge.</span>
+<span class="cm"># 4. Cache sizing. Say the Pareto direction the right way round:</span>
+<span class="cm">#    the hot ~20% of OBJECTS serve ~80% of READS. Size objects, not reads.</span>
+recent window      = photos posted in the last 7 days = 700M
+hot set (20%)      = <span class="nu">140M photos</span>
+  bytes            = 140M x 200 KB = <span class="nu">28 TB</span>   <span class="cm"># far past RAM -> cache at the CDN edge</span>
+  metadata         = 140M x 500 B  = <span class="nu">70 GB</span>   <span class="cm"># fits a small Redis cluster -> cache here</span>
+                     <span class="cm"># The split falls out of arithmetic: bytes at the edge, metadata in Redis.</span>
 </code></pre>
 
   <div class="callout">
@@ -1568,7 +1987,7 @@ hot set            = 20% of a day's reads over distinct photos
 
 <section id="blocks">
   <div class="sec-head">
-    <div class="eyebrow">Section 03</div>
+    <div class="eyebrow">Section 11 · System design</div>
     <h2>Building blocks</h2>
     <p>The vocabulary. For each one you should be able to say, unprompted: what problem it solves, what it costs you, and the one failure mode that bites in production. That triple is the difference between naming a component and understanding it.</p>
   </div>
@@ -1612,6 +2031,7 @@ hot set            = 20% of a day's reads over distinct photos
     <li><strong>Geography</strong> — locality and data residency, at the cost of cross-region joins.</li>
   </ul>
   <p>Plain <code>hash(key) % N</code> remaps nearly every key when <code>N</code> changes. Consistent hashing places nodes and keys on a ring so adding a node only moves <code>K/N</code> keys; virtual nodes even out the distribution.</p>
+  <p>Know two neighbors of the idea, because "why a ring?" is a fair question. <strong>Rendezvous (highest-random-weight) hashing</strong> computes <code>hash(key, node)</code> for every node and takes the maximum — same K/N movement property, no ring and no virtual nodes to manage, at O(N) per lookup, which is fine for tens of nodes and not for thousands. <strong>Bounded-load consistent hashing</strong> adds a per-node capacity cap and spills past it, which is the answer when one key is genuinely hot and more vnodes won't help.</p>
 
   <div class="codehead"><span>consistent_hash.py · the version you can write in an interview</span><button class="copy" type="button">Copy</button></div>
 <pre><code><span class="kw">import</span> bisect, hashlib
@@ -1625,7 +2045,9 @@ hot set            = 20% of a day's reads over distinct photos
             self.add(n)
 
     <span class="kw">def</span> _hash(self, key):
-        <span class="kw">return</span> int(hashlib.md5(key.encode()).hexdigest()[:<span class="nu">8</span>], <span class="nu">16</span>)
+        <span class="cm"># Full 128-bit digest, not a truncated prefix. With 100 nodes x 150 vnodes,</span>
+        <span class="cm"># a 32-bit space collides often enough to corrupt the ring silently.</span>
+        <span class="kw">return</span> int(hashlib.md5(key.encode()).hexdigest(), <span class="nu">16</span>)
 
     <span class="kw">def</span> add(self, node):
         <span class="kw">for</span> i <span class="kw">in</span> range(self.vnodes):        <span class="cm"># virtual nodes smooth the distribution</span>
@@ -1637,17 +2059,31 @@ hot set            = 20% of a day's reads over distinct photos
         <span class="kw">for</span> i <span class="kw">in</span> range(self.vnodes):
             h = self._hash(<span class="st">f"{node}#{i}"</span>)
             <span class="kw">del</span> self.ring[h]
-            self.sorted_keys.remove(h)
+            <span class="kw">del</span> self.sorted_keys[bisect.bisect_left(self.sorted_keys, h)]   <span class="cm"># O(log n), not a scan</span>
 
     <span class="kw">def</span> get(self, key):
         <span class="kw">if</span> <span class="kw">not</span> self.ring: <span class="kw">return</span> <span class="kw">None</span>
         h = self._hash(key)
-        i = bisect.bisect(self.sorted_keys, h) % len(self.sorted_keys)  <span class="cm"># wrap the ring</span>
+        <span class="cm"># bisect_LEFT: we want the first node at or after h. bisect_right would</span>
+        <span class="cm"># skip past a node whose hash equals the key's exactly.</span>
+        i = bisect.bisect_left(self.sorted_keys, h) % len(self.sorted_keys)
         <span class="kw">return</span> self.ring[self.sorted_keys[i]]
 
-<span class="cm"># Follow-up they will ask: "a node dies — what happens to its data?"</span>
-<span class="cm"># Answer: replicate each key to the next R distinct physical nodes clockwise.</span>
-<span class="cm"># That is exactly what Dynamo/Cassandra do, and it is why R is a tunable.</span>
+    <span class="kw">def</span> get_replicas(self, key, r=<span class="nu">3</span>):
+        <span class="cm"># The follow-up they always ask: a node dies -- where is the data?</span>
+        <span class="cm"># Walk clockwise collecting R DISTINCT PHYSICAL nodes, skipping further</span>
+        <span class="cm"># vnodes of a node already chosen. Forget that and all three "replicas"</span>
+        <span class="cm"># can land on one machine, which is the classic implementation bug.</span>
+        <span class="kw">if</span> <span class="kw">not</span> self.ring: <span class="kw">return</span> []
+        start, out = bisect.bisect_left(self.sorted_keys, self._hash(key)), []
+        <span class="kw">for</span> step <span class="kw">in</span> range(len(self.sorted_keys)):
+            node = self.ring[self.sorted_keys[(start + step) % len(self.sorted_keys)]]
+            <span class="kw">if</span> node <span class="kw">not</span> <span class="kw">in</span> out:
+                out.append(node)
+                <span class="kw">if</span> len(out) == r: <span class="kw">break</span>
+        <span class="kw">return</span> out
+
+<span class="cm"># That is exactly what Dynamo and Cassandra do, and it is why R is a tunable.</span>
 </code></pre>
 
   <h3>Replication and consistency</h3>
@@ -1662,18 +2098,18 @@ hot set            = 20% of a day's reads over distinct photos
       </tbody>
     </table>
   </div>
-  <p><strong>CAP, said correctly:</strong> during a network <em>partition</em> you choose availability or consistency. That's it — CAP says nothing about the 99.9% of the time there is no partition. <strong>PACELC</strong> is the sentence that actually matters in an interview: <em>if Partitioned, choose A or C; Else, choose Latency or Consistency.</em> Most systems are PA/EL (Dynamo, Cassandra) or PC/EC (Spanner, traditional RDBMS).</p>
-  <p><strong>The consistency ladder</strong>, weakest to strongest: eventual → read-your-writes → monotonic reads → causal → linearizable. Name the weakest one that satisfies the product. "Likes can be eventually consistent; the balance after a transfer cannot" is exactly the sentence they want.</p>
+  <p><strong>CAP, said correctly</strong> — and define the terms, because CAP uses them in a specific technical sense: <em>consistency</em> here means <strong>linearizability</strong> (every read sees the most recent completed write, as if there were one copy), not ACID's C; <em>availability</em> means <strong>every non-failing node returns a non-error response</strong>, which is a bar so high that almost no production system actually meets it. With those definitions: during a network <em>partition</em> you choose availability or consistency. That's it — CAP says nothing about the 99.9% of the time there is no partition. <strong>PACELC</strong> is the sentence that actually matters in an interview: <em>if Partitioned, choose A or C; Else, choose Latency or Consistency.</em> Most systems are PA/EL (Dynamo, Cassandra) or PC/EC (Spanner, traditional RDBMS).</p>
+  <p><strong>The consistency hierarchy</strong> is not a single line, and saying so correctly is a real signal. Eventual consistency is the floor. Above it sit the four <em>session guarantees</em> — read-your-writes, monotonic reads, monotonic writes, writes-follow-reads — which are <strong>mutually incomparable</strong>: none implies another, and you pick the ones your product needs. Above those: causal, then sequential, then linearizable. Multi-object transactions are a <em>separate, orthogonal</em> axis — read committed &lt; snapshot isolation &lt; serializable &lt; strict serializability (see §02). Name the weakest guarantee that satisfies the product: "likes can be eventually consistent, but a user must read their own comment immediately, and the balance after a transfer needs serializable" is exactly the sentence they want.</p>
 
   <h3>Storage engines: pick one and know why</h3>
   <div class="tbl-wrap">
     <table>
       <thead><tr><th>Engine</th><th>Write path</th><th>Read path</th><th>Choose it for</th></tr></thead>
       <tbody>
-        <tr><td><strong>B-tree</strong> (Postgres, MySQL/InnoDB)</td><td>In-place update, random I/O, WAL first</td><td>O(log n), one seek to the leaf</td><td>Transactions, joins, secondary indexes, read-modify-write. Your default until proven otherwise.</td></tr>
-        <tr><td><strong>LSM tree</strong> (Cassandra, RocksDB, HBase)</td><td>Append to memtable → flush sorted files → compact</td><td>Check memtable, then each level; Bloom filters skip files</td><td>Write-heavy workloads, time series, huge datasets. Cost: read amplification and compaction pauses.</td></tr>
+        <tr><td><strong>B-tree</strong> (Postgres, MySQL/InnoDB)</td><td>In-place update, random I/O, WAL first</td><td>O(log<sub>B</sub> n) levels — one leaf read, <em>if</em> the internal pages are already in the buffer pool</td><td>Transactions, joins, secondary indexes, read-modify-write. Your default until proven otherwise.</td></tr>
+        <tr><td><strong>LSM tree</strong> (Cassandra, RocksDB, HBase)</td><td>Append to memtable → flush sorted files → compact</td><td>Check memtable, then each level; Bloom filters skip files</td><td>Write-heavy workloads, time series, huge datasets. Costs: read amplification, <strong>10–30× write amplification</strong> under leveled compaction, and compaction pauses that surface as p99 spikes. Wins on space: immutable sorted files pack densely, while B-tree pages sit 50–70% full. The general framing is the <strong>RUM conjecture</strong> — you optimize two of Read, Update, and Memory overhead, never all three.</td></tr>
         <tr><td><strong>Columnar</strong> (BigQuery, Redshift, Parquet)</td><td>Batch, immutable</td><td>Scan a few columns over billions of rows</td><td>Analytics and ML training data. Never for point lookups.</td></tr>
-        <tr><td><strong>Document</strong> (MongoDB, DynamoDB)</td><td>Whole-document write</td><td>Key or index lookup</td><td>Access patterns known in advance, schema per tenant, no cross-entity joins.</td></tr>
+        <tr><td><strong>Document</strong> (MongoDB, Couchbase)</td><td>Whole-document write</td><td>Key or index lookup</td><td>Access patterns known in advance, schema per tenant, no cross-entity joins. <em>DynamoDB is a wide-column key-value store, not a document store — it does partial attribute updates and has a very different consistency model.</em></td></tr>
       </tbody>
     </table>
   </div>
@@ -1704,31 +2140,48 @@ hot set            = 20% of a day's reads over distinct photos
   </div>
 
   <div class="codehead"><span>token_bucket.lua · atomic in Redis, which is the real question</span><button class="copy" type="button">Copy</button></div>
-<pre><code><span class="cm">-- KEYS[1]=bucket key  ARGV: rate(tok/s), capacity, now(s), requested</span>
-<span class="kw">local</span> rate, cap, now, want = tonumber(ARGV[<span class="nu">1</span>]), tonumber(ARGV[<span class="nu">2</span>]), tonumber(ARGV[<span class="nu">3</span>]), tonumber(ARGV[<span class="nu">4</span>])
-<span class="kw">local</span> b = redis.call(<span class="st">'HMGET'</span>, KEYS[<span class="nu">1</span>], <span class="st">'tokens'</span>, <span class="st">'ts'</span>)
+<pre><code><span class="cm">-- KEYS[1]=bucket key    ARGV: rate(tokens/s), capacity, requested</span>
+<span class="kw">local</span> rate, cap, want = tonumber(ARGV[<span class="nu">1</span>]), tonumber(ARGV[<span class="nu">2</span>]), tonumber(ARGV[<span class="nu">3</span>])
+
+<span class="cm">-- Take the clock from REDIS, not from the caller. App servers have skewed</span>
+<span class="cm">-- clocks, and a caller-supplied `now` that runs backwards drains the bucket</span>
+<span class="cm">-- by arithmetic alone. "Where does the time come from" is the follow-up here.</span>
+<span class="kw">local</span> t   = redis.call(<span class="st">'TIME'</span>)
+<span class="kw">local</span> now = tonumber(t[<span class="nu">1</span>]) + tonumber(t[<span class="nu">2</span>]) / <span class="nu">1000000</span>
+
+<span class="kw">local</span> b      = redis.call(<span class="st">'HMGET'</span>, KEYS[<span class="nu">1</span>], <span class="st">'tokens'</span>, <span class="st">'ts'</span>)
 <span class="kw">local</span> tokens = tonumber(b[<span class="nu">1</span>]) <span class="kw">or</span> cap
 <span class="kw">local</span> ts     = tonumber(b[<span class="nu">2</span>]) <span class="kw">or</span> now
 
-tokens = math.min(cap, tokens + (now - ts) * rate)   <span class="cm">-- refill for elapsed time</span>
-<span class="kw">local</span> allowed = tokens >= want
-<span class="kw">if</span> allowed <span class="kw">then</span> tokens = tokens - want <span class="kw">end</span>
+<span class="kw">local</span> elapsed = math.max(<span class="nu">0</span>, now - ts)                  <span class="cm">-- clamp: never refill negatively</span>
+tokens = math.min(cap, tokens + elapsed * rate)
 
-redis.call(<span class="st">'HMSET'</span>, KEYS[<span class="nu">1</span>], <span class="st">'tokens'</span>, tokens, <span class="st">'ts'</span>, now)
-redis.call(<span class="st">'EXPIRE'</span>, KEYS[<span class="nu">1</span>], math.ceil(cap / rate) * <span class="nu">2</span>)  <span class="cm">-- reclaim idle buckets</span>
-<span class="kw">return</span> { allowed <span class="kw">and</span> <span class="nu">1</span> <span class="kw">or</span> <span class="nu">0</span>, tokens }
+<span class="kw">local</span> allowed, retry_after = <span class="nu">0</span>, <span class="nu">0</span>
+<span class="kw">if</span> tokens >= want <span class="kw">then</span>
+  tokens, allowed = tokens - want, <span class="nu">1</span>
+<span class="kw">else</span>
+  retry_after = (want - tokens) / rate                    <span class="cm">-- tell the client WHEN to come back</span>
+<span class="kw">end</span>
+
+redis.call(<span class="st">'HSET'</span>, KEYS[<span class="nu">1</span>], <span class="st">'tokens'</span>, tokens, <span class="st">'ts'</span>, now)
+redis.call(<span class="st">'EXPIRE'</span>, KEYS[<span class="nu">1</span>], math.ceil(cap / rate) * <span class="nu">2</span>)  <span class="cm">-- an idle bucket refills to full anyway</span>
+
+<span class="cm">-- Return STRINGS: Redis truncates Lua numbers to integers on the wire,</span>
+<span class="cm">-- which would silently destroy the fractional retry_after.</span>
+<span class="kw">return</span> { allowed, tostring(tokens), tostring(retry_after) }
 </code></pre>
-  <p>The follow-ups: <em>where does this run?</em> (at the edge/gateway, before your app burns CPU) · <em>what if Redis is down?</em> (fail open for availability, fail closed for abuse protection — say which and why) · <em>how do you avoid a round trip per request?</em> (local buckets per node with <code>limit/N</code>, periodically reconciled — approximate but cheap).</p>
+  <p>The follow-ups: <em>where does this run?</em> (at the edge/gateway, before your app burns CPU) · <em>what if Redis is down?</em> (fail open for availability, fail closed for abuse protection — say which and why) · <em>how do you avoid a round trip per request?</em> (local buckets per node with <code>limit/N</code>, periodically reconciled — approximate but cheap) · <em>what about one abusive tenant?</em> (their key lives on one shard, so a hot tenant is a hot shard — split the key into <code>k</code> sub-buckets chosen at random and enforce <code>limit/k</code> on each).</p>
 
   <h3>Bloom filters</h3>
   <p>A bit array plus <em>k</em> hash functions. Answers "definitely not present" or "maybe present" in O(k) with no false negatives. For <em>n</em> items and false-positive rate <em>p</em>: <code>m = -n·ln(p) / (ln2)²</code> bits and <code>k = (m/n)·ln2</code>. Practically: <strong>~10 bits per element gives ~1% false positives</strong> — one billion keys in about 1.2 GB. Uses: skipping SSTable reads in an LSM tree, avoiding cache penetration, "have I seen this URL" in a crawler.</p>
+  <p><strong>The follow-up is always deletion.</strong> You cannot remove an element from a standard Bloom filter — clearing its bits would break every other element that shares one. The three answers: a <strong>counting Bloom filter</strong> (4-bit counters instead of bits, 4× the space), a <strong>cuckoo filter</strong> (supports deletion, similar space, and gives you a lookup structure rather than just a membership bit), or <strong>rebuild and swap</strong> periodically, which is what most systems actually do. Also know that the false-positive rate degrades as you insert past the <em>n</em> you sized for — which is why RocksDB builds one filter per SSTable rather than one per database.</p>
 
   <h3>Proximity and geospatial indexing</h3>
   <p>Worth knowing cold — it turns up in ride-hailing, delivery, "nearby friends", and store locators.</p>
   <ul>
-    <li><strong>Geohash</strong> — interleave latitude and longitude bits into a base-32 string. A shared prefix means spatial proximity, so a plain B-tree prefix scan becomes a proximity query and it works in any boring database. Weakness: cells near a boundary are far apart in string space, so query the cell <em>and its eight neighbors</em>.</li>
+    <li><strong>Geohash</strong> — interleave latitude and longitude bits into a base-32 string. Cells are rectangles, not squares (precision 6 ≈ 1.2 km × 0.6 km at the equator) and they narrow toward the poles, so size precision off the shorter side. A shared prefix means spatial proximity, so a plain B-tree prefix scan becomes a proximity query and it works in any boring database. Weakness: cells near a boundary are far apart in string space, so query the cell <em>and its eight neighbors</em>.</li>
     <li><strong>Quadtree</strong> — recursively split a cell into four until it holds fewer than <em>k</em> points. Adapts to density, which geohash doesn't: Manhattan and the Pacific get very different tree depths. In-memory, needs rebuilding.</li>
-    <li><strong>S2 / H3</strong> — Google's and Uber's cell systems. H3's hexagons have uniform neighbor distance, which is why it wins for demand aggregation and surge pricing.</li>
+    <li><strong>S2 / H3</strong> — Google's and Uber's cell systems. H3's hexagons have uniform <em>neighbor distance</em> (every neighbour's centroid is equidistant, unlike a square grid's diagonals), which is why it wins for demand aggregation and surge pricing. Two caveats worth volunteering: cell areas still vary roughly 2× within a resolution, and the icosahedral projection forces exactly <strong>12 pentagons</strong> per resolution.</li>
     <li><strong>The moving-object trick</strong> — don't index the drivers, index a grid and let drivers publish location every 3–5 s into a Redis <code>GEOADD</code> / hash keyed by cell. Reads are "give me cells within radius"; writes are cheap overwrites, and staleness of a few seconds is invisible to the user.</li>
   </ul>
 
@@ -1760,7 +2213,7 @@ redis.call(<span class="st">'EXPIRE'</span>, KEYS[<span class="nu">1</span>], ma
 
 <section id="designs">
   <div class="sec-head">
-    <div class="eyebrow">Section 04</div>
+    <div class="eyebrow">Section 12 · System design</div>
     <h2>Four worked designs</h2>
     <p>Read each one, then close the page and redraw it. These four cover most of the surface area: unique ID generation and redirects, fan-out and hot keys, stateful connections and ordering, and spatial indexing with high-frequency writes.</p>
   </div>
@@ -1769,7 +2222,7 @@ redis.call(<span class="st">'EXPIRE'</span>, KEYS[<span class="nu">1</span>], ma
   <p>The warm-up question. It looks trivial, which is exactly why the bar is "did you find the interesting part". The interesting part is ID generation and the read path, not the database.</p>
 
   <h4>Scope</h4>
-  <p><strong>In:</strong> create a short link (optional custom alias, optional TTL), redirect, click analytics. <strong>Out:</strong> user accounts, link editing, spam detection — mention that you're deferring them. <strong>Non-functional:</strong> redirect p99 under 50 ms, read-heavy, and the redirect path must survive the analytics pipeline being down.</p>
+  <p><strong>In:</strong> create a short link (optional custom alias, optional TTL), redirect, click analytics. <strong>Out:</strong> user accounts, link editing, spam detection — mention that you're deferring them. <strong>Non-functional:</strong> redirect p99 under 50 ms <em>measured at the edge</em> — say the measurement point, because the document's own latency table puts a US cross-country round trip at 70 ms, so a 50 ms end-user p99 is physically impossible and stating one unqualified is a self-inflicted wound. Read-heavy, and the redirect path must survive the analytics pipeline being down.</p>
 
   <h4>Scale</h4>
   <p>100M new links/day → ~1,000 writes/s. Read:write of 100:1 → <strong>100k reads/s average, 300k peak</strong>. Five years of links ≈ 180B rows × ~500 B = <strong>~90 TB</strong>. So: sharded key-value store, aggressive caching, and the write path is trivially small.</p>
@@ -1782,17 +2235,18 @@ redis.call(<span class="st">'EXPIRE'</span>, KEYS[<span class="nu">1</span>], ma
       <tbody>
         <tr><td>Hash the URL</td><td><code>base62(md5(url))[:7]</code></td><td>Collisions must be detected and retried; a DB read on every write. Does give free deduplication.</td></tr>
         <tr><td>Auto-increment counter</td><td><code>base62(next_id())</code></td><td>Sequential and therefore enumerable — anyone can crawl every link. Also a single point of contention.</td></tr>
-        <tr><td><strong>Pre-allocated key ranges</strong></td><td>A key service hands each app node a block of 10k unused ids; node serves from memory</td><td>Ids are lost on restart, which does not matter. <em>This is the answer:</em> no coordination on the hot path, no collisions, and you can shuffle within a block to defeat enumeration.</td></tr>
+        <tr><td><strong>Pre-allocated key ranges</strong></td><td>A key service hands each app node a block of 10k unused ids; node serves from memory</td><td>Ids are lost on restart, which does not matter. <em>This is the answer:</em> no coordination on the hot path, no collisions, and ids are not sequential across nodes. To actually defeat enumeration, don't shuffle within the block — an attacker just walks the block. Encrypt the counter with a <strong>format-preserving (Feistel) permutation</strong> over the 62<sup>7</sup> space, which is a bijection, so you keep uniqueness and collision-freedom while making the sequence unguessable.</td></tr>
       </tbody>
     </table>
   </div>
-  <p>If asked for globally-unique 64-bit ids without a central service, describe <strong>Snowflake</strong>: <code>[41 bits ms-timestamp | 10 bits machine id | 12 bits sequence]</code> — time-sortable, 4096 ids per ms per machine, no coordination. The failure mode worth naming is clock skew going backwards; you stall until the clock catches up.</p>
+  <p>If asked for globally-unique 64-bit ids without a central service, describe <strong>Snowflake</strong>: <code>[1 unused sign bit | 41 bits ms-timestamp | 10 bits machine id | 12 bits sequence]</code>. Derive the three numbers rather than reciting them: 2<sup>41</sup> ms ≈ <strong>69.7 years</strong> from a custom epoch (which is <em>why</em> you pick a custom epoch instead of 1970 — you'd have burned half of it already), 2<sup>10</sup> = <strong>1,024 machines</strong>, 2<sup>12</sup> = <strong>4,096 ids per millisecond per machine</strong>. The leading bit is left unused so the id stays positive in languages with signed 64-bit integers.</p>
+  <p>Two honest caveats to volunteer: it is coordination-free <em>on the hot path only</em> — assigning unique machine ids across 1,024 workers is itself a coordination problem, solved out of band with a ZooKeeper/etcd lease or by deriving the id from a StatefulSet pod ordinal. And the failure mode is the clock stepping backwards (NTP correction), where the only safe behavior is to stall until the clock catches up rather than risk duplicate ids.</p>
 
   <div class="diagram">
     <div class="dflow">
       <div class="dcol"><div class="node">Client</div></div>
       <div class="arrow">→</div>
-      <div class="dcol"><div class="node pri">CDN / edge<small>301 cached</small></div></div>
+      <div class="dcol"><div class="node pri">CDN / edge<small>TLS + short-TTL<br>redirect cache</small></div></div>
       <div class="arrow">→</div>
       <div class="dcol"><div class="node">Read service<small>stateless, autoscaled</small></div></div>
       <div class="arrow">→<span>~95% hit</span></div>
@@ -1804,7 +2258,8 @@ redis.call(<span class="st">'EXPIRE'</span>, KEYS[<span class="nu">1</span>], ma
   </div>
 
   <h4>Deep dive: the redirect</h4>
-  <p>Use <strong>302 (temporary), not 301</strong>. A 301 is cached by the browser forever, which is faster but destroys your click analytics and makes a link impossible to retire. That tradeoff sentence is the whole point of the question. Cache hit rate will be very high because link popularity is Zipfian — a Redis cache of the top few million codes serves most traffic, and the KV store barely sees load.</p>
+  <p>The 301-vs-302 choice <em>is</em> the question, and the honest answer has three parts rather than one. A <strong>301</strong> is heuristically cached by browsers more or less indefinitely when you send no cache headers — so subsequent clicks never reach you at all: fastest possible redirect, zero click analytics after the first, and the link can never be retired. A <strong>302</strong> is not cacheable by default, so every click reaches you: full analytics, full load, and your CDN node caches nothing. The real answer is to pick your point on that line explicitly — <em>"302 plus edge-side click aggregation if analytics fidelity is the product; 301 with an explicit short <code>max-age</code> if origin load is the constraint and sampled analytics are acceptable."</em> Naming the header you'd set, and what your CDN does with it, is what separates this from a memorized line.</p>
+  <p>Whichever you choose, cache hit rate is high because link popularity is Zipfian — a Redis cache of the top few million codes serves most traffic and the KV store barely sees load.</p>
   <p><strong>Failure modes:</strong> a viral link creating a single hot key (fix: local in-process cache in front of Redis, since the mapping is immutable and can be cached forever) · expired links (store TTL, and let a lazy sweep delete on read rather than scanning) · analytics backpressure (bounded in-memory buffer, drop events under load and say so out loud).</p>
 
   <hr class="rule">
@@ -1836,13 +2291,15 @@ redis.call(<span class="st">'EXPIRE'</span>, KEYS[<span class="nu">1</span>], ma
       <div class="arrow">→</div>
       <div class="dcol"><div class="node pri">Timeline cache<small>Redis list per user<br>~800 post ids</small></div></div>
       <div class="arrow">←<span>read</span></div>
-      <div class="dcol"><div class="node">Feed API<small>merge + hydrate</small></div><div class="node ml">Ranker<small>see §06</small></div></div>
+      <div class="dcol"><div class="node">Feed API<small>merge + hydrate</small></div><div class="node ml">Ranker<small>see §15</small></div></div>
     </div>
     <div class="dcap">Store <em>ids</em> in the timeline, never post bodies — one edit shouldn't rewrite 200 million copies. Hydrate from the post store on read, in one batched multi-get.</div>
   </div>
 
   <h4>Deep dive: the timeline representation</h4>
-  <p>Each user's timeline is a Redis sorted set or list of ~800 post ids scored by time (or predicted engagement). Truncate hard — nobody scrolls past a few hundred items, and unbounded lists are how you run out of memory at 3am. Only materialize timelines for <strong>active users</strong> (seen in the last 30 days); for everyone else, build on read and start pushing again once they return. At 500M DAU × 800 ids × 8 B that's ~3 TB of Redis, sharded by user id — a number worth saying out loud, because it justifies the truncation.</p>
+  <p>Each user's timeline is a time-ordered list of ~800 post ids. Truncate hard — nobody scrolls past a few hundred items, and unbounded lists are how you run out of memory at 3am. Only materialize timelines for <strong>active users</strong> (seen in the last 30 days); for everyone else, build on read and start pushing again once they return.</p>
+  <p><strong>Now size it honestly, because this is where the naive number is wrong by an order of magnitude.</strong> 500M active users × 800 ids × 8 B of raw id is ~3 TB. But a Redis sorted set costs a skiplist node, a dict entry, and an sds string <em>per member</em> — realistically 60–100 B per entry, so the same timelines in sorted sets are <strong>30–40 TB</strong>, which is a completely different purchasing decision. The fix is to stop using a sorted set: pack the ids into one fixed-width binary blob per user and pay the ~3 TB. Catching that gap between the data and its representation is a genuinely senior move.</p>
+  <p>One thing not to hand-wave: a <em>precomputed</em> timeline cannot be ordered by predicted engagement, because engagement predictions depend on request-time context — hour, device, session depth. The materialized list is a recency-ordered <strong>candidate set</strong>; ranking happens at read time (§15). Saying that explicitly avoids the most common hole in this design.</p>
   <p><strong>Pagination</strong> must be cursor-based (<code>?after=&lt;post_id&gt;&limit=20</code>), never offset-based: new posts arriving shift every offset and users see duplicates.</p>
   <p><strong>Failure modes:</strong> fan-out lag during a spike (the queue absorbs it; the feed is a few seconds stale, which is acceptable — say so) · a user following 5,000 accounts (cap the pull-side merge, prioritize by affinity) · unfollow leaving stale entries (filter at read time rather than rewriting timelines).</p>
 
@@ -1870,7 +2327,8 @@ redis.call(<span class="st">'EXPIRE'</span>, KEYS[<span class="nu">1</span>], ma
   </div>
 
   <h4>Deep dive: ordering and delivery</h4>
-  <p>Client timestamps are unusable — clocks lie and clients cheat. Assign a <strong>monotonic sequence number per conversation</strong> at the chat service, and let clients sort by it. Partition the message store by <code>chat_id</code> so a conversation's messages live together and a single-partition read serves the history; the primary key is <code>(chat_id, seq)</code>, which makes "load 50 messages before X" one range scan.</p>
+  <p>First, the storage arithmetic the design needs: 50B messages/day × ~200 B ≈ <strong>10 TB/day, ~3.6 PB/year</strong> — so messages go to a horizontally partitioned wide-column store with age-based tiering, not to a relational primary.</p>
+  <p>Client timestamps are unusable — clocks lie and clients cheat. Assign a <strong>monotonic sequence number per conversation</strong> at the chat service, and let clients sort by it. Be ready for "how?", because that is a coordination question wearing a small hat: the practical answers are a single-writer partition owner per <code>chat_id</code> (route by hash, hold a lease — the same trick as Design 10), or an atomic <code>INCR</code> on a per-conversation counter, or a conditional write on <code>(chat_id, seq)</code> that retries on collision. Pick one and say what happens when the owner dies. Partition the message store by <code>chat_id</code> so a conversation's messages live together and a single-partition read serves the history; the primary key is <code>(chat_id, seq)</code>, which makes "load 50 messages before X" one range scan.</p>
   <p>Delivery is a three-state machine: <strong>sent</strong> (server has it), <strong>delivered</strong> (recipient's device acked), <strong>read</strong> (recipient opened it). Each is a separate small event flowing back on the same channel. For offline users, hold messages in a per-user inbox and drain it on reconnect — the client sends its last-known <code>seq</code> and the server replays forward.</p>
   <p><strong>Group chats</strong> flip the math: one message to a 500-person group is 500 deliveries. Keep groups bounded (that's why real products cap them), fan out through the same pub/sub, and for very large groups switch to a pull model — clients poll the conversation instead of receiving pushes.</p>
   <p><strong>Failure modes:</strong> a gateway node dying takes 50k connections with it (clients reconnect with backoff and jitter — without jitter you get a thundering herd against the registry) · duplicate sends on retry (client-generated message id, deduplicated server-side) · end-to-end encryption, if it comes up, means the server stores ciphertext and cannot do search, so search moves onto the device.</p>
@@ -1888,7 +2346,7 @@ redis.call(<span class="st">'EXPIRE'</span>, KEYS[<span class="nu">1</span>], ma
     <p><code>SELECT * FROM drivers WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?</code> requires a two-dimensional index; a B-tree can only efficiently serve one of the two predicates, so the database scans a huge intermediate set. And 1.25M updates/s against an indexed table means constant index churn. You need a structure where a location update is a hash write.</p>
   </div>
 
-  <p><strong>The design:</strong> divide the world into cells (geohash of precision 6 ≈ 1.2 km, or H3 resolution 8). Keep <code>cell_id → {driver_id: (lat, lng, ts)}</code> in Redis, sharded by cell. A location update is: compute the cell, and if it changed, remove from the old cell and add to the new one — two hash operations, no index. A search reads the rider's cell plus its neighbors, filters by true haversine distance, and returns the top K.</p>
+  <p><strong>The design:</strong> divide the world into cells (geohash precision 6 is ≈ 1.2 km × 0.6 km at the equator — it is <em>not</em> square, and it narrows with the cosine of latitude, so size your precision off the <em>shorter</em> dimension or your north–south coverage silently under-reads; or H3 resolution 8). Keep <code>cell_id → {driver_id: (lat, lng, ts)}</code> in Redis, sharded by cell. A location update is: compute the cell, and if it changed, remove from the old cell and add to the new one — two hash operations, no index. A search reads the rider's cell plus its neighbors, filters by true haversine distance, and returns the top K.</p>
 
   <div class="codehead"><span>proximity.py · the read path, including the boundary bug everyone hits</span><button class="copy" type="button">Copy</button></div>
 <pre><code><span class="kw">def</span> nearby(rider_lat, rider_lng, radius_km, k=<span class="nu">10</span>):
@@ -1911,10 +2369,13 @@ redis.call(<span class="st">'EXPIRE'</span>, KEYS[<span class="nu">1</span>], ma
         <span class="kw">if</span> dist <= radius_km:
             out.append((dist, d))
 
-    <span class="cm"># 4. Top-K by heap, not a full sort — see the DSA top-K pattern in §08.</span>
-    <span class="kw">return</span> heapq.nsmallest(k, out)
+    <span class="cm"># 4. Top-K by heap, not a full sort -- see the top-K pattern in §04.</span>
+    <span class="cm">#    NOTE the key=: on a distance tie Python would fall through to comparing</span>
+    <span class="cm">#    the driver objects and raise TypeError. Classic heap-of-tuples bug.</span>
+    <span class="kw">return</span> heapq.nsmallest(k, out, key=<span class="kw">lambda</span> pair: pair[<span class="nu">0</span>])
 </code></pre>
 
+  <p><strong>Then divide, because the design depends on it.</strong> 1.25M location updates/s, at ~2 Redis operations each when a driver changes cell (remove from old, add to new), against ~100k ops/s per Redis node, is <strong>25–40 nodes minimum</strong> before replication or headroom — and most updates don't change cell, so the realistic figure is nearer the low end. Sharding by cell id spreads that naturally. Doing this division out loud is the difference between proposing Redis and justifying it.</p>
   <p><strong>Density is the deep dive.</strong> A fixed grid puts 40,000 drivers in one Manhattan cell and zero in most ocean cells. Two answers: use a <strong>quadtree</strong> so cells split on density, or use <strong>multiple fixed precisions</strong> and pick the precision per query based on how dense the area is — the second is far easier to operate because it needs no rebuild. Say both, pick the second, and explain that operability is why.</p>
   <p><strong>Failure modes:</strong> a cell shard hot-spotting during an event (replicate hot cells read-only) · drivers oscillating across a cell boundary (hysteresis — only move cells after a real displacement) · Redis loss (the data is 4 seconds from being fully rebuilt by the drivers themselves, which makes durability a non-requirement — a genuinely nice thing to point out).</p>
 </section>
@@ -1922,7 +2383,7 @@ redis.call(<span class="st">'EXPIRE'</span>, KEYS[<span class="nu">1</span>], ma
 
 <section id="designs2">
   <div class="sec-head">
-    <div class="eyebrow">Section 12 · System design</div>
+    <div class="eyebrow">Section 13 · System design</div>
     <h2>Four harder designs</h2>
     <p>These four are chosen because each one forces a concept the first four don't: time-based work distribution, conflict resolution without a lock, extreme write compression, and correctness where being wrong costs money.</p>
   </div>
@@ -2027,7 +2488,7 @@ compressed/year                            ≈ <span class="nu">440 TB/year</spa
 </code></pre>
 
   <p><strong>The architecture</strong> is a specialized LSM tree: agents push samples to an ingest tier, which appends to a write-ahead log and accumulates a <strong>head block</strong> in memory (the last couple of hours, uncompressed and queryable). Periodically the head block is compressed and written out as an immutable block to object storage, with its own index. Queries fan out across the blocks covering the time range, plus the head block, and merge. Old blocks are compacted and downsampled by a background job.</p>
-  <p>A series is identified by its <strong>label set</strong> — <code>http_requests{service="api", region="us-east", status="500"}</code> — and lookup is an inverted index: label pair → posting list of series ids, intersected across the query's matchers. This is literally the search-engine design from §14 applied to metrics, and pointing that out is a nice moment of synthesis.</p>
+  <p>A series is identified by its <strong>label set</strong> — <code>http_requests{service="api", region="us-east", status="500"}</code> — and lookup is an inverted index: label pair → posting list of series ids, intersected across the query's matchers. This is literally the search-engine design from §15 applied to metrics, and pointing that out is a nice moment of synthesis.</p>
 
   <h4>Deep dive: cardinality is the thing that kills these systems</h4>
   <p>Every distinct combination of label values is a separate series with its own index entry and its own memory. Adding one label with a high-cardinality value — <code>user_id</code>, <code>request_id</code>, a raw URL with ids in it — multiplies your series count by millions and takes the cluster down. <strong>This is the number one production failure of every metrics system</strong>, and naming it unprompted is a strong signal. Defenses: enforce a per-metric series limit at ingest and reject beyond it, strip unbounded labels at the agent, expose cardinality as a first-class metric, and route genuinely high-cardinality data to a logging or tracing system instead — those are designed for it, and metrics are not.</p>
@@ -2063,9 +2524,15 @@ compressed/year                            ≈ <span class="nu">440 TB/year</spa
   <p><strong>Consistency choice:</strong> this is the one system where you take strong consistency and pay for it. Ledger writes go through a single-leader relational database with serializable-or-close isolation; balance checks and debits happen in one transaction; cross-service flows use a saga with explicit compensation (refund) rather than two-phase commit, because holding locks across a third-party network call is untenable.</p>
   <p><strong>Failure modes worth naming:</strong> a duplicate webhook from the processor (dedupe on their event id, and treat webhooks as at-least-once) · out-of-order webhooks (the state machine rejects invalid transitions rather than trusting arrival order) · a partial refund arriving after a chargeback (model both as ledger entries, never as edits) · currency and rounding (integer minor units only — never floating point for money, and say this out loud, because it is a real disqualifier).</p>
 </section>
+
+<div class="partbreak">
+  <div class="pn">Part IV</div>
+  <h2>AI &amp; ML systems</h2>
+  <p>A design round with two extra loops bolted on: a training loop that turns data into models, and a feedback loop where today's predictions become tomorrow's labels. Everything difficult about ML systems lives in the second one.</p>
+</div>
 <section id="mlframework">
   <div class="sec-head">
-    <div class="eyebrow">Section 05 · The AI track</div>
+    <div class="eyebrow">Section 14 · AI &amp; ML</div>
     <h2>ML design framework</h2>
     <p>An ML system design round is a system design round with two extra loops bolted on: a <strong>training loop</strong> that produces models from data, and a <strong>feedback loop</strong> where your predictions become tomorrow's training data. Candidates who only design the inference path get read as "knows models, hasn't shipped one".</p>
   </div>
@@ -2112,7 +2579,7 @@ compressed/year                            ≈ <span class="nu">440 TB/year</spa
         <tr><td>Accuracy</td><td>Fraction correct</td><td>Balanced classes</td><td>Useless at 0.1% positives — predict "no" and score 99.9%.</td></tr>
         <tr><td>Precision / Recall</td><td>Cost of false positives vs negatives</td><td>Whenever the two errors cost differently</td><td>Reporting one without the other.</td></tr>
         <tr><td>PR-AUC</td><td>Ranking quality on rare positives</td><td>Fraud, spam, ads — <strong>prefer over ROC-AUC on heavy imbalance</strong></td><td>ROC-AUC looks great on imbalanced data and means little.</td></tr>
-        <tr><td>Log loss / Brier</td><td>Calibration of probabilities</td><td>The score is used as an actual probability (ad bidding, expected value)</td><td>A model can rank perfectly and be badly calibrated.</td></tr>
+        <tr><td>Log loss / Brier</td><td>Probabilistic quality — calibration <em>and</em> discrimination together (they are proper scoring rules, not calibration metrics)</td><td>The score is used as an actual probability (ad bidding, expected value)</td><td>Log loss can improve purely from better ranking with calibration unchanged. For calibration specifically use a <strong>reliability diagram or ECE</strong>.</td></tr>
         <tr><td>NDCG@k / MAP</td><td>Graded ranking quality at the top</td><td>Search and recommendation — position matters</td><td>Computed against biased click logs, so it flatters the incumbent.</td></tr>
         <tr><td>Recall@k</td><td>Did the candidate generator find it at all</td><td>The retrieval stage of a multi-stage system</td><td>Judging a retriever by precision. Its only job is not to lose the good item.</td></tr>
       </tbody>
@@ -2131,13 +2598,14 @@ compressed/year                            ≈ <span class="nu">440 TB/year</spa
   <p>Deployment is a staircase, and being able to name it is a strong shipping signal: <strong>offline eval</strong> on a held-out time-based split (never random — that leaks the future) → <strong>shadow mode</strong>, where the new model scores real traffic and its outputs are logged but not shown → <strong>interleaving</strong> for ranking, which needs a fraction of the traffic of an A/B test → <strong>canary</strong> at 1% → <strong>A/B test</strong> sized by a power calculation → <strong>ramp</strong>, with automatic rollback wired to the guardrail metrics.</p>
   <div class="callout mlbox">
     <div class="ct">The A/B numbers to have ready</div>
-    <p>Sample size per arm ≈ <code>16 σ² / Δ²</code> for detecting an absolute lift Δ at 80% power and 95% significance. For a 2% baseline CTR and a 5% relative lift you need roughly <strong>a few hundred thousand users per arm</strong> — run it for at least one full week to absorb day-of-week effects. Randomize by user, not by request, or the same person sees both variants. Watch for <strong>network effects</strong> (social features spill between arms — switch to cluster randomization) and <strong>novelty effects</strong> (an early lift that decays by week two).</p>
+    <p>Sample size per arm ≈ <code>16 σ² / Δ²</code> for detecting an absolute lift Δ at 80% power and a 5% two-sided significance level. For a 2% baseline CTR and a 5% relative lift you need roughly <strong>a few hundred thousand users per arm</strong> — run it for at least one full week to absorb day-of-week effects. Randomize by user, not by request, or the same person sees both variants. Watch for <strong>network effects</strong> (social features spill between arms — switch to cluster randomization) and <strong>novelty effects</strong> (an early lift that decays by week two).</p>
+    <p>Three refinements that separate someone who has run experiments from someone who has read about them. <strong>Check SRM first</strong> — sample ratio mismatch, where a 50/50 split arrives as 50.4/49.6; it is the single most common reason a "significant" result is garbage, and it invalidates the test rather than adjusting it. <strong>Correct the variance for ratio metrics</strong> — CTR is measured per impression but randomized per user, so the naive binomial σ² understates the truth and real sample sizes land 2–5× above the textbook formula; use the delta method or cluster-robust standard errors. And <strong>use CUPED</strong> (variance reduction using pre-experiment data) to cut the required sample substantially for metrics with strong pre-period signal. Also: don't peek — repeatedly checking a running test inflates the false-positive rate unless you use a sequential test designed for it.</p>
   </div>
 </section>
 
 <section id="mldesigns">
   <div class="sec-head">
-    <div class="eyebrow">Section 06 · The AI track</div>
+    <div class="eyebrow">Section 15 · AI &amp; ML</div>
     <h2>Four worked ML designs</h2>
     <p>Two classical (ranking and retrieval) and two that now show up in nearly every loop (RAG and LLM serving). The pattern to internalize from the first two is <strong>multi-stage funnels</strong>; from the second two, <strong>memory and batching arithmetic</strong>.</p>
   </div>
@@ -2222,7 +2690,14 @@ compressed/year                            ≈ <span class="nu">440 TB/year</spa
   </div>
   <div class="callout mlbox">
     <div class="ct">The sizing question you will be asked</div>
-    <p>10B documents × 768-dim float32 = <code>10<sup>10</sup> × 768 × 4 B</code> ≈ <strong>30 TB</strong> of raw vectors. That does not fit in one machine's RAM, so: shard the index by document (each shard searches its slice, results merged — scatter-gather), reduce dimensions to 256 via matryoshka-style truncation or a learned projection, and quantize to int8 (4× smaller) or PQ (up to 30×). 30 TB → about 1 TB → about 12 machines. <em>Do this arithmetic out loud; it is the whole reason quantization exists.</em></p>
+    <p>10B documents × 768-dim float32 = <code>10<sup>10</sup> × 768 × 4 B</code> ≈ <strong>30 TB</strong> of raw vectors, so shard by document and scatter-gather. Then reduce, showing each factor separately so the number is reproducible:</p>
+    <div class="tbl-wrap"><table><thead><tr><th>Step</th><th class="num">Factor</th><th class="num">Size</th><th>Cost</th></tr></thead><tbody>
+      <tr><td>float32, 768 dims</td><td class="num">—</td><td class="num">30 TB</td><td>baseline</td></tr>
+      <tr><td>Truncate to 256 dims (Matryoshka)</td><td class="num">÷3</td><td class="num">10 TB</td><td>small recall loss; MRL-trained models degrade gracefully</td></tr>
+      <tr><td>int8 quantization</td><td class="num">÷4</td><td class="num">2.5 TB</td><td>minor; recovered by reranking on exact vectors</td></tr>
+      <tr><td><em>or</em> product quantization instead</td><td class="num">÷30</td><td class="num">~0.9 TB</td><td>real recall loss — must over-retrieve and rerank</td></tr>
+    </tbody></table></div>
+    <p><strong>And then name the term everyone forgets:</strong> at 10B vectors an HNSW graph costs roughly <code>M × 2 × 4</code> bytes of links per vector — at M=16 that's ~128 B/vector, or <strong>1.3 TB of graph</strong>, which is <em>larger than the quantized vectors it sits on top of</em>. Optimizing only the vectors optimizes the smaller term. That is also the reason HNSW isn't the right index at this scale at all: 10B vectors is IVF-PQ or DiskANN territory, where the graph or centroids stay in RAM and the vectors live on SSD. <em>Do this arithmetic out loud; it is the whole reason quantization and disk-resident indexes exist.</em></p>
   </div>
 
   <hr class="rule">
@@ -2250,22 +2725,23 @@ compressed/year                            ≈ <span class="nu">440 TB/year</spa
     <li><strong>Chunk on structure, not on character count.</strong> Split at headings and paragraphs, target ~500 tokens with ~15% overlap so a sentence spanning a boundary survives in one piece.</li>
     <li><strong>Keep the parent.</strong> Retrieve small chunks for precision, but pass the surrounding section to the model for context — "small-to-big" retrieval.</li>
     <li><strong>Prepend context to each chunk before embedding</strong> — document title, section path, and a one-line summary of what the parent document is about. A chunk reading "it increased 12% year over year" is unretrievable without it.</li>
-    <li><strong>Store metadata for filtering</strong> — ACL groups, source, timestamp, language. Filter <em>before</em> the vector search, not after, or a user's top-k gets emptied by post-filtering and they see nothing.</li>
+    <li><strong>Store metadata for filtering</strong> — ACL groups, source, timestamp, language. Post-filtering empties a user's top-k and shows them nothing, so you want to filter first — but be honest that <strong>filtered ANN is genuinely hard</strong>: pre-filtering an HNSW graph wrecks recall when the filter is selective, because the graph's navigability assumes the full node set. The real options are a partitioned index per ACL group, IVF with per-list filtering, or over-fetching against a measured recall budget. "Pre-filter" is the right instinct and not a free one.</li>
     <li><strong>Re-embed on model change.</strong> Changing the embedding model invalidates the entire index — 10M documents is a real re-indexing job, and planning for it (versioned indexes, dual-write, atomic swap) is a strong operational signal.</li>
   </ul>
 
+  <div class="callout mlbox"><div class="ct">Size it, like any other index</div><p>10M documents × ~20 chunks each = 200M chunks. At 768 dims float32 that is <strong>~614 GB of vectors</strong> plus the graph — comfortably a single beefy machine after int8 quantization, which is a genuinely useful thing to establish early, because it tells you this is not a distributed-systems problem and the effort belongs in retrieval quality instead. Per-query cost is <code>(prompt tokens + output tokens) × price</code>; with 8 chunks of 500 tokens you are paying for ~5k input tokens on every question, which is what makes prefix caching and small-model routing matter.</p></div>
   <h4>Grounding, and why "don't hallucinate" is a system property</h4>
   <p>You cannot prompt a model into being honest; you build a system where unsupported claims are detectable. Layer it:</p>
   <ol>
     <li><strong>Require citations per claim</strong> — the prompt asks for spans tagged with chunk ids, and a post-processor verifies each cited id was actually retrieved. Hallucinated citations are trivially caught this way.</li>
     <li><strong>Verify support</strong> — an entailment check (a small NLI model, or a second cheap LLM call) that asks "is this sentence supported by this chunk?" for the highest-stakes claims.</li>
-    <li><strong>Refuse deliberately</strong> — if the top retrieval score is below a threshold, answer "I don't have a document that covers this." A calibrated refusal rate is a shipped feature, not a failure.</li>
+    <li><strong>Refuse deliberately</strong> — below a confidence threshold, answer "I don't have a document that covers this." But use a <em>reranker</em> score, not raw cosine similarity: embedding scores aren't comparable across queries (the distribution shifts with query length and specificity), so a fixed global cosine threshold over-refuses on some query shapes and under-refuses on others. A calibrated refusal rate is a shipped feature, not a failure.</li>
     <li><strong>Show your work</strong> — render the source chunks alongside the answer so a human can check in two seconds.</li>
   </ol>
 
   <h4>Evaluation, which is where most candidates go vague</h4>
   <p>Split it in two, because the fixes are different. <strong>Retrieval:</strong> build a golden set of ~200 question→document pairs (labelled by hand, once, and worth the day it takes) and track <em>recall@k</em> and <em>MRR</em>. <strong>Generation:</strong> track <em>faithfulness</em> (fraction of claims supported by the retrieved context), <em>answer relevance</em>, and <em>citation precision</em>, scored by an LLM judge that you have calibrated against human labels on a sample. Then online: thumbs, follow-up-question rate, escalation-to-human rate, and time-to-answer. <strong>Say the failure taxonomy out loud</strong> — retrieval miss, retrieval hit but ignored, hallucinated detail, stale document, permission leak — because each one points to a different part of the pipeline.</p>
-  <p><strong>Cost and latency:</strong> a semantic cache on normalized queries (embed the query, and if cosine similarity to a cached one exceeds ~0.97, return the cached answer) cuts a large fraction of repeat traffic. Stream tokens over SSE so time-to-first-token — the number users actually feel — stays under ~500 ms even when the full answer takes 5 s. Route by difficulty: a small model handles the easy majority, a large one handles the rest.</p>
+  <p><strong>Cost and latency:</strong> caching is the biggest lever, but be careful <em>what</em> you cache. A naive semantic cache — embed the query, return the cached <em>answer</em> above ~0.97 cosine — is a correctness bug in a system whose stated requirement is not making things up: "did revenue increase in Q3?" and "did revenue decrease in Q3?" sit far above 0.97 in any general embedding space and have opposite answers. Embeddings encode topic, not polarity. Cache the <strong>retrieval</strong> (safe — you re-generate against the same chunks), and gate any answer cache on a normalized exact-match or a cheap equivalence check. Prefix-caching the long system prompt is free money and has no such hazard. Stream tokens over SSE so time-to-first-token — the number users actually feel — stays under ~500 ms even when the full answer takes 5 s. Route by difficulty: a small model handles the easy majority, a large one handles the rest.</p>
 
   <hr class="rule">
 
@@ -2275,8 +2751,11 @@ compressed/year                            ≈ <span class="nu">440 TB/year</spa
   <h4>The memory math, which you should be able to do on the whiteboard</h4>
   <div class="codehead"><span>Two numbers decide the whole architecture</span><button class="copy" type="button">Copy</button></div>
 <pre><code><span class="cm"># 1. WEIGHTS — fixed cost, paid once per GPU replica</span>
-70B params x 2 bytes (fp16)  = <span class="nu">140 GB</span>   <span class="cm"># > 80 GB card -> must shard across GPUs</span>
-70B x 1 byte  (int8)         = <span class="nu">70 GB</span>    <span class="cm"># fits one H100, ~1% quality loss</span>
+70B params x 2 bytes (fp16)  = <span class="nu">140 GB</span>   <span class="cm"># > 80 GB card -> tensor-parallel over 2-8 GPUs.</span>
+                                           <span class="cm"># TP shards the KV cache too, so aggregate</span>
+                                           <span class="cm"># concurrency scales with the TP degree.</span>
+70B x 1 byte  (int8)         = <span class="nu">70 GB</span>    <span class="cm"># "fits" an 80GB H100 -- but leaves ~10 GB for KV</span>
+                                          <span class="cm"># cache = ~7 concurrent sequences. Unservable.</span>
 70B x 0.5 byte (int4)        = <span class="nu">35 GB</span>    <span class="cm"># fits comfortably, quality loss is task-dependent</span>
 
 <span class="cm"># 2. KV CACHE — per token, per concurrent request. This is what limits batch size.</span>
@@ -2286,23 +2765,37 @@ kv_per_token = 2 (K and V) x n_layers x kv_dim x bytes
 <span class="cm"># On an 80 GB card holding a 35 GB int4 model: ~45 GB left / 1.3 GB = ~34 concurrent</span>
 <span class="cm"># sequences per GPU. THAT is your concurrency ceiling -- not FLOPs.</span>
 
-<span class="cm"># 3. THROUGHPUT — decoding is memory-bandwidth bound, not compute bound.</span>
+<span class="cm"># 3. THROUGHPUT -- decoding is memory-bandwidth bound, not compute bound.</span>
 tokens/s (single stream) ≈ HBM bandwidth / bytes read per token
-                         ≈ 3.3 TB/s / 35 GB ≈ <span class="nu">~90 tok/s</span>
-<span class="cm"># Batching is what turns 90 tok/s into thousands: the weights are read once</span>
-<span class="cm"># per step and amortized across every sequence in the batch.</span>
+                         ≈ 3.3 TB/s / 35 GB ≈ <span class="nu">~95 tok/s</span> ceiling
+<span class="cm"># Real systems achieve 60-80% of peak bandwidth, and int4 weights are usually</span>
+<span class="cm"># dequantized in-kernel, so call it 50-80 tok/s per user in practice.</span>
+<span class="cm"># Batching raises AGGREGATE throughput into the thousands -- the weights are</span>
+<span class="cm"># read once per step and amortized across the batch -- while PER-USER speed</span>
+<span class="cm"># goes DOWN. Say "aggregate" or the interviewer will assume you memorized it.</span>
+
+<span class="cm"># 4. NOW ANSWER THE ACTUAL QUESTION: how many GPUs for 10,000 RPS?</span>
+output tokens/request  = ~500
+output tokens/s        = 10,000 x 500        = <span class="nu">5M tok/s</span>
+per-H100 aggregate     = ~2,000-4,000 tok/s  <span class="cm"># 70B int4, continuous batching</span>
+GPUs for decode        = 5M / 3,000          ≈ <span class="nu">~1,700 H100s</span>
+                         <span class="cm"># before prefill, before replication, before headroom.</span>
+                         <span class="cm"># At ~$2/GPU-hour that is ~$30M/year of decode alone.</span>
+<span class="cm"># THIS is why routing to a small model and prefix caching are not</span>
+<span class="cm"># optimizations -- they are the design. Do this division out loud.</span>
 </code></pre>
 
   <h4>The four techniques to name</h4>
   <ul>
     <li><strong>Continuous (in-flight) batching</strong> — the single biggest throughput win. Static batching waits for the slowest sequence in the batch to finish; continuous batching evicts finished sequences and admits new ones every step, typically a multiple-times improvement in real throughput.</li>
     <li><strong>Paged attention</strong> — allocate the KV cache in fixed-size blocks like OS virtual memory instead of one contiguous reservation per sequence. Kills the internal fragmentation caused by reserving for max context, and lets sequences with a shared prefix (a long system prompt) share physical blocks.</li>
+    <li><strong>Chunked prefill</strong> — the simpler alternative to full disaggregation, and what most single-cluster deployments actually run. Split a long prefill into chunks and mix them into the same batch as in-flight decode tokens, so one long prompt can't stall every generating sequence. Chunk size trades time-to-first-token against inter-token latency, and it is the default in modern serving engines.</li>
     <li><strong>Prefill/decode disaggregation</strong> — prefill is compute-bound and parallel over the prompt; decode is memory-bound and sequential. They have opposite hardware profiles, so running them in one pool means one of them is always starving the other. Split the pools and you can size and autoscale each correctly.</li>
-    <li><strong>Speculative decoding</strong> — a small draft model proposes several tokens, the large model verifies them in one forward pass, and accepted tokens come nearly free. Two to three times faster on predictable text, and — this is the part to say — <em>output is mathematically identical</em> to the large model's, so it is safe to enable everywhere.</li>
+    <li><strong>Speculative decoding</strong> — a cheap drafter proposes several tokens, the large model verifies them all in one forward pass, and accepted tokens come nearly free. Two things to get right, because both are commonly overstated. First, rejection sampling preserves the target model's <em>output distribution</em>, not its exact output — token-identical only at temperature 0. Second, it is <strong>not</strong> safe to enable everywhere: it trades spare compute for latency, so at high batch sizes, where continuous batching has already saturated the GPU, verifying rejected drafts burns FLOPs for nothing and <em>reduces</em> aggregate throughput. Real stacks gate it on queue depth. Reported speedups fall from roughly 2× at batch 1 to about 1.2× at batch 128. Modern variants (EAGLE, Medusa, or plain n-gram / prompt-lookup drafting) are self-speculative and need no second model, which is why most teams use those rather than maintaining a separate draft model.</li>
   </ul>
 
   <h4>The platform around the model</h4>
-  <p><strong>Routing:</strong> classify difficulty and send most traffic to a small model, escalating only when needed. <strong>Multi-tenancy:</strong> per-team token quotas with a token-bucket limiter (§03) — GPU time is the scarce resource, so rate limit in tokens, not requests. <strong>Caching:</strong> prefix-cache long shared system prompts so prefill is not re-paid on every call. <strong>Autoscaling:</strong> scale on queue depth and time-to-first-token, not CPU; and cold-starting a GPU node means loading 35 GB of weights, so keep a warm pool — a 90-second scale-up is useless during a spike. <strong>Fallbacks:</strong> a queue with an admission deadline, then load-shed with a clear error, then a smaller model as the degraded tier.</p>
+  <p><strong>Routing:</strong> classify difficulty and send most traffic to a small model, escalating only when needed. <strong>Multi-tenancy:</strong> per-team token quotas with a token-bucket limiter (§11) — GPU time is the scarce resource, so rate limit in tokens, not requests. <strong>Caching:</strong> prefix-cache long shared system prompts so prefill is not re-paid on every call. <strong>Autoscaling:</strong> scale on queue depth and time-to-first-token, not CPU; and cold-starting a GPU node means loading 35 GB of weights, so keep a warm pool — a 90-second scale-up is useless during a spike. <strong>Fallbacks:</strong> a queue with an admission deadline, then load-shed with a clear error, then a smaller model as the degraded tier.</p>
 
   <hr class="rule">
 
@@ -2325,7 +2818,7 @@ tokens/s (single stream) ≈ HBM bandwidth / bytes read per token
 
 <section id="mldepth">
   <div class="sec-head">
-    <div class="eyebrow">Section 07 · The AI track</div>
+    <div class="eyebrow">Section 17 · AI &amp; ML</div>
     <h2>AI depth questions</h2>
     <p>These are the follow-ups that come after your diagram is on the board — the ones that decide whether the round reads as "designed a system" or "understands the system". Answer each in two or three sentences, then stop. Open one, answer it out loud before reading, then check.</p>
   </div>
@@ -2337,7 +2830,8 @@ tokens/s (single stream) ≈ HBM bandwidth / bytes read per token
 
   <details class="qa"><summary>What is the KV cache actually caching, and why does it dominate memory?</summary><div class="body">
     <p>During generation, each new token attends to all previous tokens. Their key and value projections don't change, so you compute them once and keep them — turning per-token work from O(n²) into O(n). Without it, generating 1,000 tokens means re-running the prompt 1,000 times.</p>
-    <p>The cost is <code>2 × layers × kv_dim × bytes</code> per token, per concurrent sequence — hundreds of KB per token at 70B scale, so a few thousand tokens is over a gigabyte <em>per user in flight</em>. It grows with concurrency and context, while weights are paid once. That's why the KV cache, not the model, sets your batch size. <strong>Grouped-query attention</strong> (many query heads sharing a few KV heads) is the standard fix and shrinks the cache several-fold at negligible quality cost; MQA is the extreme where all heads share one KV head.</p>
+    <p>The cost is <code>2 × layers × kv_dim × bytes</code> per token, per concurrent sequence — hundreds of KB per token at 70B scale, so a few thousand tokens is over a gigabyte <em>per user in flight</em>. It grows with concurrency and context, while weights are paid once. That's why the KV cache, not the model, sets your batch size. <strong>Grouped-query attention</strong> (many query heads sharing a few KV heads) is the standard fix and shrinks the cache several-fold at negligible quality cost; MQA is the extreme where all heads share one KV head. The third answer, now worth naming, is <strong>MLA</strong> (multi-head latent attention, used by the DeepSeek models): rather than reducing how many KV heads exist, it compresses <em>what is stored</em> — K and V are jointly projected into one shared low-rank latent plus a small decoupled RoPE key, and per-head K/V are reconstructed at inference. That cuts the cache by well over an order of magnitude versus same-shape MHA, at the cost of extra FLOPs and a much more awkward interaction with tensor parallelism, which is why GQA remains the industry default.</p>
+    <p>One derivation worth being able to do live: attention's arithmetic intensity during decode is <code>n_query_heads / n_kv_heads</code> — the GQA group size — <strong>independent of batch size and context length</strong>. So batching fixes the weight-matmul bottleneck but cannot fix the attention bottleneck, because every sequence has its own KV cache. That single fact is the structural argument for GQA, for MLA, for FP8 KV caches, and for prefix sharing.</p>
   </div></details>
 
   <details class="qa"><summary>RAG, fine-tuning, or a longer prompt — how do you choose?</summary><div class="body">
@@ -2369,7 +2863,7 @@ tokens/s (single stream) ≈ HBM bandwidth / bytes read per token
       <li><strong>Data quality</strong> — null rates, cardinality explosions, a schema change upstream. Most "model degradation" is actually an upstream pipeline that changed a unit or started sending nulls.</li>
       <li><strong>Delayed-label metrics</strong> — recompute AUC on a rolling window as labels land, and alert on the trend.</li>
     </ul>
-    <p>Distinguish <strong>data drift</strong> (inputs moved, P(X) changed) from <strong>concept drift</strong> (the relationship moved, P(y|X) changed). Data drift may be harmless; concept drift always requires retraining. And keep a <strong>holdout of un-personalized traffic</strong> so you have an unbiased baseline to compare against.</p>
+    <p>Distinguish <strong>data drift</strong> (inputs moved, P(X) changed) from <strong>concept drift</strong> (the relationship moved, P(y|X) changed). Data drift may be harmless; concept drift usually requires retraining — though not if it is confined to a region of the input space that carries no traffic, which is worth saying rather than claiming "always". And keep a <strong>holdout of un-personalized traffic</strong> so you have an unbiased baseline to compare against.</p>
   </div></details>
 
   <details class="qa"><summary>A feature is missing at serving time. What does your system do?</summary><div class="body">
@@ -2395,7 +2889,7 @@ tokens/s (single stream) ≈ HBM bandwidth / bytes read per token
 
   <details class="qa"><summary>How do you evaluate an LLM feature that has no single right answer?</summary><div class="body">
     <p>Build a layered harness rather than looking for one number. <strong>Deterministic checks first</strong> — schema validity, does it compile, did it cite a real id, regex constraints. These catch most regressions and cost nothing. <strong>Then a golden set</strong> of a few hundred inputs with human-written references, scored by an LLM judge with a rubric — and calibrate that judge against human labels on a sample, reporting agreement, because an uncalibrated judge is just a vibe. <strong>Then pairwise comparison</strong> of the new version against the current one, which is far more reliable than absolute scoring. <strong>Then online</strong>: thumbs, retry rate, conversation abandonment, escalation to a human.</p>
-    <p>Two things to say that signal experience: <strong>control the temperature to 0 for eval runs</strong> so you're measuring the change and not sampling noise, and <strong>keep a regression suite of every past failure</strong> — production incidents become test cases, exactly as in normal software.</p>
+    <p>Two things to say that signal experience: <strong>pin the temperature for eval runs</strong> so you're measuring the change and not sampling noise — while noting that temperature 0 is not true determinism on a GPU (batching and kernel nondeterminism still move outputs), and that if you serve at temperature above 0 then a temperature-0 eval measures a model you don't ship, so run several seeds and report variance; and <strong>keep a regression suite of every past failure</strong> — production incidents become test cases, exactly as in normal software.</p>
   </div></details>
 
   <details class="qa"><summary>What is prompt injection, and how do you actually defend against it?</summary><div class="body">
@@ -2428,8 +2922,9 @@ tokens/s (single stream) ≈ HBM bandwidth / bytes read per token
   </div></details>
 
   <details class="qa"><summary>Explain a mixture-of-experts model in the way an interviewer wants to hear it.</summary><div class="body">
-    <p>Replace the dense feed-forward block with many expert blocks plus a router that sends each token to the top-k experts (usually k=2). Total parameters grow enormously while <em>active</em> parameters per token stay small — so you get the quality of a much larger model at roughly the compute of a small one.</p>
-    <p>The systems cost is the part worth naming: <strong>all experts must be resident in memory even though most are idle</strong>, so MoE trades memory for compute, which is the opposite of what most serving setups are optimized for. Add load-balancing losses to stop the router collapsing onto a few experts, and expect expert-parallel communication overhead across GPUs. It is a throughput-and-quality win, not a memory win.</p>
+    <p>Replace the dense feed-forward block with many expert blocks plus a router that sends each token to the top-k experts. (Say "top-k", not "k=2" — that was the Mixtral generation; current fine-grained MoE designs route to 6–8 of many smaller experts plus one or two always-on shared experts.) Total parameters grow enormously while <em>active</em> parameters per token stay small — so you get the quality of a much larger model at roughly the compute of a small one.</p>
+    <p>The systems cost is the part worth naming: <strong>all experts must be resident in memory even though most are idle</strong>, so MoE trades memory for compute, which is the opposite of what most serving setups are optimized for. Add load balancing to stop the router collapsing onto a few experts — an auxiliary loss classically, or the newer loss-free bias-adjustment schemes — and expect expert-parallel all-to-all communication across GPUs. It is a throughput-and-quality win, not a memory win.</p>
+    <p><strong>The serving gotcha, which is the part that shows systems thinking:</strong> at small batch sizes MoE has <em>worse</em> arithmetic intensity than a dense model with the same active parameter count, because you read many experts' weights to serve very few tokens. MoE needs large batches to pay off. So "should we serve an MoE model?" is really "will our traffic keep the batches full?"</p>
   </div></details>
 
   <details class="qa"><summary>How do you decide between batch and real-time inference?</summary><div class="body">
@@ -2438,9 +2933,15 @@ tokens/s (single stream) ≈ HBM bandwidth / bytes read per token
   </div></details>
 </section>
 
+
+<div class="partbreak">
+  <div class="pn">Part V</div>
+  <h2>The loop itself</h2>
+  <p>Stories, mocks, rubrics, and the company-by-company differences. The technical parts get you the interview; this part is what people actually fail on when they've prepared for everything else.</p>
+</div>
 <section id="behavioral">
   <div class="sec-head">
-    <div class="eyebrow">Section 10</div>
+    <div class="eyebrow">Section 18 · The loop</div>
     <h2>Behavioral &amp; the story bank</h2>
     <p>At senior level this round is not a formality — it is where scope, ownership, and influence get calibrated, and it is the round most often failed by people who prepared only for the technical ones. The fix is small: eight stories, written down, said out loud until they're two minutes long.</p>
   </div>
@@ -2450,7 +2951,7 @@ tokens/s (single stream) ≈ HBM bandwidth / bytes read per token
 
   <div class="card wide" style="margin-top:16px">
     <div class="check"><input type="checkbox" id="st1"><label for="st1"><strong>1. The hardest technical problem you've solved.</strong> Needs a real technical depth payload — the constraint, the options, why yours won. This is the story that sets your level.</label></div>
-    <div class="check"><input type="checkbox" id="st2"><label for="st2"><strong>2. A time you disagreed with someone and were right.</strong> Show how you disagreed, not just that you won. Data, not volume.</label></div>
+    <div class="check"><input type="checkbox" id="st2"><label for="st2"><strong>2. A time you disagreed with someone.</strong> The scored part is <em>how</em> you disagreed and what you did after — including a version where you lost the argument and committed anyway. Data, not volume. Preparing only the story where you were right is the trap in this question.</label></div>
     <div class="check"><input type="checkbox" id="st3"><label for="st3"><strong>3. A time you were wrong.</strong> Real stakes, real cost, real change in your behavior afterward. "I care too much" is a wasted answer.</label></div>
     <div class="check"><input type="checkbox" id="st4"><label for="st4"><strong>4. Something you shipped end to end.</strong> Ambiguous start, your decisions, measured outcome.</label></div>
     <div class="check"><input type="checkbox" id="st5"><label for="st5"><strong>5. A production incident.</strong> Detection, triage, mitigation, root cause, and what you changed so it couldn't recur. Systems maturity lives here.</label></div>
@@ -2466,7 +2967,7 @@ tokens/s (single stream) ≈ HBM bandwidth / bytes read per token
       <tbody>
         <tr><td><strong>Situation</strong></td><td class="num">15 s</td><td>Just enough context. Team size, what the system did, what was at stake. Not a company history.</td></tr>
         <tr><td><strong>Task</strong></td><td class="num">15 s</td><td>Your specific responsibility. "I owned" beats "we needed to".</td></tr>
-        <tr><td><strong>Action</strong></td><td class="num">60 s</td><td>The bulk. <strong>I</strong>, not <strong>we</strong> — they are hiring you, not your team. Include the option you rejected and why.</td></tr>
+        <tr><td><strong>Action</strong></td><td class="num">60 s</td><td>The bulk. Use <strong>I</strong> for decisions and judgment calls, <strong>we</strong> for execution — an unbroken "I" through a story that obviously took a team reads as credit-taking, which is its own downgrade at senior level. Name who else was involved and what you needed from them. Include the option you rejected and why.</td></tr>
         <tr><td><strong>Result</strong></td><td class="num">20 s</td><td>A number. p99 from 800 ms to 120 ms; cost down 40%; two-week release cycle to daily.</td></tr>
         <tr><td><strong>Learning</strong></td><td class="num">10 s</td><td>The beat most people skip. "What I'd do differently is instrument before optimizing — I spent a week on the wrong bottleneck."</td></tr>
       </tbody>
@@ -2487,12 +2988,13 @@ tokens/s (single stream) ≈ HBM bandwidth / bytes read per token
   </div>
 
   <h3>Ask them something real</h3>
-  <p>The questions you ask are scored. Skip anything answerable from the careers page. These work because they require a specific answer: <em>"What does the on-call rotation actually look like — how many pages a week?"</em> · <em>"What's the biggest piece of technical debt this team is carrying, and is there a plan?"</em> · <em>"How does a model or feature get from an idea to production here — who has to say yes?"</em> · <em>"What separates someone doing well on this team from someone doing exceptionally well?"</em> · <em>"What made the last person who left decide to?"</em></p>
+  <p>The questions you ask are scored. Skip anything answerable from the careers page. These work because they require a specific answer: <em>"What does the on-call rotation actually look like — how many pages a week?"</em> · <em>"What's the biggest piece of technical debt this team is carrying, and is there a plan?"</em> · <em>"How does a model or feature get from an idea to production here — who has to say yes?"</em> · <em>"What separates someone doing well on this team from someone doing exceptionally well?"</em></p>
+  <p>One to use carefully: <em>"What made the last person who left this team decide to?"</em> is a genuinely revealing question for a <strong>hiring manager</strong>, and a risky one for a peer interviewer — many are instructed not to discuss attrition, and it can turn a rapport moment defensive. Ask it of the manager, not the panel.</p>
 </section>
 
 <section id="mocks">
   <div class="sec-head">
-    <div class="eyebrow">Section 11</div>
+    <div class="eyebrow">Section 19 · The loop</div>
     <h2>Mocks &amp; self-grading</h2>
     <p>Four graded mocks are scheduled — days 14, 21, and two on 27. A mock with a real person is better, but a solo mock done seriously is worth far more than another chapter of reading, and you can run one tonight.</p>
   </div>
@@ -2521,7 +3023,7 @@ tokens/s (single stream) ≈ HBM bandwidth / bytes read per token
       </tbody>
     </table>
   </div>
-  <p><strong>Reading the score:</strong> mostly 3s is a hire. Any 1 is a specific, fixable thing — the most common by far are estimation (fix: §02, out loud, daily) and depth (fix: pick your dive earlier and go two more levels than feels necessary). Track the same six numbers across all four mocks; you are looking for the trend, not the absolute.</p>
+  <p><strong>Reading the score:</strong> mostly 3s is a hire. Any 1 is a specific, fixable thing — the most common by far are estimation (fix: §10, out loud, daily) and depth (fix: pick your dive earlier and go two more levels than feels necessary). Track the same six numbers across all four mocks; you are looking for the trend, not the absolute.</p>
 
   <h3>Prompt bank</h3>
   <p>Check them off as you use them. Do not read the corresponding section first.</p>
@@ -2566,7 +3068,7 @@ tokens/s (single stream) ≈ HBM bandwidth / bytes read per token
 
 <section id="cheat">
   <div class="sec-head">
-    <div class="eyebrow">Section 12</div>
+    <div class="eyebrow">Section 21 · The loop</div>
     <h2>The one-page recall sheet</h2>
     <p>Day 28, and the morning of each interview. Read it out loud. Nothing new — this is only for pulling what you already know back to the surface.</p>
   </div>
@@ -2671,10 +3173,18 @@ tokens/s (single stream) ≈ HBM bandwidth / bytes read per token
   var bar = document.getElementById("progbar");
   var txt = document.getElementById("progtext");
 
+  var lcBoxes = boxes.filter(function(b){ return b.getAttribute("data-g") === "lc"; });
+  var lcCount = document.getElementById("lccount");
+  var lcBar   = document.getElementById("lcbar");
+
   function paint(){
     var done = boxes.filter(function(b){ return b.checked; }).length;
     if (txt) txt.textContent = done + " / " + boxes.length + " checked";
     if (bar) bar.style.width = (boxes.length ? (done / boxes.length * 100) : 0) + "%";
+
+    var lcDone = lcBoxes.filter(function(b){ return b.checked; }).length;
+    if (lcCount) lcCount.textContent = lcDone + " / " + lcBoxes.length + " solved";
+    if (lcBar) lcBar.style.width = (lcBoxes.length ? (lcDone / lcBoxes.length * 100) : 0) + "%";
   }
   boxes.forEach(function(b){
     if (readStore(KEY + "." + b.id) === "1") b.checked = true;

@@ -1,11 +1,11 @@
 <section id="dsa">
   <div class="sec-head">
-    <div class="eyebrow">Section 08</div>
-    <h2>The 14 patterns</h2>
+    <div class="eyebrow">Section 04 · Algorithms</div>
+    <h2>The sixteen core patterns</h2>
     <p>Interview algorithm problems are recombinations of a small number of patterns. The skill being tested is <strong>recognition speed</strong> — mapping a novel problem statement onto a template you already own within the first two minutes. Learn the trigger phrases first; the code is the easy half.</p>
   </div>
 
-  <h3>Recognition table — read this one until it's automatic</h3>
+  <h3>Recognition table — read this one until it is automatic</h3>
   <div class="tbl-wrap">
     <table>
       <thead><tr><th>When you see…</th><th>Reach for</th><th class="num">Typical</th></tr></thead>
@@ -231,8 +231,8 @@
 <span class="cm"># Kruskal's MST is: sort edges by weight, union them, skip the False ones.</span>
 </code></pre>
 
-  <div class="codehead"><span>8 · backtracking — one shape, three problems</span><button class="copy" type="button">Copy</button></div>
-<pre><code><span class="kw">def</span> combination_sum(candidates, target):
+  <div class="codehead"><span>8 · backtracking — one shape, three problems (this is LC 40, Combination Sum II)</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">def</span> combination_sum_ii(candidates, target):
     <span class="st">"""choose -> recurse -> UNDO. The undo is what makes it backtracking."""</span>
     candidates.sort()                    <span class="cm"># enables both pruning and dedup</span>
     res, path = [], []
@@ -253,6 +253,12 @@
     backtrack(<span class="nu">0</span>, target)
     <span class="kw">return</span> res
 
+<span class="cm"># This exact code is LeetCode 40 (each candidate used ONCE, duplicates skipped).</span>
+<span class="cm"># LeetCode 39, where a candidate may be REUSED, is one character different:</span>
+<span class="cm">#     backtrack(i, remaining - candidates[i])     # i, not i+1</span>
+<span class="cm"># and you drop the duplicate-skip line. Knowing which line encodes "reuse"</span>
+<span class="cm"># and which encodes "no duplicates" is the whole family.</span>
+<span class="cm">#</span>
 <span class="cm"># Subsets: append path[:] at EVERY node instead of only at the base case.</span>
 <span class="cm"># Permutations: iterate all indices with a `used` array instead of `start`.</span>
 </code></pre>

@@ -27,10 +27,18 @@
   var bar = document.getElementById("progbar");
   var txt = document.getElementById("progtext");
 
+  var lcBoxes = boxes.filter(function(b){ return b.getAttribute("data-g") === "lc"; });
+  var lcCount = document.getElementById("lccount");
+  var lcBar   = document.getElementById("lcbar");
+
   function paint(){
     var done = boxes.filter(function(b){ return b.checked; }).length;
     if (txt) txt.textContent = done + " / " + boxes.length + " checked";
     if (bar) bar.style.width = (boxes.length ? (done / boxes.length * 100) : 0) + "%";
+
+    var lcDone = lcBoxes.filter(function(b){ return b.checked; }).length;
+    if (lcCount) lcCount.textContent = lcDone + " / " + lcBoxes.length + " solved";
+    if (lcBar) lcBar.style.width = (lcBoxes.length ? (lcDone / lcBoxes.length * 100) : 0) + "%";
   }
   boxes.forEach(function(b){
     if (readStore(KEY + "." + b.id) === "1") b.checked = true;

@@ -1,6 +1,6 @@
 <section id="numbers">
   <div class="sec-head">
-    <div class="eyebrow">Section 02</div>
+    <div class="eyebrow">Section 10 · System design</div>
     <h2>Numbers &amp; capacity math</h2>
     <p>You need maybe twenty numbers memorized and one arithmetic habit. The habit: round everything to one significant figure and use powers of ten. Nobody has ever failed a loop for saying 100k QPS when the true answer was 116,530.</p>
   </div>
@@ -10,15 +10,17 @@
     <table>
       <thead><tr><th>Operation</th><th class="num">Time</th><th>What it implies</th></tr></thead>
       <tbody>
-        <tr><td>L1 / L2 cache reference</td><td class="num">~1 ns / ~4 ns</td><td>Free. Never a design consideration.</td></tr>
-        <tr><td>Main memory reference</td><td class="num">~100 ns</td><td>~10M random reads/sec/core. In-memory beats disk by ~1000×.</td></tr>
+        <tr><td>L1 / L2 cache reference</td><td class="num">~1 ns / ~4 ns</td><td>Free at the architecture level; decisive inside a hot loop or a storage-engine page layout.</td></tr>
+        <tr><td>Main memory reference</td><td class="num">~100 ns</td><td>~10M <em>dependent</em> random reads/sec/core; several times more with parallel misses in flight. In-memory beats disk by ~1000×.</td></tr>
         <tr><td>Read 1 MB sequentially from memory</td><td class="num">~10 µs</td><td>Memory bandwidth ≈ 100 GB/s on modern hardware.</td></tr>
-        <tr><td>SSD random read (4 KB)</td><td class="num">~100 µs</td><td>~10k–100k IOPS per device. This is why LSM trees batch writes.</td></tr>
+        <tr><td>NVMe random read (4 KB)</td><td class="num">~50–100 µs</td><td>At queue depth 1. A modern datacenter NVMe sustains <strong>500k–1M+ IOPS</strong> at depth — latency and throughput are different questions, and queue depth is the knob.</td></tr>
         <tr><td>Read 1 MB sequentially from SSD</td><td class="num">~200 µs</td><td>~1–5 GB/s. Sequential beats random by ~100×. Design for sequential.</td></tr>
         <tr><td>Round trip within a datacenter</td><td class="num">~0.5 ms</td><td>Your service-to-service tax. Ten hops = 5 ms floor.</td></tr>
         <tr><td>Disk seek (spinning)</td><td class="num">~10 ms</td><td>Archival only. If someone says HDD, they mean cold storage.</td></tr>
         <tr><td>Cross-country round trip (US)</td><td class="num">~70 ms</td><td>The reason CDNs and regional replicas exist. Physics, not engineering.</td></tr>
         <tr><td>Round trip across the world</td><td class="num">~150–250 ms</td><td>Any synchronous cross-continent call is a design smell.</td></tr>
+        <tr><td>Send 1 KB over a 10 Gbps link</td><td class="num">~1 µs</td><td>Serialization time is negligible next to the round trip. Bandwidth governs bulk transfer; latency governs requests.</td></tr>
+        <tr><td>TLS 1.3 handshake, new connection</td><td class="num">1 extra RTT</td><td>The tax keep-alive and connection pools exist to avoid. On a cold cross-country connection it roughly doubles first-byte latency.</td></tr>
       </tbody>
     </table>
   </div>
@@ -60,7 +62,7 @@ read QPS (avg)     = 25B / 100k s    = <span class="nu">250,000/s</span>
 read QPS (peak)    = <span class="nu">750,000/s</span>          <span class="cm"># read:write = 250:1 -> CDN + cache is the design</span>
 
 <span class="cm"># 2. Storage</span>
-photo (orig+derivs)= 2 MB
+photo (orig+derivs)= 2 MB          <span class="cm"># 500 KB original + thumb, feed and full-screen derivatives</span>
 storage/day        = 100M x 2 MB     = <span class="nu">200 TB/day</span>
 storage/year       = 200 TB x 365    ≈ <span class="nu">70 PB/year</span>   <span class="cm"># -> object store + lifecycle tiering, not a DB</span>
 
@@ -71,11 +73,13 @@ metadata/year      = 100M x 365 x 500 B ≈ <span class="nu">18 TB/year</span>  
 egress (peak)      = 750k reads/s x 200 KB (served size) ≈ <span class="nu">150 GB/s</span>
                      <span class="cm"># no origin serves that -> CDN offload at 95%+, origin sees ~7 GB/s</span>
 
-<span class="cm"># 4. Cache sizing (the 80/20 read)</span>
-hot set            = 20% of a day's reads over distinct photos
-                   ≈ 5B reads -> ~50M distinct hot photos x 200 KB = <span class="nu">10 TB</span>
-                     <span class="cm"># -> too big for RAM; cache metadata in Redis (50M x 500 B = 25 GB, easy),</span>
-                     <span class="cm">#    cache bytes at the CDN edge.</span>
+<span class="cm"># 4. Cache sizing. Say the Pareto direction the right way round:</span>
+<span class="cm">#    the hot ~20% of OBJECTS serve ~80% of READS. Size objects, not reads.</span>
+recent window      = photos posted in the last 7 days = 700M
+hot set (20%)      = <span class="nu">140M photos</span>
+  bytes            = 140M x 200 KB = <span class="nu">28 TB</span>   <span class="cm"># far past RAM -> cache at the CDN edge</span>
+  metadata         = 140M x 500 B  = <span class="nu">70 GB</span>   <span class="cm"># fits a small Redis cluster -> cache here</span>
+                     <span class="cm"># The split falls out of arithmetic: bytes at the edge, metadata in Redis.</span>
 </code></pre>
 
   <div class="callout">

@@ -1,0 +1,91 @@
+
+<section id="review">
+  <div class="sec-head">
+    <div class="eyebrow">Section 07 · Algorithms</div>
+    <h2>The review system</h2>
+    <p>The difference between people who solve 300 problems and can't pass an interview and people who solve 120 and can is entirely here. Solving a problem once teaches you that problem. Solving it, forgetting it, and solving it again teaches you the pattern.</p>
+  </div>
+
+  <h3>Why re-solving beats reading more</h3>
+  <p>Recognition is not recall. Reading a solution produces a strong feeling of understanding that disappears within days, because you never practiced <em>retrieving</em> anything — you practiced following. The interview asks you to retrieve, from nothing, under observation. So the training has to be retrieval: blank page, timer, no reference.</p>
+  <p>The second reason is compression. The first time you solve "longest substring without repeating characters" you're solving a specific problem. The fourth time, across four different problems, you're recognizing <em>sliding window with a validity condition</em> — and that abstraction is what transfers to the problem you've never seen. You cannot form it from one exposure.</p>
+
+  <h3>The three-pass method for every problem</h3>
+  <ol class="stepline">
+    <li class="hot"><b>Pass 1 — attempt, hard-capped at 25 minutes</b>
+      <p>Read the problem. Spend two minutes stating the pattern you think it is and why. Then solve it. <strong>Stop at 25 minutes whether or not you're done</strong> — going longer trains you to grind, and interviews don't reward grinding. Before you look anything up, write down the exact sentence describing where you're stuck.</p>
+    </li>
+    <li class="hot"><b>Pass 2 — study, not read</b>
+      <p>Read the editorial or a strong solution until you can explain <em>why</em> it works, not just what it does. Then answer two questions in writing: <em>what was the insight I missed?</em> and <em>what in the problem statement should have pointed me at it?</em> The second question is the one that builds recognition speed. Close everything.</p>
+    </li>
+    <li class="hot"><b>Pass 3 — re-implement from blank, the next morning</b>
+      <p>Not the same day — the next day, from an empty file, with no reference. If you can't, you didn't learn it; that's information, not failure. Re-read once and re-attempt the day after. A problem is not "done" until you've written it clean from nothing.</p>
+    </li>
+  </ol>
+
+  <h3>The spacing schedule</h3>
+  <p>Every problem gets a rating when you finish, and the rating sets the next review date:</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Rating</th><th>Meaning</th><th class="num">Next review</th><th>Then</th></tr></thead>
+      <tbody>
+        <tr><td><strong>4 — clean</strong></td><td>Solved optimally inside the time cap, no hints, no bugs</td><td class="num">+21 days</td><td>Retire it if clean twice</td></tr>
+        <tr><td><strong>3 — slow</strong></td><td>Got there, but over time or with a compile-fix loop</td><td class="num">+7 days</td><td>Promote to 4 if the next attempt is clean</td></tr>
+        <tr><td><strong>2 — hinted</strong></td><td>Needed a nudge, then finished it yourself</td><td class="num">+3 days</td><td>—</td></tr>
+        <tr><td><strong>1 — read it</strong></td><td>Read the solution, or couldn't finish</td><td class="num">+1 day</td><td>Re-implement from blank tomorrow, no exceptions</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Any review that goes badly drops the rating back down and restarts the interval. In practice this means roughly <strong>60% new problems and 40% reviews</strong> through weeks 1–2, inverting by week 4 — which is exactly what you want going into a loop.</p>
+
+  <h3>The log</h3>
+  <p>One file, one row per attempt. This is the single highest-return five minutes of the day, because by week 3 it tells you your actual weak patterns rather than the ones you assume.</p>
+  <div class="codehead"><span>log.csv · the schema, and a scheduler you can run in ten seconds</span><button class="copy" type="button">Copy</button></div>
+<pre><code>date,problem,pattern,rating,minutes,note
+2026-03-02,LC 3 Longest Substring,sliding-window,3,22,"forgot to shrink while invalid"
+2026-03-02,LC 424 Char Replacement,sliding-window,1,25,"didn't see max-count trick"
+2026-03-03,LC 76 Min Window,sliding-window,2,25,"shrink WHILE valid, not until"
+
+<span class="cm">--------------------------------------------------------------------</span>
+
+<span class="cm"># due.py -- what to review today, and which pattern is actually weak.</span>
+<span class="kw">import</span> csv, collections
+<span class="kw">from</span> datetime <span class="kw">import</span> date, timedelta
+
+NEXT = {<span class="nu">1</span>: <span class="nu">1</span>, <span class="nu">2</span>: <span class="nu">3</span>, <span class="nu">3</span>: <span class="nu">7</span>, <span class="nu">4</span>: <span class="nu">21</span>}          <span class="cm"># rating -> days until review</span>
+
+latest, by_pattern = {}, collections.defaultdict(list)
+<span class="kw">with</span> open(<span class="st">"log.csv"</span>) <span class="kw">as</span> f:
+    <span class="kw">for</span> row <span class="kw">in</span> csv.DictReader(f):
+        latest[row[<span class="st">"problem"</span>]] = row              <span class="cm"># keep only the most recent attempt</span>
+        by_pattern[row[<span class="st">"pattern"</span>]].append(int(row[<span class="st">"rating"</span>]))
+
+today = date.today()
+due = []
+<span class="kw">for</span> problem, row <span class="kw">in</span> latest.items():
+    seen = date.fromisoformat(row[<span class="st">"date"</span>])
+    <span class="kw">if</span> seen + timedelta(days=NEXT[int(row[<span class="st">"rating"</span>])]) &lt;= today:
+        due.append((int(row[<span class="st">"rating"</span>]), problem, row[<span class="st">"note"</span>]))
+
+<span class="kw">for</span> rating, problem, note <span class="kw">in</span> sorted(due):        <span class="cm"># worst-rated first</span>
+    print(<span class="st">f"[{rating}] {problem:40s} {note}"</span>)
+
+print(<span class="st">"\nweakest patterns (mean rating):"</span>)
+<span class="kw">for</span> pattern, ratings <span class="kw">in</span> sorted(by_pattern.items(), key=<span class="kw">lambda</span> kv: sum(kv[<span class="nu">1</span>])/len(kv[<span class="nu">1</span>])):
+    print(<span class="st">f"  {sum(ratings)/len(ratings):.1f}  {pattern}  (n={len(ratings)})"</span>)
+</code></pre>
+
+  <div class="callout warnbox">
+    <div class="ct">Five ways people waste a month on this</div>
+    <ul>
+      <li><strong>Solving without a timer.</strong> Forty-five unhurried minutes on a medium teaches you nothing about performing in twenty-five observed ones.</li>
+      <li><strong>Reading solutions instead of attempting.</strong> Feels efficient, builds recognition without recall, and collapses under interview conditions.</li>
+      <li><strong>Chasing hards too early.</strong> The bulk of real interviews are mediums. Two clean mediums teach more than one heroic hard.</li>
+      <li><strong>Never redoing anything.</strong> The most common failure. If your list only grows, you are collecting problems, not learning patterns.</li>
+      <li><strong>Silent solving.</strong> You are training a skill you will perform out loud. Narrate every session, even alone, from day one — the first time you talk while coding should not be in an interview.</li>
+    </ul>
+  </div>
+
+  <h3>How many is enough</h3>
+  <p>Roughly <strong>120–150 problems solved to a rating of 4</strong>, spread across all twenty patterns, is a comfortable place to walk into a loop from. Two hundred shallow attempts is worse than a hundred deep ones. The honest test isn't a count at all: pick a random medium you've never seen, and see whether you can name the pattern within two minutes and produce a working solution within twenty-five. When that's reliably true, you're ready, whatever the number says.</p>
+</section>

@@ -1,6 +1,6 @@
 <section id="designs">
   <div class="sec-head">
-    <div class="eyebrow">Section 04</div>
+    <div class="eyebrow">Section 12 · System design</div>
     <h2>Four worked designs</h2>
     <p>Read each one, then close the page and redraw it. These four cover most of the surface area: unique ID generation and redirects, fan-out and hot keys, stateful connections and ordering, and spatial indexing with high-frequency writes.</p>
   </div>
@@ -9,7 +9,7 @@
   <p>The warm-up question. It looks trivial, which is exactly why the bar is "did you find the interesting part". The interesting part is ID generation and the read path, not the database.</p>
 
   <h4>Scope</h4>
-  <p><strong>In:</strong> create a short link (optional custom alias, optional TTL), redirect, click analytics. <strong>Out:</strong> user accounts, link editing, spam detection — mention that you're deferring them. <strong>Non-functional:</strong> redirect p99 under 50 ms, read-heavy, and the redirect path must survive the analytics pipeline being down.</p>
+  <p><strong>In:</strong> create a short link (optional custom alias, optional TTL), redirect, click analytics. <strong>Out:</strong> user accounts, link editing, spam detection — mention that you're deferring them. <strong>Non-functional:</strong> redirect p99 under 50 ms <em>measured at the edge</em> — say the measurement point, because the document's own latency table puts a US cross-country round trip at 70 ms, so a 50 ms end-user p99 is physically impossible and stating one unqualified is a self-inflicted wound. Read-heavy, and the redirect path must survive the analytics pipeline being down.</p>
 
   <h4>Scale</h4>
   <p>100M new links/day → ~1,000 writes/s. Read:write of 100:1 → <strong>100k reads/s average, 300k peak</strong>. Five years of links ≈ 180B rows × ~500 B = <strong>~90 TB</strong>. So: sharded key-value store, aggressive caching, and the write path is trivially small.</p>
@@ -22,17 +22,18 @@
       <tbody>
         <tr><td>Hash the URL</td><td><code>base62(md5(url))[:7]</code></td><td>Collisions must be detected and retried; a DB read on every write. Does give free deduplication.</td></tr>
         <tr><td>Auto-increment counter</td><td><code>base62(next_id())</code></td><td>Sequential and therefore enumerable — anyone can crawl every link. Also a single point of contention.</td></tr>
-        <tr><td><strong>Pre-allocated key ranges</strong></td><td>A key service hands each app node a block of 10k unused ids; node serves from memory</td><td>Ids are lost on restart, which does not matter. <em>This is the answer:</em> no coordination on the hot path, no collisions, and you can shuffle within a block to defeat enumeration.</td></tr>
+        <tr><td><strong>Pre-allocated key ranges</strong></td><td>A key service hands each app node a block of 10k unused ids; node serves from memory</td><td>Ids are lost on restart, which does not matter. <em>This is the answer:</em> no coordination on the hot path, no collisions, and ids are not sequential across nodes. To actually defeat enumeration, don't shuffle within the block — an attacker just walks the block. Encrypt the counter with a <strong>format-preserving (Feistel) permutation</strong> over the 62<sup>7</sup> space, which is a bijection, so you keep uniqueness and collision-freedom while making the sequence unguessable.</td></tr>
       </tbody>
     </table>
   </div>
-  <p>If asked for globally-unique 64-bit ids without a central service, describe <strong>Snowflake</strong>: <code>[41 bits ms-timestamp | 10 bits machine id | 12 bits sequence]</code> — time-sortable, 4096 ids per ms per machine, no coordination. The failure mode worth naming is clock skew going backwards; you stall until the clock catches up.</p>
+  <p>If asked for globally-unique 64-bit ids without a central service, describe <strong>Snowflake</strong>: <code>[1 unused sign bit | 41 bits ms-timestamp | 10 bits machine id | 12 bits sequence]</code>. Derive the three numbers rather than reciting them: 2<sup>41</sup> ms ≈ <strong>69.7 years</strong> from a custom epoch (which is <em>why</em> you pick a custom epoch instead of 1970 — you'd have burned half of it already), 2<sup>10</sup> = <strong>1,024 machines</strong>, 2<sup>12</sup> = <strong>4,096 ids per millisecond per machine</strong>. The leading bit is left unused so the id stays positive in languages with signed 64-bit integers.</p>
+  <p>Two honest caveats to volunteer: it is coordination-free <em>on the hot path only</em> — assigning unique machine ids across 1,024 workers is itself a coordination problem, solved out of band with a ZooKeeper/etcd lease or by deriving the id from a StatefulSet pod ordinal. And the failure mode is the clock stepping backwards (NTP correction), where the only safe behavior is to stall until the clock catches up rather than risk duplicate ids.</p>
 
   <div class="diagram">
     <div class="dflow">
       <div class="dcol"><div class="node">Client</div></div>
       <div class="arrow">→</div>
-      <div class="dcol"><div class="node pri">CDN / edge<small>301 cached</small></div></div>
+      <div class="dcol"><div class="node pri">CDN / edge<small>TLS + short-TTL<br>redirect cache</small></div></div>
       <div class="arrow">→</div>
       <div class="dcol"><div class="node">Read service<small>stateless, autoscaled</small></div></div>
       <div class="arrow">→<span>~95% hit</span></div>
@@ -44,7 +45,8 @@
   </div>
 
   <h4>Deep dive: the redirect</h4>
-  <p>Use <strong>302 (temporary), not 301</strong>. A 301 is cached by the browser forever, which is faster but destroys your click analytics and makes a link impossible to retire. That tradeoff sentence is the whole point of the question. Cache hit rate will be very high because link popularity is Zipfian — a Redis cache of the top few million codes serves most traffic, and the KV store barely sees load.</p>
+  <p>The 301-vs-302 choice <em>is</em> the question, and the honest answer has three parts rather than one. A <strong>301</strong> is heuristically cached by browsers more or less indefinitely when you send no cache headers — so subsequent clicks never reach you at all: fastest possible redirect, zero click analytics after the first, and the link can never be retired. A <strong>302</strong> is not cacheable by default, so every click reaches you: full analytics, full load, and your CDN node caches nothing. The real answer is to pick your point on that line explicitly — <em>"302 plus edge-side click aggregation if analytics fidelity is the product; 301 with an explicit short <code>max-age</code> if origin load is the constraint and sampled analytics are acceptable."</em> Naming the header you'd set, and what your CDN does with it, is what separates this from a memorized line.</p>
+  <p>Whichever you choose, cache hit rate is high because link popularity is Zipfian — a Redis cache of the top few million codes serves most traffic and the KV store barely sees load.</p>
   <p><strong>Failure modes:</strong> a viral link creating a single hot key (fix: local in-process cache in front of Redis, since the mapping is immutable and can be cached forever) · expired links (store TTL, and let a lazy sweep delete on read rather than scanning) · analytics backpressure (bounded in-memory buffer, drop events under load and say so out loud).</p>
 
   <hr class="rule">
@@ -76,13 +78,15 @@
       <div class="arrow">→</div>
       <div class="dcol"><div class="node pri">Timeline cache<small>Redis list per user<br>~800 post ids</small></div></div>
       <div class="arrow">←<span>read</span></div>
-      <div class="dcol"><div class="node">Feed API<small>merge + hydrate</small></div><div class="node ml">Ranker<small>see §06</small></div></div>
+      <div class="dcol"><div class="node">Feed API<small>merge + hydrate</small></div><div class="node ml">Ranker<small>see §15</small></div></div>
     </div>
     <div class="dcap">Store <em>ids</em> in the timeline, never post bodies — one edit shouldn't rewrite 200 million copies. Hydrate from the post store on read, in one batched multi-get.</div>
   </div>
 
   <h4>Deep dive: the timeline representation</h4>
-  <p>Each user's timeline is a Redis sorted set or list of ~800 post ids scored by time (or predicted engagement). Truncate hard — nobody scrolls past a few hundred items, and unbounded lists are how you run out of memory at 3am. Only materialize timelines for <strong>active users</strong> (seen in the last 30 days); for everyone else, build on read and start pushing again once they return. At 500M DAU × 800 ids × 8 B that's ~3 TB of Redis, sharded by user id — a number worth saying out loud, because it justifies the truncation.</p>
+  <p>Each user's timeline is a time-ordered list of ~800 post ids. Truncate hard — nobody scrolls past a few hundred items, and unbounded lists are how you run out of memory at 3am. Only materialize timelines for <strong>active users</strong> (seen in the last 30 days); for everyone else, build on read and start pushing again once they return.</p>
+  <p><strong>Now size it honestly, because this is where the naive number is wrong by an order of magnitude.</strong> 500M active users × 800 ids × 8 B of raw id is ~3 TB. But a Redis sorted set costs a skiplist node, a dict entry, and an sds string <em>per member</em> — realistically 60–100 B per entry, so the same timelines in sorted sets are <strong>30–40 TB</strong>, which is a completely different purchasing decision. The fix is to stop using a sorted set: pack the ids into one fixed-width binary blob per user and pay the ~3 TB. Catching that gap between the data and its representation is a genuinely senior move.</p>
+  <p>One thing not to hand-wave: a <em>precomputed</em> timeline cannot be ordered by predicted engagement, because engagement predictions depend on request-time context — hour, device, session depth. The materialized list is a recency-ordered <strong>candidate set</strong>; ranking happens at read time (§15). Saying that explicitly avoids the most common hole in this design.</p>
   <p><strong>Pagination</strong> must be cursor-based (<code>?after=&lt;post_id&gt;&limit=20</code>), never offset-based: new posts arriving shift every offset and users see duplicates.</p>
   <p><strong>Failure modes:</strong> fan-out lag during a spike (the queue absorbs it; the feed is a few seconds stale, which is acceptable — say so) · a user following 5,000 accounts (cap the pull-side merge, prioritize by affinity) · unfollow leaving stale entries (filter at read time rather than rewriting timelines).</p>
 
@@ -110,7 +114,8 @@
   </div>
 
   <h4>Deep dive: ordering and delivery</h4>
-  <p>Client timestamps are unusable — clocks lie and clients cheat. Assign a <strong>monotonic sequence number per conversation</strong> at the chat service, and let clients sort by it. Partition the message store by <code>chat_id</code> so a conversation's messages live together and a single-partition read serves the history; the primary key is <code>(chat_id, seq)</code>, which makes "load 50 messages before X" one range scan.</p>
+  <p>First, the storage arithmetic the design needs: 50B messages/day × ~200 B ≈ <strong>10 TB/day, ~3.6 PB/year</strong> — so messages go to a horizontally partitioned wide-column store with age-based tiering, not to a relational primary.</p>
+  <p>Client timestamps are unusable — clocks lie and clients cheat. Assign a <strong>monotonic sequence number per conversation</strong> at the chat service, and let clients sort by it. Be ready for "how?", because that is a coordination question wearing a small hat: the practical answers are a single-writer partition owner per <code>chat_id</code> (route by hash, hold a lease — the same trick as Design 10), or an atomic <code>INCR</code> on a per-conversation counter, or a conditional write on <code>(chat_id, seq)</code> that retries on collision. Pick one and say what happens when the owner dies. Partition the message store by <code>chat_id</code> so a conversation's messages live together and a single-partition read serves the history; the primary key is <code>(chat_id, seq)</code>, which makes "load 50 messages before X" one range scan.</p>
   <p>Delivery is a three-state machine: <strong>sent</strong> (server has it), <strong>delivered</strong> (recipient's device acked), <strong>read</strong> (recipient opened it). Each is a separate small event flowing back on the same channel. For offline users, hold messages in a per-user inbox and drain it on reconnect — the client sends its last-known <code>seq</code> and the server replays forward.</p>
   <p><strong>Group chats</strong> flip the math: one message to a 500-person group is 500 deliveries. Keep groups bounded (that's why real products cap them), fan out through the same pub/sub, and for very large groups switch to a pull model — clients poll the conversation instead of receiving pushes.</p>
   <p><strong>Failure modes:</strong> a gateway node dying takes 50k connections with it (clients reconnect with backoff and jitter — without jitter you get a thundering herd against the registry) · duplicate sends on retry (client-generated message id, deduplicated server-side) · end-to-end encryption, if it comes up, means the server stores ciphertext and cannot do search, so search moves onto the device.</p>
@@ -128,7 +133,7 @@
     <p><code>SELECT * FROM drivers WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?</code> requires a two-dimensional index; a B-tree can only efficiently serve one of the two predicates, so the database scans a huge intermediate set. And 1.25M updates/s against an indexed table means constant index churn. You need a structure where a location update is a hash write.</p>
   </div>
 
-  <p><strong>The design:</strong> divide the world into cells (geohash of precision 6 ≈ 1.2 km, or H3 resolution 8). Keep <code>cell_id → {driver_id: (lat, lng, ts)}</code> in Redis, sharded by cell. A location update is: compute the cell, and if it changed, remove from the old cell and add to the new one — two hash operations, no index. A search reads the rider's cell plus its neighbors, filters by true haversine distance, and returns the top K.</p>
+  <p><strong>The design:</strong> divide the world into cells (geohash precision 6 is ≈ 1.2 km × 0.6 km at the equator — it is <em>not</em> square, and it narrows with the cosine of latitude, so size your precision off the <em>shorter</em> dimension or your north–south coverage silently under-reads; or H3 resolution 8). Keep <code>cell_id → {driver_id: (lat, lng, ts)}</code> in Redis, sharded by cell. A location update is: compute the cell, and if it changed, remove from the old cell and add to the new one — two hash operations, no index. A search reads the rider's cell plus its neighbors, filters by true haversine distance, and returns the top K.</p>
 
   <div class="codehead"><span>proximity.py · the read path, including the boundary bug everyone hits</span><button class="copy" type="button">Copy</button></div>
 <pre><code><span class="kw">def</span> nearby(rider_lat, rider_lng, radius_km, k=<span class="nu">10</span>):
@@ -151,10 +156,13 @@
         <span class="kw">if</span> dist <= radius_km:
             out.append((dist, d))
 
-    <span class="cm"># 4. Top-K by heap, not a full sort — see the DSA top-K pattern in §08.</span>
-    <span class="kw">return</span> heapq.nsmallest(k, out)
+    <span class="cm"># 4. Top-K by heap, not a full sort -- see the top-K pattern in §04.</span>
+    <span class="cm">#    NOTE the key=: on a distance tie Python would fall through to comparing</span>
+    <span class="cm">#    the driver objects and raise TypeError. Classic heap-of-tuples bug.</span>
+    <span class="kw">return</span> heapq.nsmallest(k, out, key=<span class="kw">lambda</span> pair: pair[<span class="nu">0</span>])
 </code></pre>
 
+  <p><strong>Then divide, because the design depends on it.</strong> 1.25M location updates/s, at ~2 Redis operations each when a driver changes cell (remove from old, add to new), against ~100k ops/s per Redis node, is <strong>25–40 nodes minimum</strong> before replication or headroom — and most updates don't change cell, so the realistic figure is nearer the low end. Sharding by cell id spreads that naturally. Doing this division out loud is the difference between proposing Redis and justifying it.</p>
   <p><strong>Density is the deep dive.</strong> A fixed grid puts 40,000 drivers in one Manhattan cell and zero in most ocean cells. Two answers: use a <strong>quadtree</strong> so cells split on density, or use <strong>multiple fixed precisions</strong> and pick the precision per query based on how dense the area is — the second is far easier to operate because it needs no rebuild. Say both, pick the second, and explain that operability is why.</p>
   <p><strong>Failure modes:</strong> a cell shard hot-spotting during an event (replicate hot cells read-only) · drivers oscillating across a cell boundary (hysteresis — only move cells after a real displacement) · Redis loss (the data is 4 seconds from being fully rebuilt by the drivers themselves, which makes durability a non-requirement — a genuinely nice thing to point out).</p>
 </section>

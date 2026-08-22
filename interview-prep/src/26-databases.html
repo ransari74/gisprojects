@@ -87,13 +87,13 @@
       <tbody>
         <tr><td><strong>Relational</strong></td><td>Postgres, MySQL</td><td>You need transactions, joins, ad-hoc queries, or you don't yet know the access patterns. <em>The correct default.</em></td><td>You genuinely exceed one machine's write throughput and can't shard cleanly.</td></tr>
         <tr><td><strong>Wide-column</strong></td><td>Cassandra, ScyllaDB, HBase</td><td>Massive write volume, time-series or event data, known query patterns, linear scale-out, multi-region writes.</td><td>You need joins, ad-hoc queries, or strong consistency by default.</td></tr>
-        <tr><td><strong>Document</strong></td><td>MongoDB, DynamoDB</td><td>Self-contained documents, schema varying per record, access always by key or a known index.</td><td>Relationships matter. Modeling a graph as documents ends badly.</td></tr>
-        <tr><td><strong>Key-value</strong></td><td>Redis, Memcached, DynamoDB</td><td>Caching, sessions, counters, rate limits, queues, leaderboards. Sub-millisecond.</td><td>It's your source of truth and you can't tolerate loss (unless configured carefully).</td></tr>
+        <tr><td><strong>Document</strong></td><td>MongoDB, Couchbase</td><td>Self-contained documents, schema varying per record, access always by key or a known index.</td><td>Relationships matter. Modeling a graph as documents ends badly.</td></tr>
+        <tr><td><strong>Key-value / wide-column</strong></td><td>Redis, Memcached, DynamoDB</td><td>Caching, sessions, counters, rate limits, queues, leaderboards. Sub-millisecond.</td><td>It's your source of truth and you can't tolerate loss (unless configured carefully).</td></tr>
         <tr><td><strong>Search</strong></td><td>Elasticsearch, OpenSearch</td><td>Full-text relevance, faceting, aggregations over text.</td><td>As a primary store. It's a derived index — rebuild it from the real database.</td></tr>
         <tr><td><strong>Time-series</strong></td><td>Prometheus, InfluxDB, TimescaleDB</td><td>Metrics: timestamped numbers, written constantly, queried by range, downsampled as they age.</td><td>Anything with updates or relationships.</td></tr>
         <tr><td><strong>Graph</strong></td><td>Neo4j, Neptune</td><td>Multi-hop traversals — fraud rings, social distance, recommendations over a graph.</td><td>One hop. A join does that fine.</td></tr>
         <tr><td><strong>Columnar / OLAP</strong></td><td>BigQuery, Snowflake, ClickHouse</td><td>Analytics scanning billions of rows over a few columns; ML training data.</td><td>Point lookups or per-row updates.</td></tr>
-        <tr><td><strong>Vector</strong></td><td>pgvector, Pinecone, Qdrant, FAISS</td><td>Similarity over embeddings — semantic search, recommendation retrieval, RAG.</td><td>Exact-match lookups. Use a real index next to it (§14).</td></tr>
+        <tr><td><strong>Vector</strong></td><td>pgvector, Pinecone, Qdrant, FAISS</td><td>Similarity over embeddings — semantic search, recommendation retrieval, RAG.</td><td>Exact-match lookups. Use a real index next to it (§15).</td></tr>
       </tbody>
     </table>
   </div>

@@ -1,6 +1,6 @@
 <section id="mlframework">
   <div class="sec-head">
-    <div class="eyebrow">Section 05 · The AI track</div>
+    <div class="eyebrow">Section 14 · AI &amp; ML</div>
     <h2>ML design framework</h2>
     <p>An ML system design round is a system design round with two extra loops bolted on: a <strong>training loop</strong> that produces models from data, and a <strong>feedback loop</strong> where your predictions become tomorrow's training data. Candidates who only design the inference path get read as "knows models, hasn't shipped one".</p>
   </div>
@@ -47,7 +47,7 @@
         <tr><td>Accuracy</td><td>Fraction correct</td><td>Balanced classes</td><td>Useless at 0.1% positives — predict "no" and score 99.9%.</td></tr>
         <tr><td>Precision / Recall</td><td>Cost of false positives vs negatives</td><td>Whenever the two errors cost differently</td><td>Reporting one without the other.</td></tr>
         <tr><td>PR-AUC</td><td>Ranking quality on rare positives</td><td>Fraud, spam, ads — <strong>prefer over ROC-AUC on heavy imbalance</strong></td><td>ROC-AUC looks great on imbalanced data and means little.</td></tr>
-        <tr><td>Log loss / Brier</td><td>Calibration of probabilities</td><td>The score is used as an actual probability (ad bidding, expected value)</td><td>A model can rank perfectly and be badly calibrated.</td></tr>
+        <tr><td>Log loss / Brier</td><td>Probabilistic quality — calibration <em>and</em> discrimination together (they are proper scoring rules, not calibration metrics)</td><td>The score is used as an actual probability (ad bidding, expected value)</td><td>Log loss can improve purely from better ranking with calibration unchanged. For calibration specifically use a <strong>reliability diagram or ECE</strong>.</td></tr>
         <tr><td>NDCG@k / MAP</td><td>Graded ranking quality at the top</td><td>Search and recommendation — position matters</td><td>Computed against biased click logs, so it flatters the incumbent.</td></tr>
         <tr><td>Recall@k</td><td>Did the candidate generator find it at all</td><td>The retrieval stage of a multi-stage system</td><td>Judging a retriever by precision. Its only job is not to lose the good item.</td></tr>
       </tbody>
@@ -66,7 +66,8 @@
   <p>Deployment is a staircase, and being able to name it is a strong shipping signal: <strong>offline eval</strong> on a held-out time-based split (never random — that leaks the future) → <strong>shadow mode</strong>, where the new model scores real traffic and its outputs are logged but not shown → <strong>interleaving</strong> for ranking, which needs a fraction of the traffic of an A/B test → <strong>canary</strong> at 1% → <strong>A/B test</strong> sized by a power calculation → <strong>ramp</strong>, with automatic rollback wired to the guardrail metrics.</p>
   <div class="callout mlbox">
     <div class="ct">The A/B numbers to have ready</div>
-    <p>Sample size per arm ≈ <code>16 σ² / Δ²</code> for detecting an absolute lift Δ at 80% power and 95% significance. For a 2% baseline CTR and a 5% relative lift you need roughly <strong>a few hundred thousand users per arm</strong> — run it for at least one full week to absorb day-of-week effects. Randomize by user, not by request, or the same person sees both variants. Watch for <strong>network effects</strong> (social features spill between arms — switch to cluster randomization) and <strong>novelty effects</strong> (an early lift that decays by week two).</p>
+    <p>Sample size per arm ≈ <code>16 σ² / Δ²</code> for detecting an absolute lift Δ at 80% power and a 5% two-sided significance level. For a 2% baseline CTR and a 5% relative lift you need roughly <strong>a few hundred thousand users per arm</strong> — run it for at least one full week to absorb day-of-week effects. Randomize by user, not by request, or the same person sees both variants. Watch for <strong>network effects</strong> (social features spill between arms — switch to cluster randomization) and <strong>novelty effects</strong> (an early lift that decays by week two).</p>
+    <p>Three refinements that separate someone who has run experiments from someone who has read about them. <strong>Check SRM first</strong> — sample ratio mismatch, where a 50/50 split arrives as 50.4/49.6; it is the single most common reason a "significant" result is garbage, and it invalidates the test rather than adjusting it. <strong>Correct the variance for ratio metrics</strong> — CTR is measured per impression but randomized per user, so the naive binomial σ² understates the truth and real sample sizes land 2–5× above the textbook formula; use the delta method or cluster-robust standard errors. And <strong>use CUPED</strong> (variance reduction using pre-experiment data) to cut the required sample substantially for metrics with strong pre-period signal. Also: don't peek — repeatedly checking a running test inflates the false-positive rate unless you use a sequential test designed for it.</p>
   </div>
 </section>
 
