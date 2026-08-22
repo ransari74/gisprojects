@@ -1,0 +1,143 @@
+
+<section id="companies">
+  <div class="sec-head">
+    <div class="eyebrow">Section 20 · The loop</div>
+    <h2>Company by company</h2>
+    <p>The loops differ more than prep guides admit, and the differences change what you should practice. They also change faster than any document can track — so this section marks what is published by the companies themselves, what is well-attested practitioner knowledge, and what is rumor.</p>
+  </div>
+
+  <div class="callout warnbox">
+    <div class="ct">Read this before you plan around anything below</div>
+    <p>The interview-prep web is now heavily polluted with generated SEO content that invents specific-sounding round counts, minute-by-minute breakdowns, and rejection statistics. Treat any unsourced precision with suspicion — including here. Everything below is marked: <span class="tag t-sd">published</span> by the company, <span class="tag t-dsa">reported</span> by mainstream journalism, or <span class="tag t-beh">practitioner</span> consensus from prep firms and ex-interviewers. <strong>Every ambiguity in this section is resolvable by one email to your recruiter</strong>, and that email beats every guide on the internet, this one included.</p>
+  </div>
+
+  <h3>Loop structure</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Company</th><th>Shape</th><th>What's distinctive</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Google</strong></td><td>Recruiter screen → 1–2 phone screens (45 min) → onsite of 4–5 × 45 min: 2–3 coding, 1 system design at L5+, 1 "Googleyness &amp; Leadership" → <strong>hiring committee</strong> → team matching</td><td>The <strong>hiring committee decides, not your interviewers</strong> — a panel who never met you reads a written packet. That single fact should change how you interview: you are performing for the write-up. No dedicated design round below L5. Longest process of the group.</td></tr>
+        <tr><td><strong>Meta</strong></td><td>Recruiter → technical screen (45 min, ~2 problems) → full loop of 4: coding, <strong>AI-enabled coding</strong>, system design <em>or</em> product architecture, behavioral</td><td>Two problems per 45 minutes — <strong>speed over polish is explicit in Meta's own published guidance</strong>, which tells candidates that working non-optimal code beats an unwritten optimal idea, and to find their own bugs. The design round forks by background: <em>system design</em> for infra-leaning candidates, <em>product architecture</em> (API design, data models, client-server flows) for product-leaning ones — <strong>ask your recruiter which you're getting</strong>. E6 gets two design rounds.</td></tr>
+        <tr><td><strong>Amazon</strong></td><td><span class="tag t-sd">published</span> SDE II: <strong>four 55-minute</strong> interviews, 3–4 with coding, 1 system design. SDE III: a 60-min phone screen that is half Leadership Principles, then <strong>five 55-minute</strong> interviews</td><td>Behavioral is not a round — <strong>every interview contains two LP questions</strong>, so roughly 20–25 minutes of each 55 is behavioral. The <strong>Bar Raiser</strong> is a trained interviewer from outside the team who runs the debrief; Amazon's own materials say they have veto power. Amazon also states plainly: expect syntactically correct code, not pseudocode.</td></tr>
+        <tr><td><strong>Microsoft</strong></td><td>Recruiter → online assessment or phone screen → loop of 4–5: 2–3 algorithms, often 1 low-level/OO design, 1 system design at senior, 1 behavioral</td><td>The most "Top Interview 150-shaped" loop of the group — classic arrays, strings, and linked lists. Design becomes central at Senior (63+). Mostly virtual.</td></tr>
+        <tr><td><strong>Apple</strong></td><td>Team-owned and decentralized. 4–8 rounds mixing coding, a deep dive on the team's actual technology, design, and a genuine "why Apple"</td><td><strong>There is no central question bank and no cross-company calibration committee</strong> — the opposite of Google. Generic prep is inefficient here: the highest-value action is asking which org and panel, then studying that team's domain.</td></tr>
+        <tr><td><strong>Netflix</strong></td><td>Manager screen → technical screen (for many roles you <em>choose</em> take-home or a discussion) → onsite of 4–5 × 45 min</td><td>Few junior hires; the bar is effectively senior. The <strong>culture memo is the behavioral rubric</strong> and candidates are commonly asked which parts resonate. Netflix explicitly advises against puzzle-style practice.</td></tr>
+        <tr><td><strong>AI labs</strong> <em>(OpenAI, Anthropic and similar)</em></td><td>Recruiter → 1–2 technical screens (live coding or take-home) → design or practical engineering deep-dive → mission/values conversation → team match</td><td>Coding tends toward <strong>pair-programming with extensions added mid-stream</strong> rather than quiz problems. Team-by-team variance is the defining feature. Mission and safety alignment is a genuinely scored dimension, not a formality.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Levels, and the Amazon trap</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Band</th><th>Meta</th><th>Google</th><th>Amazon</th><th>Microsoft</th><th>Apple</th></tr></thead>
+      <tbody>
+        <tr><td>Mid</td><td>E4</td><td>L4</td><td>SDE II (L5)</td><td>62</td><td>ICT3</td></tr>
+        <tr><td><strong>Senior</strong></td><td>E5</td><td>L5</td><td>Senior SDE (L6)</td><td>63–64</td><td>ICT4</td></tr>
+        <tr><td>Staff</td><td>E6</td><td>L6</td><td>Principal (L7)</td><td>65–66</td><td>ICT5</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Amazon's ladder is offset by one number.</strong> Amazon L5 is mid-level and maps to Meta E4 / Google L4; Amazon L6 is senior and maps to E5 / L5. Candidates who see "L6" on an Amazon offer and compare it to a Google L6 are making an expensive error. Cross-company mapping is genuinely contested at the edges — Amazon L6 often carries tech-lead scope that Meta and Google put at E6/L6 — so treat any mapping table, including this one, as approximate.</p>
+
+  <h3>What changes between mid and senior — in the design round</h3>
+  <p>This is the highest-value content in the section, because <strong>a shallow, interviewer-led design round is the single most common downlevel path</strong> at Google, Meta, Amazon and Microsoft alike. Six concrete differences:</p>
+  <ol class="stepline">
+    <li class="hot"><b>Who drives</b><p>Mid: the interviewer asks, you answer. Senior: <em>you</em> set the agenda and propose what to go deep on. Waiting to be prompted is itself the failing signal.</p></li>
+    <li class="hot"><b>Requirements</b><p>Mid: takes the prompt at face value. Senior: scopes it — QPS, read/write ratio, latency budget, consistency needs, explicit non-goals — <em>before</em> drawing any boxes.</p></li>
+    <li><b>Depth selection</b><p>Senior candidates identify the hardest part unprompted and go deep on two or three components, instead of spreading evenly across ten.</p></li>
+    <li><b>Failure modes, not just tradeoffs</b><p>Mid: "I'd use Kafka because it's durable." Senior: "here's what breaks under this failure, here's the blast radius, here's how it degrades." Staff: "here's how this design ages over three years and what forces the migration."</p></li>
+    <li><b>Operational reality</b><p>Senior and above are expected to cover deployment, monitoring and alerting, rollout and rollback, capacity, and on-call burden. Mid-level is not.</p></li>
+    <li><b>Staff-only axes</b><p>Platform boundaries and team ownership, incremental migration paths, build-versus-buy, cost, and standardization against team autonomy.</p></li>
+  </ol>
+
+  <h3>How the decision is actually made</h3>
+  <p>Most candidates believe the model is "score well, get hired." The real mechanics are different in ways that should change your behavior:</p>
+  <ul>
+    <li><strong>Each interviewer submits an independent written recommendation — plus a level recommendation — before seeing anyone else's.</strong> You are not being scored live; you are being <em>written down</em>.</li>
+    <li><strong>A committee or debrief reads packets, not people.</strong> Your interviewer's ability to reconstruct your reasoning an hour later matters more than the reasoning felt in the room. This is the reframing that improves every other piece of advice in this guide: <em>make it easy to write you up well.</em> Label your structure out loud ("three functional requirements, then two non-functional"), state tradeoffs as sentences, and summarize at the end.</li>
+    <li><strong>One strong no-hire usually sinks a loop</strong>, regardless of the other four.</li>
+    <li><strong>Downleveling is a routine outcome, not a failure.</strong> The same performance is a hire at one level and a no-hire at the next.</li>
+    <li><strong>Cooldowns</strong> of roughly 6–12 months apply after a rejection; Google publishes a 90-day wait for the same role, and notes that reapplying candidates do best with 12–18 months more experience.</li>
+    <li><strong>Passing the committee is not an offer at Google</strong> — it gets you into team matching, which commonly adds weeks and occasionally doesn't resolve at all.</li>
+  </ul>
+
+  <h3>The AI-tool question — and companies are moving in opposite directions</h3>
+  <p>This is the biggest recent change to these loops, and getting it wrong is disqualifying. <strong>Ask your recruiter, in writing, for each round.</strong></p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Company</th><th>Direction</th><th>What's actually reported</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Meta</strong></td><td>Use it, and be graded on it</td><td><span class="tag t-dsa">reported</span> An <strong>AI-enabled coding round</strong> replaces one of the two onsite coding interviews — roughly 60 minutes, in an environment with a built-in assistant. Meta's internal framing is that it is more representative of real work <em>and</em> makes LLM-based cheating less effective. Candidate reports describe a bug-fix → implement → optimize shape; that structure is consistent across sources but is not an official spec.</td></tr>
+        <tr><td><strong>Google</strong></td><td>Piloting the same direction</td><td><span class="tag t-dsa">reported</span> A pilot round where candidates read, debug and optimize an <strong>existing codebase</strong> with an assistant available, evaluating "AI fluency" — prompting, validating output, debugging. Reported as junior-to-mid roles on select US teams. Separately, Google's CEO has said publicly they will introduce <strong>at least one in-person round</strong> to verify fundamentals; that is a stated intention, not a documented rollout, so don't assume your onsite is in person.</td></tr>
+        <tr><td><strong>Amazon</strong></td><td>Banned, and disqualifying</td><td><span class="tag t-dsa">reported</span> Amazon's position is that real-time AI assistance gives an unfair advantage that masks authentic ability; candidates acknowledge they will not use unauthorized tools during interviews or assessments.</td></tr>
+        <tr><td><strong>Anthropic</strong></td><td>Published, and unusually precise</td><td><span class="tag t-sd">published</span> Applications: write your own first draft, then use AI to refine — "use AI to refine ideas, not replace them." Live interviews: <strong>not permitted unless explicitly stated</strong>, because they want to see real-time reasoning. Take-homes: complete without AI <em>unless told otherwise</em> — and they say so explicitly when it is allowed.</td></tr>
+        <tr><td><strong>Apple, Microsoft</strong></td><td>Unknown</td><td>No primary sourcing exists either way. Treat as "ask", not as "permitted".</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout">
+    <div class="ct">The most interesting artifact in this whole space</div>
+    <p>Anthropic has published that its performance-optimization take-home has had to be <strong>redesigned with each new model release</strong>, because successive Claude models first matched and then exceeded most human applicants under the same time limit — on a take-home where AI use is expressly permitted. The problem isn't cheating; it's that if humans can't improve on the model's output, the test measures which model you used rather than who you are. If you want to understand what an AI-era technical evaluation is trying to measure, that write-up is the clearest public statement of it — and it tells you what to practice: <em>judgment about model output</em>, not speed of typing.</p>
+  </div>
+
+  <h3>Amazon's Leadership Principles</h3>
+  <p>There are <strong>16</strong> (14 originals plus two added in 2021). They are not trivia — they are the literal rubric, each interviewer is assigned two or three, and a technically strong LP-weak candidate fails at Amazon in a way they would not at Google. Read the official wording on Amazon's own site; the gists below are for mapping your stories, not for quoting.</p>
+  <div class="grid g2 wide">
+    <div class="card"><span class="tag t-beh">The ones that carry most weight in engineering loops</span>
+      <ul style="margin-top:12px">
+        <li><strong>Customer Obsession</strong> — start from the customer and work backwards.</li>
+        <li><strong>Ownership</strong> — long-term thinking; never "that's not my job."</li>
+        <li><strong>Invent and Simplify</strong> — find the simpler thing; look outside for ideas.</li>
+        <li><strong>Dive Deep</strong> — stay in the details, audit, be skeptical when metrics and anecdote disagree.</li>
+        <li><strong>Bias for Action</strong> — most decisions are reversible; calculated risk beats delay.</li>
+        <li><strong>Have Backbone; Disagree and Commit</strong> — challenge respectfully, then commit fully once decided.</li>
+        <li><strong>Deliver Results</strong> — focus on key inputs; never settle after a setback.</li>
+        <li><strong>Insist on the Highest Standards</strong> — don't send defects down the line.</li>
+      </ul>
+    </div>
+    <div class="card"><span class="tag t-beh">The rest, which still get asked</span>
+      <ul style="margin-top:12px">
+        <li><strong>Are Right, A Lot</strong> — strong judgment; actively seek to disconfirm your own beliefs.</li>
+        <li><strong>Learn and Be Curious</strong></li>
+        <li><strong>Hire and Develop the Best</strong> — raise the bar with every hire; coach others.</li>
+        <li><strong>Think Big</strong></li>
+        <li><strong>Frugality</strong> — constraints breed resourcefulness.</li>
+        <li><strong>Earn Trust</strong> — listen, speak candidly, be vocally self-critical.</li>
+        <li><strong>Strive to be Earth's Best Employer</strong></li>
+        <li><strong>Success and Scale Bring Broad Responsibility</strong></li>
+      </ul>
+    </div>
+  </div>
+  <p><strong>The work is the mapping.</strong> Take the eight stories from §18 and build a grid: story down one axis, LPs across the other, and make sure every principle in the left-hand column above is covered by at least two stories. Amazon expects STAR, expects quantified results, and will drill: <em>what was the data? what did</em> you <em>do? what would you do differently?</em> Prepare the follow-ups, not just the story.</p>
+
+  <h3>If you're targeting an ML or AI role</h3>
+  <p>The loop grows a fifth signal area. <strong>Coding is still tested at close to full SWE difficulty</strong> — "I do modeling, not engineering" no longer passes anywhere. On top of that: an <strong>ML breadth round</strong> (fundamentals and theory), the <strong>ML system design round</strong> (§14–15), and a <strong>project deep-dive</strong> where you walk through a system you actually built — why that model, what the baseline was, how you evaluated, what went wrong in production. That last round is where inflated ML experience comes apart.</p>
+  <ul>
+    <li><strong>ML platform / infra roles</strong> ask about serving systems, dynamic batching, KV caching, quantization, GPU scheduling, and distributed training — the most commonly reported prompt is some form of "design a batch inference API for a GPU cluster", which is really a queueing and resource-management question.</li>
+    <li><strong>Applied-AI roles</strong> test LLM fundamentals, context engineering, RAG and vector databases, agents (tool use, orchestration, memory, guardrails), and production operations — latency budgets, token cost, routing, evals.</li>
+    <li><strong>Research engineer</strong> loops add a paper deep-dive with an actual researcher, experiment design ("how would you test that? what's the ablation?"), and — the round that most distinguishes RE from SWE — <strong>debugging a training run</strong>: the loss spiked, or it's flat, or eval diverges from train; what do you check, in what order.</li>
+  </ul>
+
+  <h3>Timelines, and how to sequence your loops</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Company</th><th class="num">Application → offer</th><th>Watch out for</th></tr></thead>
+      <tbody>
+        <tr><td>Netflix</td><td class="num">3–5 weeks</td><td>Fastest of the group.</td></tr>
+        <tr><td>Amazon</td><td class="num">3–6 weeks</td><td>Published figure; longer at senior levels.</td></tr>
+        <tr><td>Microsoft</td><td class="num">~4 weeks</td><td>—</td></tr>
+        <tr><td>AI labs</td><td class="num">3–6 weeks</td><td>High team-to-team variance.</td></tr>
+        <tr><td>Apple</td><td class="num">4–8 weeks</td><td>Very high variance; entirely team-dependent.</td></tr>
+        <tr><td>Meta</td><td class="num">4–8 weeks, sometimes 2–3 months</td><td>Team matching adds a few weeks after the loop.</td></tr>
+        <tr><td>Google</td><td class="num">8–12 weeks</td><td>The tail is the risk: committee, then team matching, which commonly adds 2–4 weeks and sometimes far more.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Two scheduling levers most candidates don't use.</strong> First, recruiters will almost always grant more prep time if you ask up front with a reason — the default two-to-four-week gap is a convention, not a constraint. Second, <strong>do not schedule your top-choice company first.</strong> Run a lower-stakes loop as calibration: the formats are similar enough that one real onsite is worth ten mocks, and you only get to be nervous-for-the-first-time once.</p>
+
+  <div class="callout">
+    <div class="ct">The email to send before you start prepping</div>
+    <p>"Before I plan my preparation — could you confirm: which rounds will I have and how long is each? What level am I being considered at, and is the loop level-flexible? Is any round in person? And what's your policy on AI tool use in each round?" Recruiters answer this routinely. It resolves nearly every ambiguity in this section, and the answer is worth more than anything you'll read about their process online.</p>
+  </div>
+</section>

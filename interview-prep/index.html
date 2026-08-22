@@ -364,64 +364,76 @@ nav.toc .part:first-of-type{margin-top:14px}
   <div class="sec-head">
     <div class="eyebrow">Section 00 · Orientation</div>
     <h2>The 28-day calendar</h2>
-    <p>Built for roughly <strong>3 hours on weekdays and 5 on weekends</strong>. If you have less, keep the algorithm block and the weekend mocks — drop the second design read instead. The order matters: distributed-systems vocabulary in weeks 1–2 is what makes the ML designs in week 3 say anything interesting.</p>
+    <p>Built for roughly <strong>3 hours on weekdays and 5 on weekends</strong>. Before you commit to it, read the next two paragraphs honestly — the plan works for one specific starting point, and pretending you're at that point is the most expensive mistake available.</p>
   </div>
 
-  <div class="legend">
+  <div class="callout warnbox">
+    <div class="ct">Is 28 days the right number for you?</div>
+    <p><strong>This plan assumes you can already write a BFS, a binary search, and a hash-map pass without looking anything up.</strong> If you can, four weeks of concentrated work is genuinely enough to sharpen design and ML systems and get your recall back. If you can't — if the templates in §04 are new rather than rusty — then this is a <strong>10–14 week</strong> project, and compressing it produces a confident-feeling candidate who fails the coding round. There is no shame in the longer timeline; there is real cost in discovering it during a loop. Run the same order at a slower cadence and keep every review day.</p>
+  </div>
+
+  <h3>Which track are you on?</h3>
+  <div class="grid g3 wide">
+    <div class="card"><span class="tag t-dsa">Rusty on algorithms</span><p style="margin-top:10px">You've been doing product work for years and haven't written a graph traversal since university. <strong>Start at §03</strong> (complexity), then live in §04–§07 for six weeks before you touch design. Your bottleneck is fluency, and fluency only comes from timed repetition.</p></div>
+    <div class="card"><span class="tag t-sd">Strong coder, weak on design</span><p style="margin-top:10px">The most common case, and the one this 28-day plan is built for. Keep algorithms on maintenance (§07), and spend the recovered hours in §09–§13. Your gap is almost certainly <em>driving the round</em> rather than knowledge — see §20 on what changes between mid and senior.</p></div>
+    <div class="card"><span class="tag t-ml">Targeting ML or AI roles</span><p style="margin-top:10px">Do not skip Part III. An ML design round is a distributed-systems round with two extra loops, and candidates who only know modeling get exposed in the first deep dive. Weeks 1–2 as written, then §14–§17 in full.</p></div>
+  </div>
+
+  <div class="legend" style="margin-top:26px">
     <span><i style="background:var(--teal)"></i>System design</span>
     <span><i style="background:var(--violet)"></i>AI / ML systems</span>
     <span><i style="background:var(--ochre)"></i>Algorithms</span>
     <span><i style="background:var(--ink-3)"></i>Mixed / mock</span>
   </div>
 
-  <h3>Week 1 — Vocabulary and the core patterns</h3>
+  <h3>Week 1 — vocabulary and the core patterns</h3>
   <div class="daygrid">
-    <div class="day k-sd"><div class="d">Day 01</div><div class="w">Framework + numbers</div><div class="m">DSA: hashing, arrays · 6 problems</div></div>
-    <div class="day k-sd"><div class="d">Day 02</div><div class="w">Storage &amp; data models</div><div class="m">DSA: two pointers · 5</div></div>
-    <div class="day k-sd"><div class="d">Day 03</div><div class="w">Caching &amp; CDN</div><div class="m">DSA: sliding window · 5</div></div>
-    <div class="day k-sd"><div class="d">Day 04</div><div class="w">LB, sharding, replication</div><div class="m">DSA: binary search + on answer · 5</div></div>
-    <div class="day k-sd"><div class="d">Day 05</div><div class="w">Queues, async, idempotency</div><div class="m">DSA: stacks, monotonic · 4</div></div>
-    <div class="day k-mix"><div class="d">Day 06</div><div class="w">Design: URL shortener</div><div class="m">DSA: trees, BFS/DFS · 6</div></div>
-    <div class="day k-mix"><div class="d">Day 07</div><div class="w">Design: rate limiter</div><div class="m">DSA: heaps, top-K · 5 + review</div></div>
+    <div class="day k-sd"><div class="d">Day 01</div><div class="w">Framework + numbers</div><div class="m">§09 §10 · ladder days 1–2</div></div>
+    <div class="day k-sd"><div class="d">Day 02</div><div class="w">How a page loads</div><div class="m">§01 · ladder day 2</div></div>
+    <div class="day k-sd"><div class="d">Day 03</div><div class="w">Databases from scratch</div><div class="m">§02 · ladder day 3</div></div>
+    <div class="day k-sd"><div class="d">Day 04</div><div class="w">Caching, LB, sharding</div><div class="m">§11 · ladder day 4</div></div>
+    <div class="day k-sd"><div class="d">Day 05</div><div class="w">Queues, async, idempotency</div><div class="m">§11 · ladder day 5</div></div>
+    <div class="day k-mix"><div class="d">Day 06</div><div class="w">Design: URL shortener</div><div class="m">§12 · ladder day 6</div></div>
+    <div class="day k-mix"><div class="d">Day 07</div><div class="w">Design: rate limiter</div><div class="m">Review day — interleave, from blank</div></div>
   </div>
 
-  <h3>Week 2 — Distributed depth and the classic designs</h3>
+  <h3>Week 2 — distributed depth and the classic designs</h3>
   <div class="daygrid">
-    <div class="day k-sd"><div class="d">Day 08</div><div class="w">Consistency, CAP, consensus</div><div class="m">DSA: intervals, greedy · 5</div></div>
-    <div class="day k-sd"><div class="d">Day 09</div><div class="w">Search &amp; inverted indexes</div><div class="m">DSA: DP 1-D · 5</div></div>
-    <div class="day k-sd"><div class="d">Day 10</div><div class="w">Streaming &amp; exactly-once</div><div class="m">DSA: DP 2-D · 4</div></div>
-    <div class="day k-sd"><div class="d">Day 11</div><div class="w">Geospatial &amp; proximity</div><div class="m">DSA: tries, strings · 4</div></div>
-    <div class="day k-sd"><div class="d">Day 12</div><div class="w">Observability, SLOs, failure</div><div class="m">DSA: backtracking · 4</div></div>
-    <div class="day k-mix"><div class="d">Day 13</div><div class="w">Design: news feed + chat</div><div class="m">DSA: mixed timed set · 4</div></div>
-    <div class="day k-mix"><div class="d">Day 14</div><div class="w">Mock #1 (system design)</div><div class="m">Grade it. Write the gap list.</div></div>
+    <div class="day k-sd"><div class="d">Day 08</div><div class="w">Consistency, CAP, consensus</div><div class="m">§11 · ladder day 8</div></div>
+    <div class="day k-sd"><div class="d">Day 09</div><div class="w">Streaming &amp; exactly-once</div><div class="m">§11 · ladder day 9</div></div>
+    <div class="day k-sd"><div class="d">Day 10</div><div class="w">Observability, SLOs, cost</div><div class="m">§11 · ladder day 10</div></div>
+    <div class="day k-sd"><div class="d">Day 11</div><div class="w">Geospatial &amp; proximity</div><div class="m">§11 §12 · ladder day 11</div></div>
+    <div class="day k-sd"><div class="d">Day 12</div><div class="w">Security &amp; failure modes</div><div class="m">§11 · ladder day 12</div></div>
+    <div class="day k-mix"><div class="d">Day 13</div><div class="w">Design: news feed + chat</div><div class="m">§12 · ladder day 13</div></div>
+    <div class="day k-mix"><div class="d">Day 14</div><div class="w">Mock #1 — system design</div><div class="m">Grade it. Start the gap list.</div></div>
   </div>
 
-  <h3>Week 3 — The AI track</h3>
-  <p>From here the algorithm block drops to <strong>45 minutes of maintenance</strong> — two problems from patterns you got wrong, never new material. The cognitive budget goes to ML systems.</p>
+  <h3>Week 3 — the AI track</h3>
+  <p>From here the algorithm block drops to <strong>45 minutes of maintenance</strong> — two problems from patterns you rated badly, never new material. The cognitive budget goes to ML systems.</p>
   <div class="daygrid">
-    <div class="day k-ml"><div class="d">Day 15</div><div class="w">ML framing &amp; metrics</div><div class="m">Maintenance: 2 problems</div></div>
-    <div class="day k-ml"><div class="d">Day 16</div><div class="w">Features, stores, skew</div><div class="m">Maintenance: 2</div></div>
-    <div class="day k-ml"><div class="d">Day 17</div><div class="w">Recsys: retrieve → rank</div><div class="m">Maintenance: 2</div></div>
-    <div class="day k-ml"><div class="d">Day 18</div><div class="w">Embeddings &amp; ANN search</div><div class="m">Maintenance: 2</div></div>
-    <div class="day k-ml"><div class="d">Day 19</div><div class="w">LLM serving &amp; cost</div><div class="m">Maintenance: 2</div></div>
-    <div class="day k-ml"><div class="d">Day 20</div><div class="w">Design: RAG assistant</div><div class="m">Write it out longhand, timed</div></div>
-    <div class="day k-mix"><div class="d">Day 21</div><div class="w">Mock #2 (ML design)</div><div class="m">Grade it. Update the gap list.</div></div>
+    <div class="day k-ml"><div class="d">Day 15</div><div class="w">ML framing &amp; metrics</div><div class="m">§14 · review 2</div></div>
+    <div class="day k-ml"><div class="d">Day 16</div><div class="w">Harder designs: scheduler, ledger</div><div class="m">§13 · review 2</div></div>
+    <div class="day k-ml"><div class="d">Day 17</div><div class="w">Recsys: retrieve → rank</div><div class="m">§15 · review 2</div></div>
+    <div class="day k-ml"><div class="d">Day 18</div><div class="w">Embeddings &amp; ANN search</div><div class="m">§15 · review 2</div></div>
+    <div class="day k-ml"><div class="d">Day 19</div><div class="w">LLM serving &amp; the roofline</div><div class="m">§16 · review 2</div></div>
+    <div class="day k-ml"><div class="d">Day 20</div><div class="w">Design: RAG assistant + agents</div><div class="m">§15 §16 · write it out longhand</div></div>
+    <div class="day k-mix"><div class="d">Day 21</div><div class="w">Mock #2 — ML design</div><div class="m">Grade it. Update the gap list.</div></div>
   </div>
 
-  <h3>Week 4 — Integration and polish</h3>
+  <h3>Week 4 — integration and polish</h3>
   <div class="daygrid">
-    <div class="day k-ml"><div class="d">Day 22</div><div class="w">Online eval, A/B, guardrails</div><div class="m">Maintenance: 2</div></div>
-    <div class="day k-ml"><div class="d">Day 23</div><div class="w">Pipelines, rollout, cost control</div><div class="m">Maintenance: 2</div></div>
-    <div class="day k-mix"><div class="d">Day 24</div><div class="w">Story bank: 8 STAR stories</div><div class="m">Say them out loud, timed to 2 min</div></div>
-    <div class="day k-mix"><div class="d">Day 25</div><div class="w">Repair week: your gap list only</div><div class="m">Nothing new. Only what you missed.</div></div>
-    <div class="day k-dsa"><div class="d">Day 26</div><div class="w">Timed set: 2 × 45 min</div><div class="m">Full interview conditions, no IDE</div></div>
+    <div class="day k-ml"><div class="d">Day 22</div><div class="w">Eval, A/B, guardrails, drift</div><div class="m">§14 §17 · review 2</div></div>
+    <div class="day k-ml"><div class="d">Day 23</div><div class="w">Training at scale, cost control</div><div class="m">§16 · review 2</div></div>
+    <div class="day k-mix"><div class="d">Day 24</div><div class="w">Story bank + company research</div><div class="m">§18 §20 · say them out loud, timed</div></div>
+    <div class="day k-mix"><div class="d">Day 25</div><div class="w">Repair: your gap list only</div><div class="m">Nothing new. Only what you missed.</div></div>
+    <div class="day k-dsa"><div class="d">Day 26</div><div class="w">Timed set: 2 × 45 min</div><div class="m">Full conditions, plain editor, no run button</div></div>
     <div class="day k-mix"><div class="d">Day 27</div><div class="w">Mocks #3 and #4</div><div class="m">One SD, one ML, back to back</div></div>
     <div class="day rest"><div class="d">Day 28</div><div class="w">Recall sheet &amp; rest</div><div class="m">Read §21 aloud. Sleep. Stop studying.</div></div>
   </div>
 
   <div class="callout">
     <div class="ct">The rule that makes this work</div>
-    <p>Reading a design is worth about a fifth of drawing one. Every topic day ends with <strong>fifteen minutes at a blank page</strong>: redraw the day's architecture from memory, then diff it against the section. The diff is your gap list, and the gap list is what week 4 is for.</p>
+    <p>Reading a design is worth about a fifth of drawing one. Every topic day ends with <strong>fifteen minutes at a blank page</strong>: redraw the day's architecture from memory, speaking it aloud as you draw, then diff it against the section. The diff is your gap list, and the gap list is what day 25 is for. The mouth is the muscle being trained here, not the hand — the first time you narrate a design should not be in an interview.</p>
   </div>
 
   <h3>Daily template</h3>
@@ -430,15 +442,14 @@ nav.toc .part:first-of-type{margin-top:14px}
       <thead><tr><th>Block</th><th class="num">Time</th><th>What you actually do</th></tr></thead>
       <tbody>
         <tr><td><strong>Warm-up</strong></td><td class="num">10 min</td><td>Re-derive yesterday's back-of-envelope numbers from memory. No notes.</td></tr>
-        <tr><td><strong>Algorithms</strong></td><td class="num">60–75 min</td><td>One pattern. Read the template once, then solve 4–6 problems <em>on a timer</em> — 25 min hard cap, then read the solution and re-implement it from scratch the next morning.</td></tr>
+        <tr><td><strong>Algorithms</strong></td><td class="num">60–75 min</td><td>One pattern from the ladder (§06). Read the template once, then 4–5 problems on a timer — 25 minutes hard cap each, then study the solution and re-implement from blank <em>the next morning</em>.</td></tr>
         <tr><td><strong>Design read</strong></td><td class="num">45 min</td><td>One section here, plus one real engineering blog post on the same topic.</td></tr>
-        <tr><td><strong>Blank page</strong></td><td class="num">15 min</td><td>Redraw it from memory. Speak the design out loud as you draw — the mouth is the muscle being trained, not the hand.</td></tr>
-        <tr><td><strong>Log</strong></td><td class="num">5 min</td><td>Three lines: what you got wrong, what you'd say differently, one number you forgot.</td></tr>
+        <tr><td><strong>Blank page</strong></td><td class="num">15 min</td><td>Redraw it from memory, out loud.</td></tr>
+        <tr><td><strong>Log</strong></td><td class="num">5 min</td><td>Rate every problem (§07) and write three lines: what you got wrong, what you'd say differently, one number you forgot.</td></tr>
       </tbody>
     </table>
   </div>
 </section>
-
 
 <div class="partbreak">
   <div class="pn">Part I</div>
@@ -2209,6 +2220,70 @@ redis.call(<span class="st">'EXPIRE'</span>, KEYS[<span class="nu">1</span>], ma
     <li><strong>Load shedding</strong> — reject early at the edge when saturated. A fast 503 is far better than a queue that times out after 30 s of held resources.</li>
     <li><strong>The golden signals</strong> — latency (p50/p95/p99), traffic, errors, saturation. Plus an SLO and an error budget: "99.9% of reads under 200 ms, measured at the edge" is what a real target sounds like.</li>
   </ul>
+
+  <hr class="rule">
+
+  <h3>Consensus and coordination</h3>
+  <p>Three designs in this guide need a single writer, a leader, or an agreed-upon value — and "the system elects a leader" is where most candidates stop. Know one level deeper.</p>
+  <p><strong>The problem:</strong> get a set of nodes to agree on a value despite crashes and network delays. The building block is a <strong>quorum</strong> — any majority. Two majorities of the same set must overlap in at least one node, and that overlap is what makes agreement possible. It is also why consensus clusters have an odd number of members: five nodes tolerate two failures, six also tolerate two, so the sixth buys nothing and costs latency.</p>
+  <p><strong>Raft</strong>, which is what you should describe because it was designed to be explainable:</p>
+  <ul>
+    <li><strong>Leader election.</strong> Time is divided into <em>terms</em>. A follower that hears nothing from a leader becomes a candidate, increments the term, and requests votes; a node votes once per term, so a majority elects exactly one leader. Randomized election timeouts stop candidates from splitting the vote forever.</li>
+    <li><strong>Log replication.</strong> All writes go to the leader, which appends to its log and replicates. Once a majority has an entry, it is <em>committed</em> and can be applied. A new leader is guaranteed to hold every committed entry, because it needed a majority to be elected and majorities overlap.</li>
+    <li><strong>Why Paxos instead?</strong> Usually not — Paxos is the older, more general result and is notoriously hard to implement correctly. Saying "Raft, because I can reason about it and so can the on-call engineer" is a good answer.</li>
+  </ul>
+  <p><strong>In practice you don't implement it</strong>, you use a coordination service — ZooKeeper or etcd — for leader election, membership, configuration, and locks. The pattern is an <em>ephemeral</em> node or a <em>lease</em>: the holder must keep renewing, and if it stops, the lock releases automatically. That is how a job scheduler (§13) survives a node dying mid-shard.</p>
+  <div class="callout warnbox">
+    <div class="ct">The fencing token — the follow-up that separates people</div>
+    <p>Distributed locks have a hole that a naive design misses. Node A takes the lock, then pauses — a long GC, a network partition, a hypervisor stall. Its lease expires and node B takes the lock. Then A wakes up, believing it still holds the lock, and writes. Two writers, corrupted data, and no error anywhere.</p>
+    <p>The fix is not a longer lease — you cannot bound a pause. The lock service must hand out a <strong>monotonically increasing fencing token</strong> with every grant, the writer must include it in every write, and <em>the storage system must reject any write carrying a token lower than the highest it has seen</em>. Note what that requires: the resource being protected has to participate. A lock alone is never enough, and being able to say that is a genuine staff-level moment.</p>
+  </div>
+  <p><strong>And know when not to use it.</strong> Consensus costs a round trip to a majority on every write. Keep it off the data path: use it to decide <em>who</em> is in charge or <em>what</em> the configuration is, then let the elected leader serve traffic at normal speed. Systems that run every request through consensus are slow for a reason they didn't need to accept.</p>
+
+  <h3>Streaming, and what "exactly-once" actually means</h3>
+  <p>Batch processing is a special case of streaming with a very long window. The concepts that make streaming its own topic:</p>
+  <ul>
+    <li><strong>Event time vs processing time.</strong> An event happened at 10:00 and arrived at 10:07 because a phone was in a tunnel. Windowing on <em>processing</em> time is easy and gives wrong answers; windowing on <em>event</em> time is correct and forces you to answer "how long do I wait?"</li>
+    <li><strong>Watermarks</strong> are that answer: a watermark at time T asserts that no more events older than T are expected, so windows up to T can be closed and emitted. It is a heuristic — set it aggressively and you drop late data, conservatively and results are stale. Add an <strong>allowed lateness</strong> window with a retraction or update path for the stragglers.</li>
+    <li><strong>Window types:</strong> tumbling (fixed, non-overlapping — "per minute"), sliding (fixed, overlapping — "last 5 minutes, every minute"), session (grouped by a gap in activity — "one user's browsing session").</li>
+    <li><strong>State and checkpointing.</strong> Aggregations hold state; the framework periodically snapshots that state, consistently across all operators, by flowing barriers through the dataflow. On failure the job restores the last checkpoint and replays from the corresponding source offsets. That mechanism is <em>why</em> replayable log sources matter.</li>
+    <li><strong>Backpressure</strong> propagates slowness upstream so a slow sink doesn't cause unbounded buffering. Monitor lag, not just throughput.</li>
+  </ul>
+  <p><strong>Now the exactly-once claim, said correctly.</strong> Exactly-once <em>delivery</em> over a network is impossible. What Kafka provides is exactly-once <em>processing semantics within its own boundary</em>, built from two things: an <strong>idempotent producer</strong> (each producer has an id and a per-partition sequence number, so the broker discards duplicates from retries) and <strong>transactions</strong> that atomically commit both the output records and the consumer offsets, with downstream readers set to <code>read_committed</code>. Read-process-write pipelines that stay inside Kafka get real exactly-once. The moment your side effect leaves that boundary — an email, a payment, a row in someone else's database — you are back to at-least-once plus an idempotency key. Say that sentence and the follow-up is answered before it's asked.</p>
+
+  <h3>Observability and SLOs</h3>
+  <div class="deflist">
+    <dt>Metrics</dt><dd>Cheap, aggregated numbers over time. Good for "is it broken and how much". Bad at explaining <em>why</em>. Cost scales with <strong>cardinality</strong> — see §13.</dd>
+    <dt>Logs</dt><dd>Expensive, high-detail events. Structured (JSON with fields) rather than printf, or you cannot query them. Sample aggressively at high volume.</dd>
+    <dt>Traces</dt><dd>One request's path across every service, with timing per hop. The only tool that answers "which of these fourteen services made it slow". Requires <strong>context propagation</strong> — a trace id passed through every call, including across queues, which is the part that always gets missed.</dd>
+  </div>
+  <p><strong>Sampling:</strong> head-based (decide at the entry point, cheap, and you lose the rare slow request) versus tail-based (buffer the trace and keep it only if it was slow or errored — much more useful, much more infrastructure). "Keep 100% of errors and slow requests, 1% of the rest" is the answer that shows you've paid for a tracing bill.</p>
+  <div class="callout">
+    <div class="ct">An SLO, worked</div>
+    <p><strong>SLI</strong> (the measurement): the proportion of GET /feed requests returning 2xx in under 200 ms, measured at the edge. <strong>SLO</strong> (the target): 99.9% over a rolling 28 days. <strong>Error budget</strong>: 0.1% of 28 days ≈ <strong>40 minutes</strong> of allowed badness per month. That budget is the whole point — it converts reliability from an argument into arithmetic. Budget intact means ship faster; budget spent means the next sprint is reliability work, and nobody has to have an opinion about it.</p>
+    <p>Alert on <strong>burn rate</strong>, not on thresholds: paging when "errors &gt; 1%" fires on every blip, whereas "we are consuming the monthly budget 14× faster than sustainable" fires when it matters. And alert on <em>symptoms</em> users feel, not causes — "checkout latency is up" pages someone; "CPU is at 80%" is a dashboard, not a page.</p>
+  </div>
+
+  <h3>Security, at the level a design round expects</h3>
+  <ul>
+    <li><strong>Authentication vs authorization.</strong> Who you are, versus what you may do. Keep them separate in the design; conflating them is how permission bugs happen.</li>
+    <li><strong>OAuth2 / OIDC</strong> — the authorization-code flow with PKCE for user login. The thing to internalize: your service receives a <em>token</em>, never the user's password, and the token is scoped and expiring.</li>
+    <li><strong>JWT vs session token.</strong> A JWT is self-contained and verifiable without a lookup, which makes it fast and horizontally scalable — and means <strong>you cannot revoke it</strong> before expiry. That is the follow-up, every time. The real answers are short expiry plus refresh tokens, or a revocation list, at which point you've reintroduced the lookup you were avoiding. Sessions are simpler and fine for most systems.</li>
+    <li><strong>Transport and storage.</strong> TLS everywhere, mTLS between services in a zero-trust setup, encryption at rest with managed keys, and secrets in a secret manager with rotation — never in environment variables checked into anything.</li>
+    <li><strong>The application basics:</strong> parameterized queries (SQL injection), output escaping (XSS), CSRF tokens or SameSite cookies, and rate limiting as an <em>abuse control</em>, not only a capacity control.</li>
+    <li><strong>Privacy as a design constraint,</strong> which is the part that actually changes architectures: PII classification and minimization, data residency by region, and a <strong>right to deletion</strong> that breaks append-only logs and immutable event stores. The standard resolution is crypto-shredding — encrypt each user's data with a per-user key and delete the key — and offering it unprompted is a strong signal.</li>
+  </ul>
+
+  <h3>Cost</h3>
+  <p>Nothing in a design is free, and "what does this cost per month?" is a standard senior follow-up that most candidates have no answer to. You do not need current price lists; you need the shape of the arithmetic and an order of magnitude.</p>
+  <ul>
+    <li><strong>Egress is the expensive one.</strong> Bandwidth out of a cloud provider dwarfs storage for media-heavy systems — which is the real reason the photo service in §10 has a CDN, beyond latency.</li>
+    <li><strong>Storage is cheap; storage <em>tiers</em> are much cheaper.</strong> Lifecycle policies moving data to infrequent-access and archive tiers routinely cut a petabyte-scale bill by an order of magnitude, at the cost of retrieval latency.</li>
+    <li><strong>Compute is priced by reservation.</strong> Spot and committed-use pricing are large multiples cheaper than on-demand; the design question is which parts of your workload are interruptible.</li>
+    <li><strong>GPUs invert everything.</strong> In an ML system the accelerators usually dominate every other line item combined, which is why §16 spends its effort on batching and routing rather than on storage.</li>
+    <li><strong>The question to be ready for:</strong> <em>"what is the cheapest 10% quality regression that halves this bill?"</em> Having a candidate answer — smaller model for the easy majority, coarser cache TTL, downsampled retention, a lower ANN recall target — shows you think about systems the way the people paying for them do.</li>
+  </ul>
+
 </section>
 
 <section id="designs">
@@ -2816,6 +2891,203 @@ GPUs for decode        = 5M / 3,000          ≈ <span class="nu">~1,700 H100s</
   </div>
 </section>
 
+
+<section id="llmsystems">
+  <div class="sec-head">
+    <div class="eyebrow">Section 16 · AI &amp; ML</div>
+    <h2>LLM &amp; agent systems</h2>
+    <p>The material that has appeared in loops most recently, and where the bar is least settled. Two things carry a round here: <strong>arithmetic you can do on the whiteboard</strong>, and <strong>knowing which published numbers are measurements and which are marketing</strong>. The second is rarer and lands harder.</p>
+  </div>
+
+  <h3>The serving stack</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Engine</th><th>What it is</th><th>Reach for it when</th></tr></thead>
+      <tbody>
+        <tr><td><strong>vLLM</strong></td><td>The open-source default. PyTorch-native, no compile step, widest model coverage, fastest to support new architectures. Its V1 engine rewrite made prefix caching near-free and mixes prefill and decode in one scheduler step.</td><td>Almost always, first. It is the baseline everything else gets measured against.</td></tr>
+        <tr><td><strong>SGLang</strong></td><td>Same class, built around structured LM programs and aggressive prefix reuse via a radix tree over token sequences — so partial prefixes match, not just exact system prompts.</td><td>Heavy prefix sharing: a fixed system prompt, a fixed tool schema, multi-turn agents, RAG over a stable corpus.</td></tr>
+        <tr><td><strong>TensorRT-LLM</strong></td><td>NVIDIA's compiled path — weights and architecture are ahead-of-time compiled into an optimized kernel graph for a specific GPU, batch range and sequence length.</td><td>One model, one GPU SKU, stable shapes, and you need the last 10–15% of throughput. Costs a 25–45 minute rebuild on every change.</td></tr>
+        <tr><td><strong>llama.cpp / GGUF</strong></td><td>A different problem entirely: single-user local inference on CPU, Apple Metal, or a consumer GPU, no Python runtime. GGUF packs weights, tokenizer and metadata into one file at 2–8 bits.</td><td>Laptops, edge, air-gapped, privacy. Not multi-tenant serving.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout warnbox">
+    <div class="ct">How to discuss engine benchmarks without getting caught</div>
+    <p>Published head-to-heads put compiled TensorRT-LLM modestly ahead of vLLM, with SGLang pulling ahead as prefix sharing rises — but the specific percentages come from blog comparisons rather than controlled measurement, and they move between posts. The defensible statement is directional: <em>"the gaps are tens of percent, not multiples, and they invert depending on how much prefix our workload shares — I'd benchmark on our own traffic."</em> A candidate who quotes a precise multiple from memory is telling the interviewer they read a blog. A candidate who names the workload property that decides it is telling them they've served a model.</p>
+  </div>
+
+  <h3>KV cache: the formula, and real numbers</h3>
+  <div class="codehead"><span>Derive it, don't memorize it — and watch the GQA trap</span><button class="copy" type="button">Copy</button></div>
+<pre><code>bytes_per_token = 2 (K and V)
+                × n_layers
+                × n_kv_heads        <span class="cm"># = n_heads for MHA; n_heads/group for GQA; 1 for MQA</span>
+                × head_dim
+                × bytes_per_element <span class="cm"># 2 for BF16, 1 for FP8</span>
+
+<span class="cm"># THE MISTAKE EVERYONE MAKES: n_kv_heads × head_dim is NOT hidden_size under GQA.</span>
+<span class="cm"># Llama 3.1 70B has hidden_size 8192, but 8 KV heads × 128 = 1024. An 8x error.</span>
+</code></pre>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Model</th><th class="num">Layers</th><th class="num">KV heads</th><th class="num">KB / token</th><th class="num">32K ctx</th><th class="num">128K ctx</th></tr></thead>
+      <tbody>
+        <tr><td>Llama 3.1 8B</td><td class="num">32</td><td class="num">8</td><td class="num">128</td><td class="num">4.3 GB</td><td class="num">17.2 GB</td></tr>
+        <tr><td>Llama 3.1 70B</td><td class="num">80</td><td class="num">8</td><td class="num">320</td><td class="num">10.7 GB</td><td class="num">43.0 GB</td></tr>
+        <tr><td>Llama 3.1 405B</td><td class="num">126</td><td class="num">8</td><td class="num">504</td><td class="num">16.9 GB</td><td class="num">67.7 GB</td></tr>
+        <tr><td>Mixtral 8×7B <em>(MoE)</em></td><td class="num">32</td><td class="num">8</td><td class="num">128</td><td class="num">4.3 GB</td><td class="num">17.2 GB</td></tr>
+        <tr><td>Llama-2 7B <em>(MHA, for contrast)</em></td><td class="num">32</td><td class="num">32</td><td class="num">512</td><td class="num">17.2 GB</td><td class="num">68.7 GB</td></tr>
+        <tr><td>DeepSeek-V3 <em>(MLA)</em></td><td class="num">61</td><td class="num">latent 512+64</td><td class="num">68.6</td><td class="num">2.3 GB</td><td class="num">9.2 GB</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Three structural facts to pull out of that table,</strong> because they are the interesting part:</p>
+  <ul>
+    <li><strong>MoE changes compute per token, not KV cache.</strong> Mixtral 8×7B has 47B total parameters and exactly the same KV cache per token as Llama 3.1 8B, because the cache depends only on layers × KV heads × head dim. "MoE needs more KV memory" is a sentence that means someone hasn't done the arithmetic.</li>
+    <li><strong>GQA is a 4–8× cut versus MHA</strong> at the same layer count — 512 KB/token for MHA-7B against 128 KB/token for GQA-8B.</li>
+    <li><strong>MLA compresses what is stored</strong> rather than reducing how many heads exist. DeepSeek-V3 caches one shared low-rank latent (512) plus a small decoupled RoPE key (64) per layer, with no ×2 for K and V — roughly <strong>98% smaller than same-shape MHA</strong>. The famous "93.3% reduction" figure is against DeepSeek's previous-generation dense model, not against same-shape MHA; being able to state that distinction is a real signal. The cost is extra FLOPs and an awkward interaction with tensor parallelism, which is why GQA remains the industry default.</li>
+  </ul>
+
+  <h3>GPUs, and the roofline that decides everything</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>GPU</th><th class="num">Memory</th><th class="num">HBM bandwidth</th><th class="num">BF16 dense</th><th class="num">BF16 ridge point</th></tr></thead>
+      <tbody>
+        <tr><td>A100 80GB SXM</td><td class="num">80 GB</td><td class="num">2.0 TB/s</td><td class="num">312 TFLOP/s</td><td class="num">153 FLOP/byte</td></tr>
+        <tr><td>H100 SXM</td><td class="num">80 GB</td><td class="num">3.35 TB/s</td><td class="num">~989 TFLOP/s</td><td class="num">295 FLOP/byte</td></tr>
+        <tr><td>H200 SXM</td><td class="num">141 GB</td><td class="num">4.8 TB/s</td><td class="num">~989 TFLOP/s</td><td class="num">206 FLOP/byte</td></tr>
+        <tr><td>B200</td><td class="num">180 GB usable</td><td class="num">~8 TB/s</td><td class="num">~2,250 TFLOP/s</td><td class="num">281 FLOP/byte</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout warnbox">
+    <div class="ct">Halve the marketing number</div>
+    <p>NVIDIA routinely quotes tensor-core throughput <em>with 2:4 structured sparsity</em> — H100 "1,979 TFLOP/s BF16", B200 "18 PFLOP/s FP4". No production LLM inference uses 2:4 sparsity, so the dense figure is half of whatever is on the slide. B200 memory and bandwidth also genuinely differ across NVIDIA's own materials (180 vs 192 GB, 7.7 vs 8.0 TB/s) because one figure is software-visible and the other physical. Saying "dense, not sparse" costs two words and marks you as someone who has sized a cluster.</p>
+  </div>
+
+  <div class="codehead"><span>The roofline, and the two intensities that matter at decode</span><button class="copy" type="button">Copy</button></div>
+<pre><code>I  = FLOPs performed / bytes moved from HBM        <span class="cm"># arithmetic intensity</span>
+I* = peak_compute / peak_bandwidth                 <span class="cm"># the ridge point</span>
+I &lt; I*  ->  memory-bandwidth bound
+I &gt; I*  ->  compute bound
+
+<span class="cm"># (a) WEIGHT MATMULS at decode. X[B×K] @ W[K×N]: FLOPs = 2BKN, bytes = KN·w.</span>
+I_gemm = 2 × batch / bytes_per_weight
+       = B      for BF16 weights      <span class="cm"># NOT B/2 -- several write-ups drop the 2 in the MAC</span>
+       = 2B     for FP8 weights
+
+<span class="cm"># H100's BF16 ridge is 295, so you need batch ~300 before the linear layers</span>
+<span class="cm"># become compute-bound. Real serving batches are 8-64 -- five to forty times</span>
+<span class="cm"># BELOW the ridge. Decode is emphatically memory-bandwidth bound, and that one</span>
+<span class="cm"># fact is why continuous batching, quantization and speculative decoding pay.</span>
+
+<span class="cm"># (b) ATTENTION ITSELF. Per decoding sequence of length L:</span>
+<span class="cm">#     KV bytes read = 2·L·n_kv·d_h·w ,  FLOPs = 4·n_q·L·d_h</span>
+I_attn = n_q / n_kv = the GQA group size
+
+<span class="cm"># INDEPENDENT of batch size AND of context length. Derive this live and you</span>
+<span class="cm"># have said the most useful thing in the round: batching fixes the weight</span>
+<span class="cm"># bottleneck but CANNOT fix the attention bottleneck, because every sequence</span>
+<span class="cm"># carries its own KV cache. That is the whole argument for GQA -> MQA -> MLA,</span>
+<span class="cm"># for FP8 KV caches, and for prefix sharing.</span>
+</code></pre>
+
+  <h3>The five throughput techniques, with their real provenance</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Technique</th><th>Mechanism</th><th>Reported gain — and against what</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Paged attention</strong></td><td>KV cache in fixed-size blocks (~16 tokens) with a per-sequence block table, exactly like OS virtual memory. Blocks allocate on demand; shared prefixes share physical blocks copy-on-write.</td><td>Cuts KV memory waste from <strong>60–80% down to under 4%</strong>. The often-quoted "2–4× throughput" is the original paper against 2023-vintage baselines — stale as a claim about modern engines.</td></tr>
+        <tr><td><strong>Continuous batching</strong></td><td>Batch composition re-decided every decode step: finished sequences evicted, queued ones admitted mid-flight. No padding, no waiting for the slowest generation.</td><td><strong>~4× against competent static batching</strong>; the widely-repeated "23×" is against naive single-request serving. The gain scales with <em>variance in output length</em> — uniform outputs gain nothing, chat and agents gain multiples.</td></tr>
+        <tr><td><strong>Chunked prefill</strong></td><td>Split a long prefill into chunks and mix them with decode tokens in one batch, so a long prompt can't stall every generating sequence.</td><td>Up to <strong>5.6× serving capacity at a fixed latency SLO</strong>. Chunk size trades time-to-first-token against inter-token latency.</td></tr>
+        <tr><td><strong>Prefix caching</strong></td><td>Hash block-aligned prefixes and reuse their KV blocks; a radix tree generalizes it to partial matches.</td><td>Hit rates of 50–99% depending on workload, highest for agents sharing a system prompt and tool schema. The commercial analogue is API prompt caching, where cached reads are heavily discounted.</td></tr>
+        <tr><td><strong>PD disaggregation</strong></td><td>Prefill (compute-bound, bursty) and decode (bandwidth-bound, long-running) on separate GPU pools, KV cache shipped over NVLink/RDMA.</td><td>~<strong>2× goodput</strong> — requests meeting both TTFT and TPOT targets — by removing phase interference. Only pays when the interconnect is fast and prompts are long enough that transfer cost is small next to prefill.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Name TTFT and TPOT explicitly.</strong> Time-to-first-token is prefill, and is what a user feels as responsiveness. Time-per-output-token is decode, and is what they feel as reading speed. Aggregate throughput is what the finance team feels. Those three trade against each other, and every serving decision moves at least two of them — a candidate who says only "throughput" has one dimension where the problem has three.</p>
+
+  <h3>Quantization, with what actually degrades</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Method</th><th>Quantizes</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><strong>FP8 (E4M3)</strong></td><td>Weights + activations, native on Hopper/Blackwell</td><td>The production default now: ~2× memory, ~1.6× throughput, minimal accuracy impact, and FP8 KV caches report over 99% accuracy recovery. Most of these figures come from vendors who ship the tooling — reproducible, but not third-party audited.</td></tr>
+        <tr><td><strong>AWQ</strong></td><td>Weights only, INT4, activation-aware</td><td>Protects the ~1% of channels with the largest activations. Beats GPTQ at equal bit-width, and the real differentiator is <strong>calibration robustness</strong> — under a mismatched calibration set AWQ degrades slightly where GPTQ degrades severely.</td></tr>
+        <tr><td><strong>GPTQ</strong></td><td>Weights only, INT4/3, second-order error compensation</td><td>Excellent when the calibration set matches production traffic; overfits that set more than AWQ does.</td></tr>
+        <tr><td><strong>SmoothQuant</strong></td><td>W8A8 — migrates activation outliers into the weights</td><td>For compute-bound large-batch serving on pre-Hopper hardware. Underperforms when misapplied to weight-only settings.</td></tr>
+        <tr><td><strong>GGUF k-quants</strong></td><td>Weights, 2–8 bits, block-wise</td><td>Q4_K_M is the sane default. Q2_K and Q3_K_S are a genuine quality cliff, not a gentle slope.</td></tr>
+        <tr><td><strong>QLoRA / NF4</strong></td><td>4-bit frozen base + BF16 LoRA adapters</td><td>A <em>training</em> technique, not a serving one. Takes 65B finetuning from over 780 GB to under 48 GB — one GPU — with no measured degradation versus 16-bit finetuning.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>What breaks first</strong> is not the average benchmark score: it is outlier activations, long-context coherence, and rare-token or non-English performance. A model can hold its average while one slice falls apart. So: <em>quantize, then evaluate on your own task</em> — and remember that a quantized larger model generally beats a full-precision smaller one at the same memory budget, which is usually the actual decision in front of you.</p>
+
+  <hr class="rule">
+
+  <h3>Agentic systems</h3>
+  <p>"Design an agent that can take actions on a user's account" is now a standard prompt. It is a systems question about <strong>blast radius, budgets, and evaluation</strong> — not a prompt-engineering question.</p>
+
+  <h4>Tool calling and the loop</h4>
+  <ul>
+    <li><strong>Tool schemas are the design.</strong> Few, orthogonal, well-named tools with tight JSON Schemas beat many overlapping ones. Descriptions are prompt real estate — write them for the model, not as API reference docs.</li>
+    <li><strong>Tool <em>results</em> are the hidden cost.</strong> A 50k-token tool output blows the context and poisons everything downstream. Paginate, truncate with a continuation token, or write to a file and return a handle.</li>
+    <li><strong>Errors must be recoverable.</strong> Return an actionable message the model can act on, not a stack trace.</li>
+    <li><strong>ReAct</strong> (thought → action → observation) is what most production agents actually are. Plan-and-execute is cheaper and more auditable but brittle when the environment surprises it. Reflection helps most when there is a real verifier — tests, a compiler, a schema — rather than the model grading itself.</li>
+    <li><strong>Budgets belong in the harness, not the prompt.</strong> Max steps, max tokens, max wall-clock, max spend. A prompt that says "be efficient" is not a budget.</li>
+  </ul>
+
+  <h4>Memory — four kinds, and say which you need</h4>
+  <div class="deflist">
+    <dt>Working</dt><dd>The context window itself, managed by compaction and summarization as it fills.</dd>
+    <dt>Episodic</dt><dd>What happened in past sessions — transcripts and summaries, retrieved on demand.</dd>
+    <dt>Semantic</dt><dd>Durable extracted facts about the user or domain, written to a store.</dd>
+    <dt>Procedural</dt><dd>Learned skills and instructions, persisted as files or system-prompt fragments.</dd>
+  </div>
+  <p>Current practice favours <strong>files and structured stores over vector memory</strong> for agents: a scratchpad the agent reads and writes is more debuggable, more editable, and less lossy than embedding-based recall. The hard problems to name are what to write (over-writing pollutes the store), invalidation, and conflicting memories.</p>
+
+  <h4>Multi-agent — and the finding that should make you cautious</h4>
+  <p>The orchestrator–worker pattern — a lead decomposes the task, subagents work in parallel with isolated context windows, the lead synthesizes — has the best-documented production result available: a published research system reported <strong>roughly 90% better performance than a single-agent baseline on its internal eval, at about 15× the tokens</strong>, and, crucially, that <strong>token usage alone explained around 80% of the performance variance</strong>.</p>
+  <p>That last number is the one to quote, because it deflates the mystique: most of the multi-agent gain is buying more total inference and more independent context windows, not emergent coordination. Which gives a clean decision rule — <em>multi-agent pays when the task is breadth-first, with many independent search paths whose combined information exceeds one context window, and the outcome is worth a 15× token bill. It does not pay for narrow, sequential, or latency-sensitive work.</em></p>
+
+  <h4>Sandboxing, and the lethal trifecta</h4>
+  <p>Any agent that executes code or touches a filesystem needs a real isolation boundary (a microVM or sandboxed container, not a subprocess), <strong>egress allowlisting</strong>, filesystem scoping, resource limits, no ambient credentials — short-lived scoped tokens injected per task — and human approval gates on irreversible actions.</p>
+  <div class="callout mlbox">
+    <div class="ct">The framing that wins this part of the round</div>
+    <p>An agent is dangerous when it has all three of: <strong>access to private data</strong>, <strong>exposure to untrusted content</strong>, and <strong>a channel to send data out</strong>. Any two are manageable; all three is not. Egress allowlisting is how you break the third leg, which is why it does more for agent safety than any amount of prompt hardening. State the design principle plainly: <em>make the blast radius small enough that you can afford for the agent to be wrong</em> — because it will be.</p>
+  </div>
+  <p>The tool-connection layer has its own threat model worth naming: <strong>tool poisoning</strong> (malicious instructions hidden in a tool's description), <strong>rug-pull redefinition</strong> after a user has approved a tool, cross-server shadowing, injection via tool <em>results</em>, and credential passthrough. Standardization work on tool protocols has moved toward a stateless core precisely so that gateways can inspect and enforce policy on every request rather than trusting a session.</p>
+
+  <h4>Evaluating agents — trajectory, not just the answer</h4>
+  <p>The single most useful metric is <strong>pass^k</strong>: the probability that <em>all</em> k independent attempts succeed. An agent with 60% pass@1 and 5% pass^8 is unshippable, and only the second number tells you that. Alongside it: cost per task, steps per task, tool-call error rate, recovery rate after a failed call, and variance across seeds — agents are far higher-variance than single-turn models.</p>
+  <p>Benchmarks worth knowing by name: <strong>SWE-bench Verified</strong> (real GitHub issues graded by the repository's own tests), <strong>τ²-bench</strong> (tool-agent-user interaction scoring policy-compliant completion <em>and</em> correct refusal), <strong>GAIA</strong>, <strong>OSWorld</strong> and <strong>WebArena</strong> for computer and browser use, and time-horizon measurements asking how long a task an agent completes at 50% reliability.</p>
+  <p>On failure modes, the useful research finding is that validated taxonomies of multi-agent failure — specification ambiguity, inter-agent coordination breakdown, verification gaps — identify failures that are <strong>not detectable at the individual-agent level</strong>. A collection of safe agents is not a safe collection of agents. That sentence is worth having ready.</p>
+
+  <hr class="rule">
+
+  <h3>Training at scale — the one-line rules</h3>
+  <p>ML-systems loops ask about training infrastructure at least as often as serving. You do not need to have run a thousand-GPU job; you need to know which technique solves which shortage.</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Technique</th><th>Shards / does</th><th>You need it when</th><th>It costs</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Data parallel (DDP)</strong></td><td>Replicates the model, shards the batch</td><td>Everything fits on one GPU and you just want speed</td><td>Gradient all-reduce each step</td></tr>
+        <tr><td><strong>ZeRO-1 / ZeRO-2</strong></td><td>Shards optimizer states, then gradients</td><td>You OOM on optimizer state — Adam is 8 bytes/param in fp32</td><td><strong>Nothing.</strong> Same communication volume as DDP. Effectively free; turn it on.</td></tr>
+        <tr><td><strong>ZeRO-3 / FSDP</strong></td><td>Also shards parameters</td><td>The parameters themselves don't fit per GPU</td><td>~1.5× the communication — params are all-gathered every forward and backward</td></tr>
+        <tr><td><strong>Tensor parallel (TP)</strong></td><td>Splits individual matmuls across GPUs</td><td>A single <em>layer</em> doesn't fit, or you need lower per-step latency</td><td>Two all-reduces <em>per transformer layer</em> — so <strong>keep TP inside one node</strong>; the degree rarely exceeds 8</td></tr>
+        <tr><td><strong>Pipeline parallel (PP)</strong></td><td>Splits layers across GPUs, micro-batched</td><td>You've exhausted intra-node TP and must cross node boundaries</td><td>The pipeline bubble; needs many micro-batches and real model surgery</td></tr>
+        <tr><td><strong>Sequence / context parallel</strong></td><td>Shards the sequence dimension</td><td>Long-context training, where activation memory scales with length</td><td>Extra communication inside attention</td></tr>
+        <tr><td><strong>Gradient checkpointing</strong></td><td>Discards activations, recomputes them in the backward pass</td><td>Activation memory is the binding constraint</td><td>~30% extra compute — the classic memory-for-compute trade</td></tr>
+        <tr><td><strong>Mixed precision (BF16)</strong></td><td>BF16 compute, fp32 master weights</td><td>Always, on modern hardware</td><td>~nothing. BF16 over FP16 because its fp32-matching exponent range removes the need for loss scaling.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>The composition order they expect:</strong> TP within a node (over NVLink) → PP across nodes (point-to-point rather than collective, so it tolerates slower links) → data/FSDP across what's left → sequence parallelism layered onto TP for long context → expert parallelism for MoE. The reason TP stays intra-node is exactly those two all-reduces per layer: push them over InfiniBand instead of NVLink and throughput collapses.</p>
+  <div class="callout mlbox">
+    <div class="ct">Memory accounting, worth reciting</div>
+    <p>Per parameter, a training step holds <strong>2 bytes</strong> (BF16 weights) + <strong>2–4</strong> (gradients) + <strong>8</strong> (Adam's fp32 m and v) + <strong>4</strong> (fp32 master weights) ≈ <strong>16–18 bytes per parameter</strong>, before activations. So a 7B model is ~120 GB of static state — which is why a model that infers comfortably on one 24 GB card cannot be full-finetuned on eight of them without sharding, and why ZeRO exists. Say this and half the follow-ups answer themselves.</p>
+  </div>
+</section>
 <section id="mldepth">
   <div class="sec-head">
     <div class="eyebrow">Section 17 · AI &amp; ML</div>
@@ -3066,6 +3338,149 @@ GPUs for decode        = 5M / 3,000          ≈ <span class="nu">~1,700 H100s</
   </div>
 </section>
 
+
+<section id="companies">
+  <div class="sec-head">
+    <div class="eyebrow">Section 20 · The loop</div>
+    <h2>Company by company</h2>
+    <p>The loops differ more than prep guides admit, and the differences change what you should practice. They also change faster than any document can track — so this section marks what is published by the companies themselves, what is well-attested practitioner knowledge, and what is rumor.</p>
+  </div>
+
+  <div class="callout warnbox">
+    <div class="ct">Read this before you plan around anything below</div>
+    <p>The interview-prep web is now heavily polluted with generated SEO content that invents specific-sounding round counts, minute-by-minute breakdowns, and rejection statistics. Treat any unsourced precision with suspicion — including here. Everything below is marked: <span class="tag t-sd">published</span> by the company, <span class="tag t-dsa">reported</span> by mainstream journalism, or <span class="tag t-beh">practitioner</span> consensus from prep firms and ex-interviewers. <strong>Every ambiguity in this section is resolvable by one email to your recruiter</strong>, and that email beats every guide on the internet, this one included.</p>
+  </div>
+
+  <h3>Loop structure</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Company</th><th>Shape</th><th>What's distinctive</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Google</strong></td><td>Recruiter screen → 1–2 phone screens (45 min) → onsite of 4–5 × 45 min: 2–3 coding, 1 system design at L5+, 1 "Googleyness &amp; Leadership" → <strong>hiring committee</strong> → team matching</td><td>The <strong>hiring committee decides, not your interviewers</strong> — a panel who never met you reads a written packet. That single fact should change how you interview: you are performing for the write-up. No dedicated design round below L5. Longest process of the group.</td></tr>
+        <tr><td><strong>Meta</strong></td><td>Recruiter → technical screen (45 min, ~2 problems) → full loop of 4: coding, <strong>AI-enabled coding</strong>, system design <em>or</em> product architecture, behavioral</td><td>Two problems per 45 minutes — <strong>speed over polish is explicit in Meta's own published guidance</strong>, which tells candidates that working non-optimal code beats an unwritten optimal idea, and to find their own bugs. The design round forks by background: <em>system design</em> for infra-leaning candidates, <em>product architecture</em> (API design, data models, client-server flows) for product-leaning ones — <strong>ask your recruiter which you're getting</strong>. E6 gets two design rounds.</td></tr>
+        <tr><td><strong>Amazon</strong></td><td><span class="tag t-sd">published</span> SDE II: <strong>four 55-minute</strong> interviews, 3–4 with coding, 1 system design. SDE III: a 60-min phone screen that is half Leadership Principles, then <strong>five 55-minute</strong> interviews</td><td>Behavioral is not a round — <strong>every interview contains two LP questions</strong>, so roughly 20–25 minutes of each 55 is behavioral. The <strong>Bar Raiser</strong> is a trained interviewer from outside the team who runs the debrief; Amazon's own materials say they have veto power. Amazon also states plainly: expect syntactically correct code, not pseudocode.</td></tr>
+        <tr><td><strong>Microsoft</strong></td><td>Recruiter → online assessment or phone screen → loop of 4–5: 2–3 algorithms, often 1 low-level/OO design, 1 system design at senior, 1 behavioral</td><td>The most "Top Interview 150-shaped" loop of the group — classic arrays, strings, and linked lists. Design becomes central at Senior (63+). Mostly virtual.</td></tr>
+        <tr><td><strong>Apple</strong></td><td>Team-owned and decentralized. 4–8 rounds mixing coding, a deep dive on the team's actual technology, design, and a genuine "why Apple"</td><td><strong>There is no central question bank and no cross-company calibration committee</strong> — the opposite of Google. Generic prep is inefficient here: the highest-value action is asking which org and panel, then studying that team's domain.</td></tr>
+        <tr><td><strong>Netflix</strong></td><td>Manager screen → technical screen (for many roles you <em>choose</em> take-home or a discussion) → onsite of 4–5 × 45 min</td><td>Few junior hires; the bar is effectively senior. The <strong>culture memo is the behavioral rubric</strong> and candidates are commonly asked which parts resonate. Netflix explicitly advises against puzzle-style practice.</td></tr>
+        <tr><td><strong>AI labs</strong> <em>(OpenAI, Anthropic and similar)</em></td><td>Recruiter → 1–2 technical screens (live coding or take-home) → design or practical engineering deep-dive → mission/values conversation → team match</td><td>Coding tends toward <strong>pair-programming with extensions added mid-stream</strong> rather than quiz problems. Team-by-team variance is the defining feature. Mission and safety alignment is a genuinely scored dimension, not a formality.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Levels, and the Amazon trap</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Band</th><th>Meta</th><th>Google</th><th>Amazon</th><th>Microsoft</th><th>Apple</th></tr></thead>
+      <tbody>
+        <tr><td>Mid</td><td>E4</td><td>L4</td><td>SDE II (L5)</td><td>62</td><td>ICT3</td></tr>
+        <tr><td><strong>Senior</strong></td><td>E5</td><td>L5</td><td>Senior SDE (L6)</td><td>63–64</td><td>ICT4</td></tr>
+        <tr><td>Staff</td><td>E6</td><td>L6</td><td>Principal (L7)</td><td>65–66</td><td>ICT5</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Amazon's ladder is offset by one number.</strong> Amazon L5 is mid-level and maps to Meta E4 / Google L4; Amazon L6 is senior and maps to E5 / L5. Candidates who see "L6" on an Amazon offer and compare it to a Google L6 are making an expensive error. Cross-company mapping is genuinely contested at the edges — Amazon L6 often carries tech-lead scope that Meta and Google put at E6/L6 — so treat any mapping table, including this one, as approximate.</p>
+
+  <h3>What changes between mid and senior — in the design round</h3>
+  <p>This is the highest-value content in the section, because <strong>a shallow, interviewer-led design round is the single most common downlevel path</strong> at Google, Meta, Amazon and Microsoft alike. Six concrete differences:</p>
+  <ol class="stepline">
+    <li class="hot"><b>Who drives</b><p>Mid: the interviewer asks, you answer. Senior: <em>you</em> set the agenda and propose what to go deep on. Waiting to be prompted is itself the failing signal.</p></li>
+    <li class="hot"><b>Requirements</b><p>Mid: takes the prompt at face value. Senior: scopes it — QPS, read/write ratio, latency budget, consistency needs, explicit non-goals — <em>before</em> drawing any boxes.</p></li>
+    <li><b>Depth selection</b><p>Senior candidates identify the hardest part unprompted and go deep on two or three components, instead of spreading evenly across ten.</p></li>
+    <li><b>Failure modes, not just tradeoffs</b><p>Mid: "I'd use Kafka because it's durable." Senior: "here's what breaks under this failure, here's the blast radius, here's how it degrades." Staff: "here's how this design ages over three years and what forces the migration."</p></li>
+    <li><b>Operational reality</b><p>Senior and above are expected to cover deployment, monitoring and alerting, rollout and rollback, capacity, and on-call burden. Mid-level is not.</p></li>
+    <li><b>Staff-only axes</b><p>Platform boundaries and team ownership, incremental migration paths, build-versus-buy, cost, and standardization against team autonomy.</p></li>
+  </ol>
+
+  <h3>How the decision is actually made</h3>
+  <p>Most candidates believe the model is "score well, get hired." The real mechanics are different in ways that should change your behavior:</p>
+  <ul>
+    <li><strong>Each interviewer submits an independent written recommendation — plus a level recommendation — before seeing anyone else's.</strong> You are not being scored live; you are being <em>written down</em>.</li>
+    <li><strong>A committee or debrief reads packets, not people.</strong> Your interviewer's ability to reconstruct your reasoning an hour later matters more than the reasoning felt in the room. This is the reframing that improves every other piece of advice in this guide: <em>make it easy to write you up well.</em> Label your structure out loud ("three functional requirements, then two non-functional"), state tradeoffs as sentences, and summarize at the end.</li>
+    <li><strong>One strong no-hire usually sinks a loop</strong>, regardless of the other four.</li>
+    <li><strong>Downleveling is a routine outcome, not a failure.</strong> The same performance is a hire at one level and a no-hire at the next.</li>
+    <li><strong>Cooldowns</strong> of roughly 6–12 months apply after a rejection; Google publishes a 90-day wait for the same role, and notes that reapplying candidates do best with 12–18 months more experience.</li>
+    <li><strong>Passing the committee is not an offer at Google</strong> — it gets you into team matching, which commonly adds weeks and occasionally doesn't resolve at all.</li>
+  </ul>
+
+  <h3>The AI-tool question — and companies are moving in opposite directions</h3>
+  <p>This is the biggest recent change to these loops, and getting it wrong is disqualifying. <strong>Ask your recruiter, in writing, for each round.</strong></p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Company</th><th>Direction</th><th>What's actually reported</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Meta</strong></td><td>Use it, and be graded on it</td><td><span class="tag t-dsa">reported</span> An <strong>AI-enabled coding round</strong> replaces one of the two onsite coding interviews — roughly 60 minutes, in an environment with a built-in assistant. Meta's internal framing is that it is more representative of real work <em>and</em> makes LLM-based cheating less effective. Candidate reports describe a bug-fix → implement → optimize shape; that structure is consistent across sources but is not an official spec.</td></tr>
+        <tr><td><strong>Google</strong></td><td>Piloting the same direction</td><td><span class="tag t-dsa">reported</span> A pilot round where candidates read, debug and optimize an <strong>existing codebase</strong> with an assistant available, evaluating "AI fluency" — prompting, validating output, debugging. Reported as junior-to-mid roles on select US teams. Separately, Google's CEO has said publicly they will introduce <strong>at least one in-person round</strong> to verify fundamentals; that is a stated intention, not a documented rollout, so don't assume your onsite is in person.</td></tr>
+        <tr><td><strong>Amazon</strong></td><td>Banned, and disqualifying</td><td><span class="tag t-dsa">reported</span> Amazon's position is that real-time AI assistance gives an unfair advantage that masks authentic ability; candidates acknowledge they will not use unauthorized tools during interviews or assessments.</td></tr>
+        <tr><td><strong>Anthropic</strong></td><td>Published, and unusually precise</td><td><span class="tag t-sd">published</span> Applications: write your own first draft, then use AI to refine — "use AI to refine ideas, not replace them." Live interviews: <strong>not permitted unless explicitly stated</strong>, because they want to see real-time reasoning. Take-homes: complete without AI <em>unless told otherwise</em> — and they say so explicitly when it is allowed.</td></tr>
+        <tr><td><strong>Apple, Microsoft</strong></td><td>Unknown</td><td>No primary sourcing exists either way. Treat as "ask", not as "permitted".</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout">
+    <div class="ct">The most interesting artifact in this whole space</div>
+    <p>Anthropic has published that its performance-optimization take-home has had to be <strong>redesigned with each new model release</strong>, because successive Claude models first matched and then exceeded most human applicants under the same time limit — on a take-home where AI use is expressly permitted. The problem isn't cheating; it's that if humans can't improve on the model's output, the test measures which model you used rather than who you are. If you want to understand what an AI-era technical evaluation is trying to measure, that write-up is the clearest public statement of it — and it tells you what to practice: <em>judgment about model output</em>, not speed of typing.</p>
+  </div>
+
+  <h3>Amazon's Leadership Principles</h3>
+  <p>There are <strong>16</strong> (14 originals plus two added in 2021). They are not trivia — they are the literal rubric, each interviewer is assigned two or three, and a technically strong LP-weak candidate fails at Amazon in a way they would not at Google. Read the official wording on Amazon's own site; the gists below are for mapping your stories, not for quoting.</p>
+  <div class="grid g2 wide">
+    <div class="card"><span class="tag t-beh">The ones that carry most weight in engineering loops</span>
+      <ul style="margin-top:12px">
+        <li><strong>Customer Obsession</strong> — start from the customer and work backwards.</li>
+        <li><strong>Ownership</strong> — long-term thinking; never "that's not my job."</li>
+        <li><strong>Invent and Simplify</strong> — find the simpler thing; look outside for ideas.</li>
+        <li><strong>Dive Deep</strong> — stay in the details, audit, be skeptical when metrics and anecdote disagree.</li>
+        <li><strong>Bias for Action</strong> — most decisions are reversible; calculated risk beats delay.</li>
+        <li><strong>Have Backbone; Disagree and Commit</strong> — challenge respectfully, then commit fully once decided.</li>
+        <li><strong>Deliver Results</strong> — focus on key inputs; never settle after a setback.</li>
+        <li><strong>Insist on the Highest Standards</strong> — don't send defects down the line.</li>
+      </ul>
+    </div>
+    <div class="card"><span class="tag t-beh">The rest, which still get asked</span>
+      <ul style="margin-top:12px">
+        <li><strong>Are Right, A Lot</strong> — strong judgment; actively seek to disconfirm your own beliefs.</li>
+        <li><strong>Learn and Be Curious</strong></li>
+        <li><strong>Hire and Develop the Best</strong> — raise the bar with every hire; coach others.</li>
+        <li><strong>Think Big</strong></li>
+        <li><strong>Frugality</strong> — constraints breed resourcefulness.</li>
+        <li><strong>Earn Trust</strong> — listen, speak candidly, be vocally self-critical.</li>
+        <li><strong>Strive to be Earth's Best Employer</strong></li>
+        <li><strong>Success and Scale Bring Broad Responsibility</strong></li>
+      </ul>
+    </div>
+  </div>
+  <p><strong>The work is the mapping.</strong> Take the eight stories from §18 and build a grid: story down one axis, LPs across the other, and make sure every principle in the left-hand column above is covered by at least two stories. Amazon expects STAR, expects quantified results, and will drill: <em>what was the data? what did</em> you <em>do? what would you do differently?</em> Prepare the follow-ups, not just the story.</p>
+
+  <h3>If you're targeting an ML or AI role</h3>
+  <p>The loop grows a fifth signal area. <strong>Coding is still tested at close to full SWE difficulty</strong> — "I do modeling, not engineering" no longer passes anywhere. On top of that: an <strong>ML breadth round</strong> (fundamentals and theory), the <strong>ML system design round</strong> (§14–15), and a <strong>project deep-dive</strong> where you walk through a system you actually built — why that model, what the baseline was, how you evaluated, what went wrong in production. That last round is where inflated ML experience comes apart.</p>
+  <ul>
+    <li><strong>ML platform / infra roles</strong> ask about serving systems, dynamic batching, KV caching, quantization, GPU scheduling, and distributed training — the most commonly reported prompt is some form of "design a batch inference API for a GPU cluster", which is really a queueing and resource-management question.</li>
+    <li><strong>Applied-AI roles</strong> test LLM fundamentals, context engineering, RAG and vector databases, agents (tool use, orchestration, memory, guardrails), and production operations — latency budgets, token cost, routing, evals.</li>
+    <li><strong>Research engineer</strong> loops add a paper deep-dive with an actual researcher, experiment design ("how would you test that? what's the ablation?"), and — the round that most distinguishes RE from SWE — <strong>debugging a training run</strong>: the loss spiked, or it's flat, or eval diverges from train; what do you check, in what order.</li>
+  </ul>
+
+  <h3>Timelines, and how to sequence your loops</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Company</th><th class="num">Application → offer</th><th>Watch out for</th></tr></thead>
+      <tbody>
+        <tr><td>Netflix</td><td class="num">3–5 weeks</td><td>Fastest of the group.</td></tr>
+        <tr><td>Amazon</td><td class="num">3–6 weeks</td><td>Published figure; longer at senior levels.</td></tr>
+        <tr><td>Microsoft</td><td class="num">~4 weeks</td><td>—</td></tr>
+        <tr><td>AI labs</td><td class="num">3–6 weeks</td><td>High team-to-team variance.</td></tr>
+        <tr><td>Apple</td><td class="num">4–8 weeks</td><td>Very high variance; entirely team-dependent.</td></tr>
+        <tr><td>Meta</td><td class="num">4–8 weeks, sometimes 2–3 months</td><td>Team matching adds a few weeks after the loop.</td></tr>
+        <tr><td>Google</td><td class="num">8–12 weeks</td><td>The tail is the risk: committee, then team matching, which commonly adds 2–4 weeks and sometimes far more.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Two scheduling levers most candidates don't use.</strong> First, recruiters will almost always grant more prep time if you ask up front with a reason — the default two-to-four-week gap is a convention, not a constraint. Second, <strong>do not schedule your top-choice company first.</strong> Run a lower-stakes loop as calibration: the formats are similar enough that one real onsite is worth ten mocks, and you only get to be nervous-for-the-first-time once.</p>
+
+  <div class="callout">
+    <div class="ct">The email to send before you start prepping</div>
+    <p>"Before I plan my preparation — could you confirm: which rounds will I have and how long is each? What level am I being considered at, and is the loop level-flexible? Is any round in person? And what's your policy on AI tool use in each round?" Recruiters answer this routinely. It resolves nearly every ambiguity in this section, and the answer is worth more than anything you'll read about their process online.</p>
+  </div>
+</section>
 <section id="cheat">
   <div class="sec-head">
     <div class="eyebrow">Section 21 · The loop</div>

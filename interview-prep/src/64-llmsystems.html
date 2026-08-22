@@ -1,0 +1,197 @@
+
+<section id="llmsystems">
+  <div class="sec-head">
+    <div class="eyebrow">Section 16 · AI &amp; ML</div>
+    <h2>LLM &amp; agent systems</h2>
+    <p>The material that has appeared in loops most recently, and where the bar is least settled. Two things carry a round here: <strong>arithmetic you can do on the whiteboard</strong>, and <strong>knowing which published numbers are measurements and which are marketing</strong>. The second is rarer and lands harder.</p>
+  </div>
+
+  <h3>The serving stack</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Engine</th><th>What it is</th><th>Reach for it when</th></tr></thead>
+      <tbody>
+        <tr><td><strong>vLLM</strong></td><td>The open-source default. PyTorch-native, no compile step, widest model coverage, fastest to support new architectures. Its V1 engine rewrite made prefix caching near-free and mixes prefill and decode in one scheduler step.</td><td>Almost always, first. It is the baseline everything else gets measured against.</td></tr>
+        <tr><td><strong>SGLang</strong></td><td>Same class, built around structured LM programs and aggressive prefix reuse via a radix tree over token sequences — so partial prefixes match, not just exact system prompts.</td><td>Heavy prefix sharing: a fixed system prompt, a fixed tool schema, multi-turn agents, RAG over a stable corpus.</td></tr>
+        <tr><td><strong>TensorRT-LLM</strong></td><td>NVIDIA's compiled path — weights and architecture are ahead-of-time compiled into an optimized kernel graph for a specific GPU, batch range and sequence length.</td><td>One model, one GPU SKU, stable shapes, and you need the last 10–15% of throughput. Costs a 25–45 minute rebuild on every change.</td></tr>
+        <tr><td><strong>llama.cpp / GGUF</strong></td><td>A different problem entirely: single-user local inference on CPU, Apple Metal, or a consumer GPU, no Python runtime. GGUF packs weights, tokenizer and metadata into one file at 2–8 bits.</td><td>Laptops, edge, air-gapped, privacy. Not multi-tenant serving.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout warnbox">
+    <div class="ct">How to discuss engine benchmarks without getting caught</div>
+    <p>Published head-to-heads put compiled TensorRT-LLM modestly ahead of vLLM, with SGLang pulling ahead as prefix sharing rises — but the specific percentages come from blog comparisons rather than controlled measurement, and they move between posts. The defensible statement is directional: <em>"the gaps are tens of percent, not multiples, and they invert depending on how much prefix our workload shares — I'd benchmark on our own traffic."</em> A candidate who quotes a precise multiple from memory is telling the interviewer they read a blog. A candidate who names the workload property that decides it is telling them they've served a model.</p>
+  </div>
+
+  <h3>KV cache: the formula, and real numbers</h3>
+  <div class="codehead"><span>Derive it, don't memorize it — and watch the GQA trap</span><button class="copy" type="button">Copy</button></div>
+<pre><code>bytes_per_token = 2 (K and V)
+                × n_layers
+                × n_kv_heads        <span class="cm"># = n_heads for MHA; n_heads/group for GQA; 1 for MQA</span>
+                × head_dim
+                × bytes_per_element <span class="cm"># 2 for BF16, 1 for FP8</span>
+
+<span class="cm"># THE MISTAKE EVERYONE MAKES: n_kv_heads × head_dim is NOT hidden_size under GQA.</span>
+<span class="cm"># Llama 3.1 70B has hidden_size 8192, but 8 KV heads × 128 = 1024. An 8x error.</span>
+</code></pre>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Model</th><th class="num">Layers</th><th class="num">KV heads</th><th class="num">KB / token</th><th class="num">32K ctx</th><th class="num">128K ctx</th></tr></thead>
+      <tbody>
+        <tr><td>Llama 3.1 8B</td><td class="num">32</td><td class="num">8</td><td class="num">128</td><td class="num">4.3 GB</td><td class="num">17.2 GB</td></tr>
+        <tr><td>Llama 3.1 70B</td><td class="num">80</td><td class="num">8</td><td class="num">320</td><td class="num">10.7 GB</td><td class="num">43.0 GB</td></tr>
+        <tr><td>Llama 3.1 405B</td><td class="num">126</td><td class="num">8</td><td class="num">504</td><td class="num">16.9 GB</td><td class="num">67.7 GB</td></tr>
+        <tr><td>Mixtral 8×7B <em>(MoE)</em></td><td class="num">32</td><td class="num">8</td><td class="num">128</td><td class="num">4.3 GB</td><td class="num">17.2 GB</td></tr>
+        <tr><td>Llama-2 7B <em>(MHA, for contrast)</em></td><td class="num">32</td><td class="num">32</td><td class="num">512</td><td class="num">17.2 GB</td><td class="num">68.7 GB</td></tr>
+        <tr><td>DeepSeek-V3 <em>(MLA)</em></td><td class="num">61</td><td class="num">latent 512+64</td><td class="num">68.6</td><td class="num">2.3 GB</td><td class="num">9.2 GB</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Three structural facts to pull out of that table,</strong> because they are the interesting part:</p>
+  <ul>
+    <li><strong>MoE changes compute per token, not KV cache.</strong> Mixtral 8×7B has 47B total parameters and exactly the same KV cache per token as Llama 3.1 8B, because the cache depends only on layers × KV heads × head dim. "MoE needs more KV memory" is a sentence that means someone hasn't done the arithmetic.</li>
+    <li><strong>GQA is a 4–8× cut versus MHA</strong> at the same layer count — 512 KB/token for MHA-7B against 128 KB/token for GQA-8B.</li>
+    <li><strong>MLA compresses what is stored</strong> rather than reducing how many heads exist. DeepSeek-V3 caches one shared low-rank latent (512) plus a small decoupled RoPE key (64) per layer, with no ×2 for K and V — roughly <strong>98% smaller than same-shape MHA</strong>. The famous "93.3% reduction" figure is against DeepSeek's previous-generation dense model, not against same-shape MHA; being able to state that distinction is a real signal. The cost is extra FLOPs and an awkward interaction with tensor parallelism, which is why GQA remains the industry default.</li>
+  </ul>
+
+  <h3>GPUs, and the roofline that decides everything</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>GPU</th><th class="num">Memory</th><th class="num">HBM bandwidth</th><th class="num">BF16 dense</th><th class="num">BF16 ridge point</th></tr></thead>
+      <tbody>
+        <tr><td>A100 80GB SXM</td><td class="num">80 GB</td><td class="num">2.0 TB/s</td><td class="num">312 TFLOP/s</td><td class="num">153 FLOP/byte</td></tr>
+        <tr><td>H100 SXM</td><td class="num">80 GB</td><td class="num">3.35 TB/s</td><td class="num">~989 TFLOP/s</td><td class="num">295 FLOP/byte</td></tr>
+        <tr><td>H200 SXM</td><td class="num">141 GB</td><td class="num">4.8 TB/s</td><td class="num">~989 TFLOP/s</td><td class="num">206 FLOP/byte</td></tr>
+        <tr><td>B200</td><td class="num">180 GB usable</td><td class="num">~8 TB/s</td><td class="num">~2,250 TFLOP/s</td><td class="num">281 FLOP/byte</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout warnbox">
+    <div class="ct">Halve the marketing number</div>
+    <p>NVIDIA routinely quotes tensor-core throughput <em>with 2:4 structured sparsity</em> — H100 "1,979 TFLOP/s BF16", B200 "18 PFLOP/s FP4". No production LLM inference uses 2:4 sparsity, so the dense figure is half of whatever is on the slide. B200 memory and bandwidth also genuinely differ across NVIDIA's own materials (180 vs 192 GB, 7.7 vs 8.0 TB/s) because one figure is software-visible and the other physical. Saying "dense, not sparse" costs two words and marks you as someone who has sized a cluster.</p>
+  </div>
+
+  <div class="codehead"><span>The roofline, and the two intensities that matter at decode</span><button class="copy" type="button">Copy</button></div>
+<pre><code>I  = FLOPs performed / bytes moved from HBM        <span class="cm"># arithmetic intensity</span>
+I* = peak_compute / peak_bandwidth                 <span class="cm"># the ridge point</span>
+I &lt; I*  ->  memory-bandwidth bound
+I &gt; I*  ->  compute bound
+
+<span class="cm"># (a) WEIGHT MATMULS at decode. X[B×K] @ W[K×N]: FLOPs = 2BKN, bytes = KN·w.</span>
+I_gemm = 2 × batch / bytes_per_weight
+       = B      for BF16 weights      <span class="cm"># NOT B/2 -- several write-ups drop the 2 in the MAC</span>
+       = 2B     for FP8 weights
+
+<span class="cm"># H100's BF16 ridge is 295, so you need batch ~300 before the linear layers</span>
+<span class="cm"># become compute-bound. Real serving batches are 8-64 -- five to forty times</span>
+<span class="cm"># BELOW the ridge. Decode is emphatically memory-bandwidth bound, and that one</span>
+<span class="cm"># fact is why continuous batching, quantization and speculative decoding pay.</span>
+
+<span class="cm"># (b) ATTENTION ITSELF. Per decoding sequence of length L:</span>
+<span class="cm">#     KV bytes read = 2·L·n_kv·d_h·w ,  FLOPs = 4·n_q·L·d_h</span>
+I_attn = n_q / n_kv = the GQA group size
+
+<span class="cm"># INDEPENDENT of batch size AND of context length. Derive this live and you</span>
+<span class="cm"># have said the most useful thing in the round: batching fixes the weight</span>
+<span class="cm"># bottleneck but CANNOT fix the attention bottleneck, because every sequence</span>
+<span class="cm"># carries its own KV cache. That is the whole argument for GQA -> MQA -> MLA,</span>
+<span class="cm"># for FP8 KV caches, and for prefix sharing.</span>
+</code></pre>
+
+  <h3>The five throughput techniques, with their real provenance</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Technique</th><th>Mechanism</th><th>Reported gain — and against what</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Paged attention</strong></td><td>KV cache in fixed-size blocks (~16 tokens) with a per-sequence block table, exactly like OS virtual memory. Blocks allocate on demand; shared prefixes share physical blocks copy-on-write.</td><td>Cuts KV memory waste from <strong>60–80% down to under 4%</strong>. The often-quoted "2–4× throughput" is the original paper against 2023-vintage baselines — stale as a claim about modern engines.</td></tr>
+        <tr><td><strong>Continuous batching</strong></td><td>Batch composition re-decided every decode step: finished sequences evicted, queued ones admitted mid-flight. No padding, no waiting for the slowest generation.</td><td><strong>~4× against competent static batching</strong>; the widely-repeated "23×" is against naive single-request serving. The gain scales with <em>variance in output length</em> — uniform outputs gain nothing, chat and agents gain multiples.</td></tr>
+        <tr><td><strong>Chunked prefill</strong></td><td>Split a long prefill into chunks and mix them with decode tokens in one batch, so a long prompt can't stall every generating sequence.</td><td>Up to <strong>5.6× serving capacity at a fixed latency SLO</strong>. Chunk size trades time-to-first-token against inter-token latency.</td></tr>
+        <tr><td><strong>Prefix caching</strong></td><td>Hash block-aligned prefixes and reuse their KV blocks; a radix tree generalizes it to partial matches.</td><td>Hit rates of 50–99% depending on workload, highest for agents sharing a system prompt and tool schema. The commercial analogue is API prompt caching, where cached reads are heavily discounted.</td></tr>
+        <tr><td><strong>PD disaggregation</strong></td><td>Prefill (compute-bound, bursty) and decode (bandwidth-bound, long-running) on separate GPU pools, KV cache shipped over NVLink/RDMA.</td><td>~<strong>2× goodput</strong> — requests meeting both TTFT and TPOT targets — by removing phase interference. Only pays when the interconnect is fast and prompts are long enough that transfer cost is small next to prefill.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Name TTFT and TPOT explicitly.</strong> Time-to-first-token is prefill, and is what a user feels as responsiveness. Time-per-output-token is decode, and is what they feel as reading speed. Aggregate throughput is what the finance team feels. Those three trade against each other, and every serving decision moves at least two of them — a candidate who says only "throughput" has one dimension where the problem has three.</p>
+
+  <h3>Quantization, with what actually degrades</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Method</th><th>Quantizes</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><strong>FP8 (E4M3)</strong></td><td>Weights + activations, native on Hopper/Blackwell</td><td>The production default now: ~2× memory, ~1.6× throughput, minimal accuracy impact, and FP8 KV caches report over 99% accuracy recovery. Most of these figures come from vendors who ship the tooling — reproducible, but not third-party audited.</td></tr>
+        <tr><td><strong>AWQ</strong></td><td>Weights only, INT4, activation-aware</td><td>Protects the ~1% of channels with the largest activations. Beats GPTQ at equal bit-width, and the real differentiator is <strong>calibration robustness</strong> — under a mismatched calibration set AWQ degrades slightly where GPTQ degrades severely.</td></tr>
+        <tr><td><strong>GPTQ</strong></td><td>Weights only, INT4/3, second-order error compensation</td><td>Excellent when the calibration set matches production traffic; overfits that set more than AWQ does.</td></tr>
+        <tr><td><strong>SmoothQuant</strong></td><td>W8A8 — migrates activation outliers into the weights</td><td>For compute-bound large-batch serving on pre-Hopper hardware. Underperforms when misapplied to weight-only settings.</td></tr>
+        <tr><td><strong>GGUF k-quants</strong></td><td>Weights, 2–8 bits, block-wise</td><td>Q4_K_M is the sane default. Q2_K and Q3_K_S are a genuine quality cliff, not a gentle slope.</td></tr>
+        <tr><td><strong>QLoRA / NF4</strong></td><td>4-bit frozen base + BF16 LoRA adapters</td><td>A <em>training</em> technique, not a serving one. Takes 65B finetuning from over 780 GB to under 48 GB — one GPU — with no measured degradation versus 16-bit finetuning.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>What breaks first</strong> is not the average benchmark score: it is outlier activations, long-context coherence, and rare-token or non-English performance. A model can hold its average while one slice falls apart. So: <em>quantize, then evaluate on your own task</em> — and remember that a quantized larger model generally beats a full-precision smaller one at the same memory budget, which is usually the actual decision in front of you.</p>
+
+  <hr class="rule">
+
+  <h3>Agentic systems</h3>
+  <p>"Design an agent that can take actions on a user's account" is now a standard prompt. It is a systems question about <strong>blast radius, budgets, and evaluation</strong> — not a prompt-engineering question.</p>
+
+  <h4>Tool calling and the loop</h4>
+  <ul>
+    <li><strong>Tool schemas are the design.</strong> Few, orthogonal, well-named tools with tight JSON Schemas beat many overlapping ones. Descriptions are prompt real estate — write them for the model, not as API reference docs.</li>
+    <li><strong>Tool <em>results</em> are the hidden cost.</strong> A 50k-token tool output blows the context and poisons everything downstream. Paginate, truncate with a continuation token, or write to a file and return a handle.</li>
+    <li><strong>Errors must be recoverable.</strong> Return an actionable message the model can act on, not a stack trace.</li>
+    <li><strong>ReAct</strong> (thought → action → observation) is what most production agents actually are. Plan-and-execute is cheaper and more auditable but brittle when the environment surprises it. Reflection helps most when there is a real verifier — tests, a compiler, a schema — rather than the model grading itself.</li>
+    <li><strong>Budgets belong in the harness, not the prompt.</strong> Max steps, max tokens, max wall-clock, max spend. A prompt that says "be efficient" is not a budget.</li>
+  </ul>
+
+  <h4>Memory — four kinds, and say which you need</h4>
+  <div class="deflist">
+    <dt>Working</dt><dd>The context window itself, managed by compaction and summarization as it fills.</dd>
+    <dt>Episodic</dt><dd>What happened in past sessions — transcripts and summaries, retrieved on demand.</dd>
+    <dt>Semantic</dt><dd>Durable extracted facts about the user or domain, written to a store.</dd>
+    <dt>Procedural</dt><dd>Learned skills and instructions, persisted as files or system-prompt fragments.</dd>
+  </div>
+  <p>Current practice favours <strong>files and structured stores over vector memory</strong> for agents: a scratchpad the agent reads and writes is more debuggable, more editable, and less lossy than embedding-based recall. The hard problems to name are what to write (over-writing pollutes the store), invalidation, and conflicting memories.</p>
+
+  <h4>Multi-agent — and the finding that should make you cautious</h4>
+  <p>The orchestrator–worker pattern — a lead decomposes the task, subagents work in parallel with isolated context windows, the lead synthesizes — has the best-documented production result available: a published research system reported <strong>roughly 90% better performance than a single-agent baseline on its internal eval, at about 15× the tokens</strong>, and, crucially, that <strong>token usage alone explained around 80% of the performance variance</strong>.</p>
+  <p>That last number is the one to quote, because it deflates the mystique: most of the multi-agent gain is buying more total inference and more independent context windows, not emergent coordination. Which gives a clean decision rule — <em>multi-agent pays when the task is breadth-first, with many independent search paths whose combined information exceeds one context window, and the outcome is worth a 15× token bill. It does not pay for narrow, sequential, or latency-sensitive work.</em></p>
+
+  <h4>Sandboxing, and the lethal trifecta</h4>
+  <p>Any agent that executes code or touches a filesystem needs a real isolation boundary (a microVM or sandboxed container, not a subprocess), <strong>egress allowlisting</strong>, filesystem scoping, resource limits, no ambient credentials — short-lived scoped tokens injected per task — and human approval gates on irreversible actions.</p>
+  <div class="callout mlbox">
+    <div class="ct">The framing that wins this part of the round</div>
+    <p>An agent is dangerous when it has all three of: <strong>access to private data</strong>, <strong>exposure to untrusted content</strong>, and <strong>a channel to send data out</strong>. Any two are manageable; all three is not. Egress allowlisting is how you break the third leg, which is why it does more for agent safety than any amount of prompt hardening. State the design principle plainly: <em>make the blast radius small enough that you can afford for the agent to be wrong</em> — because it will be.</p>
+  </div>
+  <p>The tool-connection layer has its own threat model worth naming: <strong>tool poisoning</strong> (malicious instructions hidden in a tool's description), <strong>rug-pull redefinition</strong> after a user has approved a tool, cross-server shadowing, injection via tool <em>results</em>, and credential passthrough. Standardization work on tool protocols has moved toward a stateless core precisely so that gateways can inspect and enforce policy on every request rather than trusting a session.</p>
+
+  <h4>Evaluating agents — trajectory, not just the answer</h4>
+  <p>The single most useful metric is <strong>pass^k</strong>: the probability that <em>all</em> k independent attempts succeed. An agent with 60% pass@1 and 5% pass^8 is unshippable, and only the second number tells you that. Alongside it: cost per task, steps per task, tool-call error rate, recovery rate after a failed call, and variance across seeds — agents are far higher-variance than single-turn models.</p>
+  <p>Benchmarks worth knowing by name: <strong>SWE-bench Verified</strong> (real GitHub issues graded by the repository's own tests), <strong>τ²-bench</strong> (tool-agent-user interaction scoring policy-compliant completion <em>and</em> correct refusal), <strong>GAIA</strong>, <strong>OSWorld</strong> and <strong>WebArena</strong> for computer and browser use, and time-horizon measurements asking how long a task an agent completes at 50% reliability.</p>
+  <p>On failure modes, the useful research finding is that validated taxonomies of multi-agent failure — specification ambiguity, inter-agent coordination breakdown, verification gaps — identify failures that are <strong>not detectable at the individual-agent level</strong>. A collection of safe agents is not a safe collection of agents. That sentence is worth having ready.</p>
+
+  <hr class="rule">
+
+  <h3>Training at scale — the one-line rules</h3>
+  <p>ML-systems loops ask about training infrastructure at least as often as serving. You do not need to have run a thousand-GPU job; you need to know which technique solves which shortage.</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Technique</th><th>Shards / does</th><th>You need it when</th><th>It costs</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Data parallel (DDP)</strong></td><td>Replicates the model, shards the batch</td><td>Everything fits on one GPU and you just want speed</td><td>Gradient all-reduce each step</td></tr>
+        <tr><td><strong>ZeRO-1 / ZeRO-2</strong></td><td>Shards optimizer states, then gradients</td><td>You OOM on optimizer state — Adam is 8 bytes/param in fp32</td><td><strong>Nothing.</strong> Same communication volume as DDP. Effectively free; turn it on.</td></tr>
+        <tr><td><strong>ZeRO-3 / FSDP</strong></td><td>Also shards parameters</td><td>The parameters themselves don't fit per GPU</td><td>~1.5× the communication — params are all-gathered every forward and backward</td></tr>
+        <tr><td><strong>Tensor parallel (TP)</strong></td><td>Splits individual matmuls across GPUs</td><td>A single <em>layer</em> doesn't fit, or you need lower per-step latency</td><td>Two all-reduces <em>per transformer layer</em> — so <strong>keep TP inside one node</strong>; the degree rarely exceeds 8</td></tr>
+        <tr><td><strong>Pipeline parallel (PP)</strong></td><td>Splits layers across GPUs, micro-batched</td><td>You've exhausted intra-node TP and must cross node boundaries</td><td>The pipeline bubble; needs many micro-batches and real model surgery</td></tr>
+        <tr><td><strong>Sequence / context parallel</strong></td><td>Shards the sequence dimension</td><td>Long-context training, where activation memory scales with length</td><td>Extra communication inside attention</td></tr>
+        <tr><td><strong>Gradient checkpointing</strong></td><td>Discards activations, recomputes them in the backward pass</td><td>Activation memory is the binding constraint</td><td>~30% extra compute — the classic memory-for-compute trade</td></tr>
+        <tr><td><strong>Mixed precision (BF16)</strong></td><td>BF16 compute, fp32 master weights</td><td>Always, on modern hardware</td><td>~nothing. BF16 over FP16 because its fp32-matching exponent range removes the need for loss scaling.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>The composition order they expect:</strong> TP within a node (over NVLink) → PP across nodes (point-to-point rather than collective, so it tolerates slower links) → data/FSDP across what's left → sequence parallelism layered onto TP for long context → expert parallelism for MoE. The reason TP stays intra-node is exactly those two all-reduces per layer: push them over InfiniBand instead of NVLink and throughput collapses.</p>
+  <div class="callout mlbox">
+    <div class="ct">Memory accounting, worth reciting</div>
+    <p>Per parameter, a training step holds <strong>2 bytes</strong> (BF16 weights) + <strong>2–4</strong> (gradients) + <strong>8</strong> (Adam's fp32 m and v) + <strong>4</strong> (fp32 master weights) ≈ <strong>16–18 bytes per parameter</strong>, before activations. So a 7B model is ~120 GB of static state — which is why a model that infers comfortably on one 24 GB card cannot be full-finetuned on eight of them without sharding, and why ZeRO exists. Say this and half the follow-ups answer themselves.</p>
+  </div>
+</section>

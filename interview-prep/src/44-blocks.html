@@ -222,5 +222,69 @@ redis.call(<span class="st">'EXPIRE'</span>, KEYS[<span class="nu">1</span>], ma
     <li><strong>Load shedding</strong> — reject early at the edge when saturated. A fast 503 is far better than a queue that times out after 30 s of held resources.</li>
     <li><strong>The golden signals</strong> — latency (p50/p95/p99), traffic, errors, saturation. Plus an SLO and an error budget: "99.9% of reads under 200 ms, measured at the edge" is what a real target sounds like.</li>
   </ul>
+
+  <hr class="rule">
+
+  <h3>Consensus and coordination</h3>
+  <p>Three designs in this guide need a single writer, a leader, or an agreed-upon value — and "the system elects a leader" is where most candidates stop. Know one level deeper.</p>
+  <p><strong>The problem:</strong> get a set of nodes to agree on a value despite crashes and network delays. The building block is a <strong>quorum</strong> — any majority. Two majorities of the same set must overlap in at least one node, and that overlap is what makes agreement possible. It is also why consensus clusters have an odd number of members: five nodes tolerate two failures, six also tolerate two, so the sixth buys nothing and costs latency.</p>
+  <p><strong>Raft</strong>, which is what you should describe because it was designed to be explainable:</p>
+  <ul>
+    <li><strong>Leader election.</strong> Time is divided into <em>terms</em>. A follower that hears nothing from a leader becomes a candidate, increments the term, and requests votes; a node votes once per term, so a majority elects exactly one leader. Randomized election timeouts stop candidates from splitting the vote forever.</li>
+    <li><strong>Log replication.</strong> All writes go to the leader, which appends to its log and replicates. Once a majority has an entry, it is <em>committed</em> and can be applied. A new leader is guaranteed to hold every committed entry, because it needed a majority to be elected and majorities overlap.</li>
+    <li><strong>Why Paxos instead?</strong> Usually not — Paxos is the older, more general result and is notoriously hard to implement correctly. Saying "Raft, because I can reason about it and so can the on-call engineer" is a good answer.</li>
+  </ul>
+  <p><strong>In practice you don't implement it</strong>, you use a coordination service — ZooKeeper or etcd — for leader election, membership, configuration, and locks. The pattern is an <em>ephemeral</em> node or a <em>lease</em>: the holder must keep renewing, and if it stops, the lock releases automatically. That is how a job scheduler (§13) survives a node dying mid-shard.</p>
+  <div class="callout warnbox">
+    <div class="ct">The fencing token — the follow-up that separates people</div>
+    <p>Distributed locks have a hole that a naive design misses. Node A takes the lock, then pauses — a long GC, a network partition, a hypervisor stall. Its lease expires and node B takes the lock. Then A wakes up, believing it still holds the lock, and writes. Two writers, corrupted data, and no error anywhere.</p>
+    <p>The fix is not a longer lease — you cannot bound a pause. The lock service must hand out a <strong>monotonically increasing fencing token</strong> with every grant, the writer must include it in every write, and <em>the storage system must reject any write carrying a token lower than the highest it has seen</em>. Note what that requires: the resource being protected has to participate. A lock alone is never enough, and being able to say that is a genuine staff-level moment.</p>
+  </div>
+  <p><strong>And know when not to use it.</strong> Consensus costs a round trip to a majority on every write. Keep it off the data path: use it to decide <em>who</em> is in charge or <em>what</em> the configuration is, then let the elected leader serve traffic at normal speed. Systems that run every request through consensus are slow for a reason they didn't need to accept.</p>
+
+  <h3>Streaming, and what "exactly-once" actually means</h3>
+  <p>Batch processing is a special case of streaming with a very long window. The concepts that make streaming its own topic:</p>
+  <ul>
+    <li><strong>Event time vs processing time.</strong> An event happened at 10:00 and arrived at 10:07 because a phone was in a tunnel. Windowing on <em>processing</em> time is easy and gives wrong answers; windowing on <em>event</em> time is correct and forces you to answer "how long do I wait?"</li>
+    <li><strong>Watermarks</strong> are that answer: a watermark at time T asserts that no more events older than T are expected, so windows up to T can be closed and emitted. It is a heuristic — set it aggressively and you drop late data, conservatively and results are stale. Add an <strong>allowed lateness</strong> window with a retraction or update path for the stragglers.</li>
+    <li><strong>Window types:</strong> tumbling (fixed, non-overlapping — "per minute"), sliding (fixed, overlapping — "last 5 minutes, every minute"), session (grouped by a gap in activity — "one user's browsing session").</li>
+    <li><strong>State and checkpointing.</strong> Aggregations hold state; the framework periodically snapshots that state, consistently across all operators, by flowing barriers through the dataflow. On failure the job restores the last checkpoint and replays from the corresponding source offsets. That mechanism is <em>why</em> replayable log sources matter.</li>
+    <li><strong>Backpressure</strong> propagates slowness upstream so a slow sink doesn't cause unbounded buffering. Monitor lag, not just throughput.</li>
+  </ul>
+  <p><strong>Now the exactly-once claim, said correctly.</strong> Exactly-once <em>delivery</em> over a network is impossible. What Kafka provides is exactly-once <em>processing semantics within its own boundary</em>, built from two things: an <strong>idempotent producer</strong> (each producer has an id and a per-partition sequence number, so the broker discards duplicates from retries) and <strong>transactions</strong> that atomically commit both the output records and the consumer offsets, with downstream readers set to <code>read_committed</code>. Read-process-write pipelines that stay inside Kafka get real exactly-once. The moment your side effect leaves that boundary — an email, a payment, a row in someone else's database — you are back to at-least-once plus an idempotency key. Say that sentence and the follow-up is answered before it's asked.</p>
+
+  <h3>Observability and SLOs</h3>
+  <div class="deflist">
+    <dt>Metrics</dt><dd>Cheap, aggregated numbers over time. Good for "is it broken and how much". Bad at explaining <em>why</em>. Cost scales with <strong>cardinality</strong> — see §13.</dd>
+    <dt>Logs</dt><dd>Expensive, high-detail events. Structured (JSON with fields) rather than printf, or you cannot query them. Sample aggressively at high volume.</dd>
+    <dt>Traces</dt><dd>One request's path across every service, with timing per hop. The only tool that answers "which of these fourteen services made it slow". Requires <strong>context propagation</strong> — a trace id passed through every call, including across queues, which is the part that always gets missed.</dd>
+  </div>
+  <p><strong>Sampling:</strong> head-based (decide at the entry point, cheap, and you lose the rare slow request) versus tail-based (buffer the trace and keep it only if it was slow or errored — much more useful, much more infrastructure). "Keep 100% of errors and slow requests, 1% of the rest" is the answer that shows you've paid for a tracing bill.</p>
+  <div class="callout">
+    <div class="ct">An SLO, worked</div>
+    <p><strong>SLI</strong> (the measurement): the proportion of GET /feed requests returning 2xx in under 200 ms, measured at the edge. <strong>SLO</strong> (the target): 99.9% over a rolling 28 days. <strong>Error budget</strong>: 0.1% of 28 days ≈ <strong>40 minutes</strong> of allowed badness per month. That budget is the whole point — it converts reliability from an argument into arithmetic. Budget intact means ship faster; budget spent means the next sprint is reliability work, and nobody has to have an opinion about it.</p>
+    <p>Alert on <strong>burn rate</strong>, not on thresholds: paging when "errors &gt; 1%" fires on every blip, whereas "we are consuming the monthly budget 14× faster than sustainable" fires when it matters. And alert on <em>symptoms</em> users feel, not causes — "checkout latency is up" pages someone; "CPU is at 80%" is a dashboard, not a page.</p>
+  </div>
+
+  <h3>Security, at the level a design round expects</h3>
+  <ul>
+    <li><strong>Authentication vs authorization.</strong> Who you are, versus what you may do. Keep them separate in the design; conflating them is how permission bugs happen.</li>
+    <li><strong>OAuth2 / OIDC</strong> — the authorization-code flow with PKCE for user login. The thing to internalize: your service receives a <em>token</em>, never the user's password, and the token is scoped and expiring.</li>
+    <li><strong>JWT vs session token.</strong> A JWT is self-contained and verifiable without a lookup, which makes it fast and horizontally scalable — and means <strong>you cannot revoke it</strong> before expiry. That is the follow-up, every time. The real answers are short expiry plus refresh tokens, or a revocation list, at which point you've reintroduced the lookup you were avoiding. Sessions are simpler and fine for most systems.</li>
+    <li><strong>Transport and storage.</strong> TLS everywhere, mTLS between services in a zero-trust setup, encryption at rest with managed keys, and secrets in a secret manager with rotation — never in environment variables checked into anything.</li>
+    <li><strong>The application basics:</strong> parameterized queries (SQL injection), output escaping (XSS), CSRF tokens or SameSite cookies, and rate limiting as an <em>abuse control</em>, not only a capacity control.</li>
+    <li><strong>Privacy as a design constraint,</strong> which is the part that actually changes architectures: PII classification and minimization, data residency by region, and a <strong>right to deletion</strong> that breaks append-only logs and immutable event stores. The standard resolution is crypto-shredding — encrypt each user's data with a per-user key and delete the key — and offering it unprompted is a strong signal.</li>
+  </ul>
+
+  <h3>Cost</h3>
+  <p>Nothing in a design is free, and "what does this cost per month?" is a standard senior follow-up that most candidates have no answer to. You do not need current price lists; you need the shape of the arithmetic and an order of magnitude.</p>
+  <ul>
+    <li><strong>Egress is the expensive one.</strong> Bandwidth out of a cloud provider dwarfs storage for media-heavy systems — which is the real reason the photo service in §10 has a CDN, beyond latency.</li>
+    <li><strong>Storage is cheap; storage <em>tiers</em> are much cheaper.</strong> Lifecycle policies moving data to infrequent-access and archive tiers routinely cut a petabyte-scale bill by an order of magnitude, at the cost of retrieval latency.</li>
+    <li><strong>Compute is priced by reservation.</strong> Spot and committed-use pricing are large multiples cheaper than on-demand; the design question is which parts of your workload are interruptible.</li>
+    <li><strong>GPUs invert everything.</strong> In an ML system the accelerators usually dominate every other line item combined, which is why §16 spends its effort on batching and routing rather than on storage.</li>
+    <li><strong>The question to be ready for:</strong> <em>"what is the cheapest 10% quality regression that halves this bill?"</em> Having a candidate answer — smaller model for the easy majority, coarser cache TTL, downsampled retention, a lower ANN recall target — shows you think about systems the way the people paying for them do.</li>
+  </ul>
+
 </section>
 
