@@ -3539,6 +3539,36 @@ I_attn = n_q / n_kv = the GQA group size
       </ul>
     </div>
     <div class="card">
+      <span class="tag t-ml">Serving arithmetic</span>
+      <ul style="margin-top:12px">
+        <li>KV/token = 2 × layers × <strong>kv_heads</strong> × head_dim × bytes. Not hidden_size — that's the GQA trap.</li>
+        <li>Decode is bandwidth-bound: weight-matmul intensity is 2B/bytes_per_weight, and H100's BF16 ridge is ~295.</li>
+        <li>Attention intensity = the GQA group size, independent of batch <em>and</em> context. Batching can't fix it.</li>
+        <li>Halve any NVIDIA TFLOPS number that doesn't say "dense".</li>
+        <li>TTFT, TPOT, aggregate throughput — three dimensions, always say which.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag t-sd">Coordination &amp; correctness</span>
+      <ul style="margin-top:12px">
+        <li>Quorums overlap; that's why consensus works and why clusters are odd-sized.</li>
+        <li>A lock alone never suffices — <strong>fencing token</strong>, checked by the resource.</li>
+        <li>Exactly-once exists only inside one transactional boundary. Outside it: at-least-once + idempotency key.</li>
+        <li>Session guarantees are incomparable, not a ladder. Isolation levels are a separate axis.</li>
+        <li>Error budget = (1 − SLO) × window. Alert on burn rate and symptoms.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag t-beh">The loop itself</span>
+      <ul style="margin-top:12px">
+        <li>You are being <em>written down</em>, not scored live. Make the write-up easy: label structure, state tradeoffs as sentences, summarize at the end.</li>
+        <li>The design round is usually the round that sets your level.</li>
+        <li>Amazon: every round contains two Leadership Principle questions. Map your eight stories to them.</li>
+        <li>Ask the recruiter, in writing: which rounds, what level, in person?, AI-tool policy per round.</li>
+        <li>Don't schedule your top choice first.</li>
+      </ul>
+    </div>
+    <div class="card">
       <span class="tag t-dsa">Coding hour</span>
       <ul style="margin-top:12px">
         <li>Restate → example → edge cases → brute force + complexity → approach → <em>get a nod</em> → code.</li>
