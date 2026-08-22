@@ -1,0 +1,72 @@
+<section id="mlframework">
+  <div class="sec-head">
+    <div class="eyebrow">Section 05 · The AI track</div>
+    <h2>ML design framework</h2>
+    <p>An ML system design round is a system design round with two extra loops bolted on: a <strong>training loop</strong> that produces models from data, and a <strong>feedback loop</strong> where your predictions become tomorrow's training data. Candidates who only design the inference path get read as "knows models, hasn't shipped one".</p>
+  </div>
+
+  <div class="diagram">
+    <div class="dflow">
+      <div class="dcol"><div class="node">Logs &amp; events</div><div class="node store">Warehouse<small>columnar</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node ml">Feature pipeline<small>batch + streaming</small></div><div class="node store">Feature store<small>offline / online</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node ml">Training<small>+ eval, registry</small></div></div>
+      <div class="arrow">→<span>promote</span></div>
+      <div class="dcol"><div class="node pri">Inference service<small>shadow → canary → 100%</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node">Product surface</div></div>
+      <div class="arrow">⤾<span>feedback</span></div>
+      <div class="dcol"><div class="node">Labels<small>clicks, dwell, purchases</small></div></div>
+    </div>
+    <div class="dcap">The loop closes: user reactions to your model's output become the labels that train its replacement. Everything hard about ML systems lives in that arrow.</div>
+  </div>
+
+  <h3>The eight steps</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th class="num">#</th><th>Step</th><th>What to say</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td><strong>Frame it</strong></td><td>Turn the product ask into an ML task: what is the input, what is the output, what is one training example? "Recommend videos" becomes "given (user, candidate video, context), predict P(watch &gt; 30 s)".</td></tr>
+        <tr><td class="num">2</td><td><strong>Metrics</strong></td><td>Three tiers: <em>business</em> (retention, revenue), <em>online</em> (CTR, watch time — what the A/B test measures), <em>offline</em> (AUC, NDCG@10 — what you optimize daily). Plus explicit guardrails you must not regress.</td></tr>
+        <tr><td class="num">3</td><td><strong>Data &amp; labels</strong></td><td>Where does the label come from and how long until you have it? Implicit feedback is free and biased; explicit is clean and scarce. Name the delay: fraud labels arrive with a 30-day chargeback lag.</td></tr>
+        <tr><td class="num">4</td><td><strong>Features</strong></td><td>Group them: user, item, user×item interaction, context (time, device, location). Say which are precomputed batch, which are real-time, and which are too expensive to compute per request.</td></tr>
+        <tr><td class="num">5</td><td><strong>Model</strong></td><td>Always start with a baseline (popularity, logistic regression, gradient-boosted trees) and justify complexity against it. Jumping straight to a transformer without a baseline is a judgment flag.</td></tr>
+        <tr><td class="num">6</td><td><strong>Training</strong></td><td>Cadence, data volume, negative sampling, class imbalance, point-in-time correctness. How do you retrain — and how do you roll back?</td></tr>
+        <tr><td class="num">7</td><td><strong>Serving</strong></td><td>Latency budget, batch vs real-time, model size vs QPS, caching, and the fallback when the model service is unavailable.</td></tr>
+        <tr><td class="num">8</td><td><strong>Monitor</strong></td><td>Prediction distribution, feature drift, label delay, online/offline metric divergence, and the feedback-loop pathologies below.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Metrics: choose deliberately, not by habit</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Metric</th><th>Measures</th><th>Right when</th><th>Trap</th></tr></thead>
+      <tbody>
+        <tr><td>Accuracy</td><td>Fraction correct</td><td>Balanced classes</td><td>Useless at 0.1% positives — predict "no" and score 99.9%.</td></tr>
+        <tr><td>Precision / Recall</td><td>Cost of false positives vs negatives</td><td>Whenever the two errors cost differently</td><td>Reporting one without the other.</td></tr>
+        <tr><td>PR-AUC</td><td>Ranking quality on rare positives</td><td>Fraud, spam, ads — <strong>prefer over ROC-AUC on heavy imbalance</strong></td><td>ROC-AUC looks great on imbalanced data and means little.</td></tr>
+        <tr><td>Log loss / Brier</td><td>Calibration of probabilities</td><td>The score is used as an actual probability (ad bidding, expected value)</td><td>A model can rank perfectly and be badly calibrated.</td></tr>
+        <tr><td>NDCG@k / MAP</td><td>Graded ranking quality at the top</td><td>Search and recommendation — position matters</td><td>Computed against biased click logs, so it flatters the incumbent.</td></tr>
+        <tr><td>Recall@k</td><td>Did the candidate generator find it at all</td><td>The retrieval stage of a multi-stage system</td><td>Judging a retriever by precision. Its only job is not to lose the good item.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>The four failures that separate levels</h3>
+  <div class="grid g2 wide" style="margin-top:18px">
+    <div class="card"><span class="tag t-ml">Training / serving skew</span><p style="margin-top:10px">Features computed one way in a Spark job and another way in the serving path. The model sees a different world in production than in training, and the metric silently degrades. <strong>Fix:</strong> a feature store with one definition compiled to both paths, plus a continuous check comparing logged serving features against recomputed training features.</p></div>
+    <div class="card"><span class="tag t-ml">Label leakage</span><p style="margin-top:10px">A feature that encodes the future — "number of items in cart at checkout" predicting purchase, or a feature aggregated over the whole dataset including post-event rows. <strong>Fix:</strong> point-in-time correct joins — every feature value is <em>as of</em> the prediction timestamp, never later. This is the single hardest thing about feature infrastructure.</p></div>
+    <div class="card"><span class="tag t-ml">Feedback loops</span><p style="margin-top:10px">You only get labels for what you showed. The model recommends what it already believes, gets confirming clicks, and narrows forever. <strong>Fix:</strong> log the propensity of each impression, use inverse-propensity weighting, and reserve a small random-exposure slice as unbiased evaluation data.</p></div>
+    <div class="card"><span class="tag t-ml">Position &amp; presentation bias</span><p style="margin-top:10px">The top slot gets clicked because it is the top slot. Train naively on clicks and you learn "position 1 is good". <strong>Fix:</strong> include position as a feature during training and set it to a constant at inference, or model click = P(examined | position) × P(relevant).</p></div>
+  </div>
+
+  <h3>Offline is a filter; online is the truth</h3>
+  <p>Deployment is a staircase, and being able to name it is a strong shipping signal: <strong>offline eval</strong> on a held-out time-based split (never random — that leaks the future) → <strong>shadow mode</strong>, where the new model scores real traffic and its outputs are logged but not shown → <strong>interleaving</strong> for ranking, which needs a fraction of the traffic of an A/B test → <strong>canary</strong> at 1% → <strong>A/B test</strong> sized by a power calculation → <strong>ramp</strong>, with automatic rollback wired to the guardrail metrics.</p>
+  <div class="callout mlbox">
+    <div class="ct">The A/B numbers to have ready</div>
+    <p>Sample size per arm ≈ <code>16 σ² / Δ²</code> for detecting an absolute lift Δ at 80% power and 95% significance. For a 2% baseline CTR and a 5% relative lift you need roughly <strong>a few hundred thousand users per arm</strong> — run it for at least one full week to absorb day-of-week effects. Randomize by user, not by request, or the same person sees both variants. Watch for <strong>network effects</strong> (social features spill between arms — switch to cluster randomization) and <strong>novelty effects</strong> (an early lift that decays by week two).</p>
+  </div>
+</section>
+

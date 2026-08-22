@@ -270,6 +270,37 @@ details.qa .body p,details.qa .body ul{max-width:64ch}
 .progressbar{height:4px;background:var(--sunk);border-radius:2px;overflow:hidden;margin-top:10px}
 .progressbar i{display:block;height:100%;background:var(--teal);width:0;transition:width .3s}
 .railprog{font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3);margin-top:16px;letter-spacing:.06em}
+
+/* ---- added: numbered timeline, definition grid, part dividers ---- */
+.stepline{list-style:none;counter-reset:sl;padding:0;margin:22px 0;max-width:1080px;border-left:1px solid var(--rule)}
+.stepline li{counter-increment:sl;position:relative;padding:0 0 22px 34px;margin:0}
+.stepline li::before{content:counter(sl);position:absolute;left:-13px;top:1px;width:25px;height:25px;border-radius:50%;background:var(--paper);border:1px solid var(--rule);color:var(--ink-3);font-family:var(--f-mono);font-size:11px;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.stepline li.hot::before{background:var(--teal-wash);border-color:var(--teal);color:var(--teal)}
+.stepline li b{font-family:var(--f-display);font-size:16px;display:block;margin-bottom:4px}
+.stepline li p{margin:0 0 8px;max-width:66ch}
+.stepline li:last-child{padding-bottom:0}
+
+.deflist{display:grid;grid-template-columns:minmax(140px,190px) 1fr;gap:0;max-width:1080px;border:1px solid var(--rule);border-radius:8px;overflow:hidden;margin:20px 0;background:var(--paper)}
+.deflist dt{font-family:var(--f-mono);font-size:12px;padding:12px 14px;border-bottom:1px solid var(--rule-soft);background:var(--paper-2);color:var(--ink);display:flex;align-items:flex-start}
+.deflist dd{margin:0;padding:12px 16px;border-bottom:1px solid var(--rule-soft);font-size:14.8px;line-height:1.55}
+.deflist dt:last-of-type,.deflist dd:last-of-type{border-bottom:none}
+@media (max-width:640px){.deflist{grid-template-columns:1fr}.deflist dt{border-bottom:none;padding-bottom:2px;background:none}}
+
+.partbreak{max-width:1080px;margin:86px 0 0;padding:26px 0 0;border-top:2px solid var(--ink)}
+.partbreak .pn{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal)}
+.partbreak h2{font-size:clamp(30px,4.6vw,46px);margin:10px 0 0;letter-spacing:-.03em}
+.partbreak p{color:var(--ink-2);margin:12px 0 0;max-width:62ch;font-size:18px}
+nav.toc .part{font-family:var(--f-display);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);margin:22px 0 2px;padding-top:12px;border-top:1px solid var(--rule)}
+nav.toc .part:first-of-type{margin-top:14px}
+
+.lc{display:grid;grid-template-columns:52px 1fr auto;gap:0 12px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--rule-soft);font-size:14.5px}
+.lc:last-child{border-bottom:none}
+.lc .no{font-family:var(--f-mono);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;text-align:right}
+.lc .df{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;padding:2px 6px;border-radius:3px;border:1px solid var(--rule);color:var(--ink-3);white-space:nowrap}
+.lc .df.e{color:var(--good);border-color:var(--good)}
+.lc .df.m{color:var(--warn);border-color:var(--warn)}
+.lc .df.h{color:var(--crit);border-color:var(--crit)}
+.lc .st{font-weight:600}
 </style>
 
 <div class="shell">
@@ -396,6 +427,991 @@ details.qa .body p,details.qa .body ul{max-width:64ch}
       </tbody>
     </table>
   </div>
+</section>
+
+
+<div class="partbreak">
+  <div class="pn">Part I</div>
+  <h2>Foundations</h2>
+  <p>Start here if any of these would slow you down: what a load balancer does, why an index makes a query fast, what a thread is, or why O(n log n) matters. Nothing in the later parts is understandable without this part, and most people who "aren't good at system design" are actually missing one of these four things.</p>
+</div>
+
+<section id="request">
+  <div class="sec-head">
+    <div class="eyebrow">Section 01 · Foundations</div>
+    <h2>What happens when you load a page</h2>
+    <p>One question — <em>type a URL, press enter, what happens?</em> — has been asked in interviews for twenty years, because a complete answer touches DNS, TCP, TLS, HTTP, load balancing, caching, databases, and rendering. Learn it once as a spine, and every later topic hangs off it.</p>
+  </div>
+
+  <ol class="stepline">
+    <li class="hot"><b>The browser parses the URL</b>
+      <p><code>https://api.example.com:443/v1/users?id=42#top</code> decomposes into scheme (<code>https</code>, which sets the default port and demands TLS), host, port, path, query string, and fragment. The fragment after <code>#</code> is <strong>never sent to the server</strong> — it's browser-only. That detail alone has decided interview questions about analytics.</p>
+    </li>
+    <li class="hot"><b>DNS resolves the hostname to an IP address</b>
+      <p>The browser checks its own cache, then the OS cache, then asks the configured <em>recursive resolver</em> (your ISP's, or 8.8.8.8). If the resolver doesn't have it cached, it walks the hierarchy: root nameserver → <code>.com</code> TLD server → <code>example.com</code>'s authoritative nameserver, which returns the record. Each answer carries a <strong>TTL</strong> that controls how long it may be cached.</p>
+      <p>Why this matters in design: DNS is the first place you can do load balancing and failover — return different IPs to different regions (<em>GeoDNS</em>) or rotate records. And DNS TTL is why a failover isn't instant: clients keep the old IP until the TTL expires. Modern services use <strong>anycast</strong> instead — the same IP announced from many locations, and the network routes you to the nearest one.</p>
+    </li>
+    <li><b>TCP connects: the three-way handshake</b>
+      <p>Client sends <code>SYN</code>, server replies <code>SYN-ACK</code>, client sends <code>ACK</code>. That's <strong>one full round trip before any data moves</strong> — 1 ms inside a datacenter, 70 ms across a continent. This is why connection reuse (keep-alive, connection pools) matters so much, and why a service that opens a new connection per request is slow for reasons that have nothing to do with its code.</p>
+      <p>TCP gives you ordered, reliable, congestion-controlled delivery. It costs you head-of-line blocking: one lost packet stalls everything behind it. <strong>UDP</strong> gives you none of the guarantees and none of the cost — which is why video calls, gaming, and DNS use it, and why they handle loss at the application layer instead.</p>
+    </li>
+    <li><b>TLS negotiates encryption</b>
+      <p>The client offers cipher suites; the server returns its certificate chain; the client validates it against trusted roots; both derive a shared symmetric key. TLS 1.3 does this in <strong>one round trip</strong> (1.2 needed two), and supports 0-RTT resumption for repeat visitors — at the cost of replay risk, which is why 0-RTT is only safe for idempotent requests.</p>
+      <p>The design consequence: TLS termination usually happens at the load balancer or CDN edge, close to the user, so the expensive handshake crosses a short distance. Traffic inside the trust boundary may then be plaintext, or re-encrypted for zero-trust environments.</p>
+    </li>
+    <li class="hot"><b>The HTTP request travels to a load balancer</b>
+      <p>The IP you resolved almost certainly belongs to a load balancer, not to a server. Two kinds, and knowing the difference is table stakes:</p>
+      <ul>
+        <li><strong>Layer 4</strong> (transport) forwards TCP connections by IP and port. It cannot see the URL. Very fast, very dumb, and it can't retry a failed request because it doesn't know what a request is.</li>
+        <li><strong>Layer 7</strong> (application) terminates the connection and reads the HTTP request. It can route by path or header, retry idempotent requests, do TLS termination, compression, rate limiting, and sticky sessions. Slower per request, and vastly more useful.</li>
+      </ul>
+      <p>Algorithms it might use: round-robin, weighted round-robin, least-connections (usually the best default), consistent hashing on a key (for cache affinity), and <em>power of two random choices</em> — pick two backends at random and send to the less loaded one, which gets nearly the benefit of least-connections without global state.</p>
+      <p>The load balancer also runs <strong>health checks</strong>, and this is where candidates get caught: a shallow check (<em>does the port accept a connection?</em>) will happily route traffic to a process whose database connection pool is exhausted. A deep check verifies dependencies, but then one slow database can mark your entire fleet unhealthy at once. The real answer is a shallow check for routing plus a separate deep check for alerting.</p>
+    </li>
+    <li><b>A server handles the request</b>
+      <p>The kernel accepts the connection, the application reads it off a socket, routes it to a handler, and the handler does work — usually meaning it calls other things: a cache, a database, two other services. Nearly all of the request's wall-clock time is spent <em>waiting</em> on those calls, not computing. That single fact is why concurrency models matter more than raw language speed for most web services.</p>
+    </li>
+    <li><b>The response comes back, and caching decides how much of this ever happens again</b>
+      <p><code>Cache-Control: max-age=3600</code> lets any cache reuse the response for an hour. <code>ETag</code> plus <code>If-None-Match</code> lets the client ask "has it changed?" and receive a 40-byte <code>304 Not Modified</code> instead of the body. <code>Cache-Control: no-store</code> means never write it down; <code>private</code> means only the browser, not shared caches. Getting these headers right removes more load than most optimizations you can make in code.</p>
+    </li>
+  </ol>
+
+  <h3>HTTP, the parts you're expected to know cold</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Method</th><th class="num">Safe</th><th class="num">Idempotent</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td><code>GET</code></td><td class="num">yes</td><td class="num">yes</td><td>Read. Must have no side effects — a GET that mutates will be triggered by crawlers and prefetchers.</td></tr>
+        <tr><td><code>POST</code></td><td class="num">no</td><td class="num">no</td><td>Create, or "do something". The only non-idempotent method, which is exactly why it needs idempotency keys.</td></tr>
+        <tr><td><code>PUT</code></td><td class="num">no</td><td class="num">yes</td><td>Replace the whole resource at a known URL. Sending it twice leaves the same state.</td></tr>
+        <tr><td><code>PATCH</code></td><td class="num">no</td><td class="num">no*</td><td>Partial update. Idempotent only if you write absolute values, not increments.</td></tr>
+        <tr><td><code>DELETE</code></td><td class="num">no</td><td class="num">yes</td><td>Remove. The second call returns 404, but the <em>state</em> is the same — that's what idempotent means.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Status codes that carry meaning:</strong> 200 OK · 201 Created (with a <code>Location</code> header) · 204 No Content · 301 permanent redirect (cached forever by browsers) · 302 temporary · 304 Not Modified · 400 malformed · 401 not authenticated · 403 authenticated but not allowed · 404 not found · 409 conflict (the version you're updating moved) · 422 semantically invalid · 429 rate limited (send <code>Retry-After</code>) · 500 your bug · 502 bad gateway · 503 unavailable, try later · 504 upstream timed out. <strong>The 401/403 and 502/503/504 distinctions get asked</strong>, because they show whether you've actually debugged production.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Version</th><th>What it added</th><th>Why you'd care</th></tr></thead>
+      <tbody>
+        <tr><td>HTTP/1.1</td><td>Keep-alive, chunked transfer, <code>Host</code> header</td><td>One request at a time per connection → browsers open ~6 connections per host to fake parallelism.</td></tr>
+        <tr><td>HTTP/2</td><td>Multiplexed streams over one TCP connection, header compression, server push</td><td>Removes the 6-connection hack. Still suffers TCP head-of-line blocking: one dropped packet stalls every stream.</td></tr>
+        <tr><td>HTTP/3</td><td>Runs over QUIC (UDP), with per-stream reliability</td><td>Loss on one stream doesn't stall the others; connection survives a network change (wifi → cellular) because the connection id isn't the IP.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>How services talk to each other</h3>
+  <div class="deflist">
+    <dt>REST</dt><dd>Resources as URLs, verbs as HTTP methods, JSON bodies. Universal, cacheable by every proxy on earth, easy to debug with curl. Costs: over-fetching, under-fetching, and the N+1 problem where a list view triggers a request per item.</dd>
+    <dt>gRPC</dt><dd>Binary protobuf over HTTP/2, with generated clients and a strict schema. Much smaller payloads and faster serialization, plus native streaming in both directions. The default for internal service-to-service traffic. Costs: not human-readable, needs a proxy for browsers, and schema evolution requires discipline.</dd>
+    <dt>GraphQL</dt><dd>The client specifies exactly the fields it needs in one round trip. Great for mobile clients and for many-shaped frontends. Costs: caching is hard (everything is a POST to one endpoint), and an unbounded query can be an accidental denial of service — you need depth limits and query cost analysis.</dd>
+    <dt>WebSocket / SSE</dt><dd>For server-initiated data. See §11 — the tradeoff is stateful connections, which change how you scale and deploy.</dd>
+    <dt>Message queue</dt><dd>Not a request/response protocol at all. Use when the caller shouldn't wait, when the work can be retried, or when several systems need the same event.</dd>
+  </div>
+
+  <hr class="rule">
+
+  <h3>The operating system half</h3>
+  <p>You need enough of this to reason about capacity and failure, not enough to write a kernel.</p>
+
+  <h4>Processes, threads, and why the distinction costs money</h4>
+  <p>A <strong>process</strong> is an isolated address space: its own memory, its own file descriptors. A <strong>thread</strong> lives inside a process and shares that memory with its siblings. Sharing is what makes threads cheap to communicate between and dangerous to get wrong — two threads touching the same variable without coordination is a data race, and data races produce bugs that appear once a week in production and never in tests.</p>
+  <p>A <strong>context switch</strong> — the kernel swapping one thread off a core for another — costs on the order of a microsecond, plus the cache pollution afterward, which often costs more. Thousands of threads means the machine spends its time switching rather than working. That is the whole reason for the next idea.</p>
+
+  <h4>Blocking vs non-blocking I/O: the C10K problem</h4>
+  <p>If each connection needs its own thread and each thread blocks while waiting for the network, then 10,000 concurrent connections needs 10,000 threads, and the machine dies of context switching. The fix is an <strong>event loop</strong>: a single thread asks the kernel (via <code>epoll</code>/<code>kqueue</code>/IOCP) "which of these 10,000 sockets are ready?", handles those, and goes back to waiting. One thread, tens of thousands of connections, as long as no handler ever blocks.</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Model</th><th>Examples</th><th>Good at</th><th>Fails at</th></tr></thead>
+      <tbody>
+        <tr><td>Thread per request</td><td>Classic Java/Rails/PHP, Go (with cheap goroutines)</td><td>Simple code — blocking calls look sequential</td><td>Very high connection counts, unless threads are lightweight</td></tr>
+        <tr><td>Event loop</td><td>Node.js, nginx, Redis, Python asyncio</td><td>Enormous numbers of mostly-idle connections</td><td>Any CPU-heavy handler blocks <em>everything</em>; one slow function stalls the process</td></tr>
+        <tr><td>Green threads / coroutines</td><td>Go, Erlang, Java virtual threads, Kotlin</td><td>Both — blocking-style code on an event loop underneath</td><td>Debugging and profiling are less obvious</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The interview-ready summary: <strong>I/O-bound work wants concurrency</strong> (many things in flight, mostly waiting); <strong>CPU-bound work wants parallelism</strong> (many cores actually computing). Confusing them produces both of the classic mistakes — an async web server that pins a core doing JSON parsing, and a thread pool sized for CPU count that spends its life waiting on a database.</p>
+
+  <h4>Memory, and why "it fits in RAM" is a design decision</h4>
+  <p>The hierarchy — registers, L1/L2/L3 cache, RAM, SSD, network, disk — spans about eight orders of magnitude in latency (§10). Two practical consequences: <strong>sequential access is dramatically faster than random access at every level</strong>, because each level prefetches ahead; and the operating system's <strong>page cache</strong> means "reading from disk" often isn't — a hot file lives in free RAM, which is why a database can look fast until its working set exceeds memory, and then fall off a cliff. When you hear "performance degraded gradually then collapsed", suspect a working set that outgrew RAM.</p>
+
+  <h4>Concurrency control, in the order you'll need it</h4>
+  <div class="deflist">
+    <dt>Race condition</dt><dd>Two threads read-modify-write the same value; one update is lost. <code>counter += 1</code> is three operations, not one.</dd>
+    <dt>Mutex / lock</dt><dd>Only one thread in the critical section. Correct and slow; the cost is contention, where threads spend their time queueing rather than working.</dd>
+    <dt>Deadlock</dt><dd>A holds lock 1 and wants 2; B holds 2 and wants 1. Requires all four Coffman conditions; the practical fix is a <strong>global lock ordering</strong> — always acquire in the same order — plus timeouts.</dd>
+    <dt>Atomic operation</dt><dd>Compare-and-swap and friends: hardware-level, lock-free, the foundation of every concurrent data structure. <code>INCR</code> in Redis is this idea over the network.</dd>
+    <dt>Optimistic locking</dt><dd>Don't lock. Read a version number, and on write assert it hasn't changed (<code>UPDATE … WHERE version = 7</code>); retry if it has. Best when conflicts are rare — which is nearly always.</dd>
+    <dt>Pessimistic locking</dt><dd><code>SELECT … FOR UPDATE</code>. Take the lock first. Correct under heavy contention, and a throughput ceiling — plus a deadlock risk you now own.</dd>
+    <dt>Immutability</dt><dd>The cheapest concurrency strategy: if nothing is mutated, nothing needs coordinating. This is why event logs, append-only stores, and copy-on-write structures are so common in distributed systems.</dd>
+  </div>
+
+  <div class="callout">
+    <div class="ct">Practice this one out loud tonight</div>
+    <p>Give the full URL-to-pixels answer, unprompted, in four minutes. Then do it again in ninety seconds. The long version proves you know the machinery; the short version proves you know what matters. Interviewers use this question precisely because the compression is the signal.</p>
+  </div>
+</section>
+
+<section id="dbfoundations">
+  <div class="sec-head">
+    <div class="eyebrow">Section 02 · Foundations</div>
+    <h2>Databases from scratch</h2>
+    <p>More design rounds are lost on database questions than on any other topic, because "which database" is really four questions: what does an index cost, what does a transaction guarantee, what happens under concurrent writes, and what happens when one machine isn't enough. Answer those and the choice makes itself.</p>
+  </div>
+
+  <h3>What an index actually is</h3>
+  <p>A table without an index is an unordered pile of rows. Finding <code>WHERE email = 'x'</code> means reading every row — a <strong>sequential scan</strong>, O(n). An index is a separate, sorted structure — almost always a <strong>B+ tree</strong> — mapping column values to row locations.</p>
+  <p>A B+ tree stores keys in fixed-size pages (typically 8 KB) with a high branching factor: an internal page holds hundreds of keys, so a tree over a billion rows is only about four levels deep. That's <strong>four page reads to find any row</strong> instead of a billion. All actual values live in the leaf pages, which are linked together — which is why a B+ tree serves both point lookups <em>and</em> range scans efficiently.</p>
+
+  <div class="diagram">
+    <div class="dflow">
+      <div class="dcol"><div class="node pri">Root page<small>1 read</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node">Internal<small>~500 keys/page</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node">Internal<small>~250k rows covered</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node store">Leaf pages<small>values + row pointers,<br>linked left→right</small></div></div>
+      <div class="arrow">→<span>range scan</span></div>
+      <div class="dcol"><div class="node store">Next leaf<small>no re-descent</small></div></div>
+    </div>
+    <div class="dcap">Depth ~4 over a billion rows. The linked leaves are why <code>BETWEEN</code> and <code>ORDER BY</code> on an indexed column are cheap.</div>
+  </div>
+
+  <h4>The rules that follow from the structure</h4>
+  <ul>
+    <li><strong>Indexes make writes slower.</strong> Every <code>INSERT</code>/<code>UPDATE</code>/<code>DELETE</code> must update every affected index. Five indexes means roughly six writes per write. "Add an index" is never free, and on a write-heavy table it can be the problem rather than the fix.</li>
+    <li><strong>Composite indexes are left-prefix only.</strong> An index on <code>(user_id, created_at)</code> serves <code>WHERE user_id = ?</code> and <code>WHERE user_id = ? AND created_at &gt; ?</code>, but <em>not</em> <code>WHERE created_at &gt; ?</code> alone — the tree is sorted by <code>user_id</code> first. Column order is a design decision, and this is the single most common index mistake.</li>
+    <li><strong>A covering index answers the query without touching the table.</strong> If the index contains every column the query needs, the database never follows the pointer to the row. Often a 10× win on read-heavy paths.</li>
+    <li><strong>Low-cardinality columns barely help.</strong> An index on a boolean over 100M rows still points at 50M of them; the planner will correctly ignore it and scan.</li>
+    <li><strong>A function on the column disables the index.</strong> <code>WHERE LOWER(email) = 'x'</code> can't use an index on <code>email</code> — you need an index on the expression itself.</li>
+    <li><strong>Clustered vs secondary.</strong> In MySQL/InnoDB the table <em>is</em> the primary-key B-tree, so secondary indexes store the primary key and every secondary lookup costs a second descent. This is why a random UUID primary key hurts InnoDB — inserts land all over the tree instead of appending.</li>
+  </ul>
+
+  <h3>How the planner joins tables</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Algorithm</th><th>How</th><th>Chosen when</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Nested loop</strong></td><td>For each row of A, look up matches in B (ideally via an index)</td><td>A is small and B is indexed on the join key. Catastrophic if B isn't indexed — that's O(n×m).</td></tr>
+        <tr><td><strong>Hash join</strong></td><td>Build a hash table on the smaller side, probe with the larger</td><td>Big unsorted inputs, equality joins. Needs memory; spills to disk when it doesn't fit.</td></tr>
+        <tr><td><strong>Merge join</strong></td><td>Sort both sides, then walk them in lockstep</td><td>Inputs already sorted (e.g. both indexed on the join key), or very large.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Read the plan, don't guess.</strong> <code>EXPLAIN ANALYZE</code> gives you the chosen algorithm, estimated vs actual row counts, and time per node. The tell for a bad plan is a large gap between estimate and actual — that means stale statistics, and the planner picked a nested loop for what turned out to be ten million rows.</p>
+  <p><strong>The N+1 problem</strong> is the application-level version of the same mistake: fetch 100 posts, then loop and fetch each author separately — 101 queries, each with a network round trip. Fix by joining, or by batching the second query with <code>WHERE id IN (…)</code>. Mention it by name; it's the most common real-world database bug in web applications.</p>
+
+  <h3>Transactions: what ACID actually promises</h3>
+  <div class="deflist">
+    <dt>Atomicity</dt><dd>All of the statements in the transaction, or none. Implemented by a write-ahead log: changes are journaled before they're applied, so a crash mid-transaction can be rolled back on restart.</dd>
+    <dt>Consistency</dt><dd>The weakest and most misunderstood letter. It only means declared constraints (foreign keys, uniqueness, checks) hold before and after. It is <em>not</em> the "C" in CAP, which is a different property entirely.</dd>
+    <dt>Isolation</dt><dd>Concurrent transactions don't see each other's partial work — to the degree the isolation level promises. This is where the real complexity lives.</dd>
+    <dt>Durability</dt><dd>Once committed, it survives a crash. Which requires an <code>fsync</code> to actually reach the disk, and that's why commit latency has a floor — and why <code>synchronous_commit = off</code> makes a database dramatically faster and slightly untruthful.</dd>
+  </div>
+
+  <h4>Isolation levels and the anomalies they permit</h4>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Level</th><th class="num">Dirty read</th><th class="num">Non-repeatable read</th><th class="num">Phantom</th><th class="num">Write skew</th></tr></thead>
+      <tbody>
+        <tr><td>Read uncommitted</td><td class="num">possible</td><td class="num">possible</td><td class="num">possible</td><td class="num">possible</td></tr>
+        <tr><td>Read committed <em>(default in Postgres)</em></td><td class="num">no</td><td class="num">possible</td><td class="num">possible</td><td class="num">possible</td></tr>
+        <tr><td>Repeatable read <em>(default in MySQL)</em></td><td class="num">no</td><td class="num">no</td><td class="num">possible*</td><td class="num">possible</td></tr>
+        <tr><td>Serializable</td><td class="num">no</td><td class="num">no</td><td class="num">no</td><td class="num">no</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>In words: a <strong>dirty read</strong> sees uncommitted data. A <strong>non-repeatable read</strong> is reading the same row twice in one transaction and getting different values. A <strong>phantom</strong> is re-running the same <code>WHERE</code> and getting new rows. <strong>Write skew</strong> is the subtle one: two transactions each read a set, each check a constraint that currently holds, and each write — and the constraint is violated by the combination. The classic case is two doctors both cancelling their on-call shift because each sees the other still on call. Only serializable prevents it, and knowing that example is worth real credit.</p>
+  <p><strong>MVCC</strong> is how modern databases give you this cheaply: instead of locking readers out, each transaction sees a consistent snapshot of the data as of its start, and writers create new row versions rather than overwriting. Readers never block writers and writers never block readers. The cost is version accumulation — Postgres needs <code>VACUUM</code> to reclaim dead tuples, and a long-running transaction holds back cleanup for the whole database. "Why did our disk fill up?" is very often this.</p>
+
+  <h3>Transactions that span services</h3>
+  <p>Once data lives in two systems, ACID stops applying and you have three options:</p>
+  <ul>
+    <li><strong>Two-phase commit.</strong> A coordinator asks everyone to prepare, then to commit. Correct, and it blocks: if the coordinator dies after prepare, every participant holds locks indefinitely. Rare in modern systems for exactly this reason.</li>
+    <li><strong>Saga.</strong> A sequence of local transactions, each with a compensating action to undo it. Book the flight, book the hotel; if the hotel fails, cancel the flight. No isolation — an intermediate state is visible — so the business has to tolerate it, which usually it does.</li>
+    <li><strong>Make it one transaction.</strong> Often the right answer is that the two things belonged in the same service and the same database, and the distribution was the mistake.</li>
+  </ul>
+
+  <h3>Choosing a store</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Family</th><th>Examples</th><th>Reach for it when</th><th>Don't when</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Relational</strong></td><td>Postgres, MySQL</td><td>You need transactions, joins, ad-hoc queries, or you don't yet know the access patterns. <em>The correct default.</em></td><td>You genuinely exceed one machine's write throughput and can't shard cleanly.</td></tr>
+        <tr><td><strong>Wide-column</strong></td><td>Cassandra, ScyllaDB, HBase</td><td>Massive write volume, time-series or event data, known query patterns, linear scale-out, multi-region writes.</td><td>You need joins, ad-hoc queries, or strong consistency by default.</td></tr>
+        <tr><td><strong>Document</strong></td><td>MongoDB, DynamoDB</td><td>Self-contained documents, schema varying per record, access always by key or a known index.</td><td>Relationships matter. Modeling a graph as documents ends badly.</td></tr>
+        <tr><td><strong>Key-value</strong></td><td>Redis, Memcached, DynamoDB</td><td>Caching, sessions, counters, rate limits, queues, leaderboards. Sub-millisecond.</td><td>It's your source of truth and you can't tolerate loss (unless configured carefully).</td></tr>
+        <tr><td><strong>Search</strong></td><td>Elasticsearch, OpenSearch</td><td>Full-text relevance, faceting, aggregations over text.</td><td>As a primary store. It's a derived index — rebuild it from the real database.</td></tr>
+        <tr><td><strong>Time-series</strong></td><td>Prometheus, InfluxDB, TimescaleDB</td><td>Metrics: timestamped numbers, written constantly, queried by range, downsampled as they age.</td><td>Anything with updates or relationships.</td></tr>
+        <tr><td><strong>Graph</strong></td><td>Neo4j, Neptune</td><td>Multi-hop traversals — fraud rings, social distance, recommendations over a graph.</td><td>One hop. A join does that fine.</td></tr>
+        <tr><td><strong>Columnar / OLAP</strong></td><td>BigQuery, Snowflake, ClickHouse</td><td>Analytics scanning billions of rows over a few columns; ML training data.</td><td>Point lookups or per-row updates.</td></tr>
+        <tr><td><strong>Vector</strong></td><td>pgvector, Pinecone, Qdrant, FAISS</td><td>Similarity over embeddings — semantic search, recommendation retrieval, RAG.</td><td>Exact-match lookups. Use a real index next to it (§14).</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout">
+    <div class="ct">The answer that scores well</div>
+    <p>"Postgres, until a specific requirement forces something else." Then name the requirement that would force it: write throughput beyond a single primary, a document shape that changes per tenant, sub-millisecond reads, full-text relevance ranking. Interviewers are testing whether you reach for complexity by default — and a modern Postgres with JSONB, full-text search, and pgvector covers a startling amount of ground, which is itself a good thing to say.</p>
+  </div>
+
+  <h3>Two operational details that show experience</h3>
+  <p><strong>Connection pooling.</strong> Every Postgres connection is a process using several megabytes; a few hundred is a lot. But 100 app servers × a 20-connection pool each is 2,000 connections, and the database falls over. The fix is an external pooler (PgBouncer) in transaction mode. Mentioning this unprompted signals you've run something.</p>
+  <p><strong>Migrations without downtime.</strong> Adding a nullable column is instant; adding a <code>NOT NULL</code> column with a default rewrites the table and locks it. The safe pattern is <strong>expand then contract</strong>: add the new column, write to both, backfill in batches, switch reads, then drop the old one — four deploys instead of one, and no outage. This is a very common senior-level follow-up.</p>
+</section>
+
+<section id="bigo">
+  <div class="sec-head">
+    <div class="eyebrow">Section 03 · Foundations</div>
+    <h2>Complexity, properly</h2>
+    <p>Big-O is not trivia. It is the language you use to justify a design choice in ten seconds, and it is scored in every coding round. The goal is to compute it correctly and quickly for code you just wrote — including the cases where the answer isn't obvious.</p>
+  </div>
+
+  <h3>What the notation means</h3>
+  <p>O(f(n)) is an <strong>upper bound on growth</strong> as n gets large. Constants and lower-order terms drop, because they stop mattering: 3n² + 500n + 90000 is O(n²), and for large enough n a 500× constant advantage loses to a single extra factor of n. Ω is a lower bound, Θ is both. Interviews say "O" and mean "tight bound"; nobody will correct you for saying O(n) instead of Θ(n).</p>
+  <p>What the constants <em>do</em> matter for: n is small (an O(n²) algorithm over 50 items is fine and simpler), or the constant is enormous (a "linear" algorithm doing a database round trip per element is not fast).</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Growth</th><th>Name</th><th class="num">n = 10</th><th class="num">n = 1,000</th><th class="num">n = 1,000,000</th></tr></thead>
+      <tbody>
+        <tr><td>O(1)</td><td>constant</td><td class="num">1</td><td class="num">1</td><td class="num">1</td></tr>
+        <tr><td>O(log n)</td><td>logarithmic</td><td class="num">3</td><td class="num">10</td><td class="num">20</td></tr>
+        <tr><td>O(n)</td><td>linear</td><td class="num">10</td><td class="num">1,000</td><td class="num">10⁶</td></tr>
+        <tr><td>O(n log n)</td><td>linearithmic</td><td class="num">33</td><td class="num">10⁴</td><td class="num">2 × 10⁷</td></tr>
+        <tr><td>O(n²)</td><td>quadratic</td><td class="num">100</td><td class="num">10⁶</td><td class="num">10¹² <em>— hours</em></td></tr>
+        <tr><td>O(2ⁿ)</td><td>exponential</td><td class="num">1,024</td><td class="num">beyond the universe</td><td class="num">—</td></tr>
+        <tr><td>O(n!)</td><td>factorial</td><td class="num">3.6 × 10⁶</td><td class="num">—</td><td class="num">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>A useful anchor: a modern CPU does roughly <strong>10⁸ simple operations per second</strong> in an interpreted language like Python, 10⁹ in a compiled one. So at n = 10⁶, O(n log n) is comfortable and O(n²) is a coffee break.</p>
+
+  <h3>Counting it in four cases</h3>
+  <div class="codehead"><span>Read the loop structure, not the line count</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="cm"># 1. SEQUENTIAL work ADDS -> take the max.</span>
+sort(a)          <span class="cm"># O(n log n)</span>
+<span class="kw">for</span> x <span class="kw">in</span> a: ...   <span class="cm"># O(n)          total: O(n log n + n) = O(n log n)</span>
+
+<span class="cm"># 2. NESTED work MULTIPLIES.</span>
+<span class="kw">for</span> i <span class="kw">in</span> range(n):
+    <span class="kw">for</span> j <span class="kw">in</span> range(n): ...        <span class="cm"># O(n^2)</span>
+
+<span class="cm"># 3. But watch the BOUNDS. This is NOT O(n^2)... it is.</span>
+<span class="kw">for</span> i <span class="kw">in</span> range(n):
+    <span class="kw">for</span> j <span class="kw">in</span> range(i, n): ...     <span class="cm"># n + (n-1) + ... + 1 = n(n+1)/2 -> still O(n^2)</span>
+
+<span class="cm"># 4. HALVING gives a log. Doubling does too.</span>
+<span class="kw">while</span> n > <span class="nu">1</span>:
+    n = n // <span class="nu">2</span>                     <span class="cm"># O(log n)</span>
+
+<span class="cm"># The trap: a loop that LOOKS nested but isn't.</span>
+left = <span class="nu">0</span>
+<span class="kw">for</span> right <span class="kw">in</span> range(n):
+    <span class="kw">while</span> left &lt; right <span class="kw">and</span> bad():
+        left += <span class="nu">1</span>                  <span class="cm"># `left` only ever moves FORWARD, at most n times</span>
+<span class="cm"># total: O(n), not O(n^2). Say this out loud in sliding-window and</span>
+<span class="cm"># monotonic-stack problems -- interviewers specifically check for it.</span>
+</code></pre>
+
+  <h4>Recursion: draw the tree</h4>
+  <p>The cost of a recursive function is <strong>(number of nodes in the call tree) × (work per node)</strong>.</p>
+  <ul>
+    <li><code>fib(n)</code> naive: each call spawns two, depth n → about 2ⁿ nodes, O(1) each → <strong>O(2ⁿ)</strong>.</li>
+    <li>Merge sort: each level splits in half (log n levels), each level does O(n) merging → <strong>O(n log n)</strong>.</li>
+    <li>Binary search recursive: one branch survives per level → <strong>O(log n)</strong>.</li>
+    <li>Permutations: n choices, then n−1, … → <strong>O(n!)</strong> nodes, O(n) to copy each → O(n · n!).</li>
+  </ul>
+  <p>For divide-and-conquer, the <strong>master theorem</strong> in the only form you need: for <code>T(n) = a·T(n/b) + O(n^d)</code>, compare <code>d</code> with <code>log_b(a)</code> — if d is larger the top level dominates (O(n^d)), if equal it's O(n^d log n), if smaller the leaves dominate (O(n^log_b a)). Merge sort is a=2, b=2, d=1 → equal → O(n log n).</p>
+
+  <h4>Amortized: the dynamic array</h4>
+  <p>Appending to a Python list is usually O(1), but occasionally the array is full and must be copied to a bigger one — O(n). Because the size doubles, that copy happens rarely enough that the <em>average over any sequence of n appends</em> is O(1). That is <strong>amortized O(1)</strong>, and it is not the same as average-case: amortized is a worst-case guarantee over a sequence, not a probabilistic claim. Hash table insertion is the same story. Say "amortized" when it applies — it's a precision marker interviewers notice.</p>
+
+  <h3>Costs you should know without thinking</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Structure</th><th class="num">Access</th><th class="num">Search</th><th class="num">Insert</th><th class="num">Delete</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>Dynamic array</td><td class="num">O(1)</td><td class="num">O(n)</td><td class="num">O(1)*</td><td class="num">O(n)</td><td>*amortized at the end; O(n) in the middle</td></tr>
+        <tr><td>Linked list</td><td class="num">O(n)</td><td class="num">O(n)</td><td class="num">O(1)</td><td class="num">O(1)</td><td>O(1) only if you already hold the node</td></tr>
+        <tr><td>Hash table</td><td class="num">—</td><td class="num">O(1)*</td><td class="num">O(1)*</td><td class="num">O(1)*</td><td>*average; O(n) worst case under collisions</td></tr>
+        <tr><td>Balanced BST</td><td class="num">—</td><td class="num">O(log n)</td><td class="num">O(log n)</td><td class="num">O(log n)</td><td>Keeps order — supports range queries and successor</td></tr>
+        <tr><td>Binary heap</td><td class="num">O(1) min</td><td class="num">O(n)</td><td class="num">O(log n)</td><td class="num">O(log n)</td><td>Only the extreme element is cheap</td></tr>
+        <tr><td>Trie</td><td class="num">—</td><td class="num">O(L)</td><td class="num">O(L)</td><td class="num">O(L)</td><td>L = key length, independent of how many keys</td></tr>
+        <tr><td>Union-Find</td><td class="num">—</td><td class="num">O(α(n))</td><td class="num">O(α(n))</td><td class="num">—</td><td>Effectively constant with both optimizations</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Python operation</th><th class="num">Cost</th><th>The trap</th></tr></thead>
+      <tbody>
+        <tr><td><code>list.append(x)</code> / <code>list.pop()</code></td><td class="num">O(1)</td><td>—</td></tr>
+        <tr><td><code>list.pop(0)</code> / <code>list.insert(0, x)</code></td><td class="num">O(n)</td><td>Shifts everything. Use <code>collections.deque</code> — this has failed real candidates.</td></tr>
+        <tr><td><code>x in list</code></td><td class="num">O(n)</td><td><code>x in set</code> is O(1). Swapping one for the other is the single most common interview fix.</td></tr>
+        <tr><td><code>list[a:b]</code></td><td class="num">O(b−a)</td><td>Slicing in a loop turns O(n) into O(n²) silently.</td></tr>
+        <tr><td><code>s += "x"</code> in a loop</td><td class="num">O(n²)</td><td>Strings are immutable. Build a list and <code>"".join()</code> it.</td></tr>
+        <tr><td><code>sorted(x)</code></td><td class="num">O(n log n)</td><td>Timsort — genuinely O(n) on already-sorted input.</td></tr>
+        <tr><td><code>heapq.heapify(x)</code></td><td class="num">O(n)</td><td>Building a heap is linear; n individual pushes is O(n log n).</td></tr>
+        <tr><td><code>dict</code> / <code>set</code> lookup</td><td class="num">O(1)</td><td>Keys must be hashable — a list can't be a key, a tuple can.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Space, including the part people forget</h3>
+  <p>Count what you allocate <em>and the recursion stack</em>. A recursive DFS over a tree is O(h) space where h is the height — which is O(n) for a degenerate tree, and that's the answer they're looking for. "O(1) extra space" means you may not allocate proportional to input; the input itself doesn't count, and mutating it in place is usually the intent.</p>
+
+  <div class="callout">
+    <div class="ct">The sentence to have ready</div>
+    <p>"That's O(n log n) time from the sort, O(n) space for the hash map, and the recursion adds O(log n) stack depth." Complete, specific, unprompted. State it before they ask, every single time — it costs five seconds and it closes an entire scoring axis.</p>
+  </div>
+</section>
+
+<div class="partbreak">
+  <div class="pn">Part II</div>
+  <h2>Algorithms</h2>
+  <p>Twenty patterns, a 150-problem ladder that builds them in order, and a protocol for the coding hour itself. The goal is not to have solved many problems — it is to recognize which of twenty shapes a new problem is, within two minutes, under observation.</p>
+</div>
+<section id="dsa">
+  <div class="sec-head">
+    <div class="eyebrow">Section 08</div>
+    <h2>The 14 patterns</h2>
+    <p>Interview algorithm problems are recombinations of a small number of patterns. The skill being tested is <strong>recognition speed</strong> — mapping a novel problem statement onto a template you already own within the first two minutes. Learn the trigger phrases first; the code is the easy half.</p>
+  </div>
+
+  <h3>Recognition table — read this one until it's automatic</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>When you see…</th><th>Reach for</th><th class="num">Typical</th></tr></thead>
+      <tbody>
+        <tr><td>"has this appeared before", pairs summing to a target, grouping</td><td><strong>Hash map</strong></td><td class="num">O(n)</td></tr>
+        <tr><td><strong>Sorted</strong> array, pair/triple search, in-place partition, palindrome</td><td><strong>Two pointers</strong></td><td class="num">O(n)</td></tr>
+        <tr><td>"longest/shortest <strong>contiguous</strong> subarray or substring such that…"</td><td><strong>Sliding window</strong></td><td class="num">O(n)</td></tr>
+        <tr><td>Sorted input, or "minimize the maximum", or a monotone yes/no predicate</td><td><strong>Binary search</strong> (on index or on the answer)</td><td class="num">O(n log n)</td></tr>
+        <tr><td>"next greater/smaller", histogram, span, temperatures</td><td><strong>Monotonic stack</strong></td><td class="num">O(n)</td></tr>
+        <tr><td>"top K", "K most/least", running median, merge K sorted</td><td><strong>Heap</strong></td><td class="num">O(n log k)</td></tr>
+        <tr><td>Meetings, ranges, calendars, overlaps</td><td><strong>Sort + sweep intervals</strong></td><td class="num">O(n log n)</td></tr>
+        <tr><td>Cycle detection, middle node, reorder in place</td><td><strong>Fast/slow pointers</strong></td><td class="num">O(n)</td></tr>
+        <tr><td>Tree, "level by level", "shortest path in an unweighted graph", grid flood</td><td><strong>BFS</strong></td><td class="num">O(V+E)</td></tr>
+        <tr><td>Tree paths, connected components, "explore fully"</td><td><strong>DFS</strong></td><td class="num">O(V+E)</td></tr>
+        <tr><td>Dependencies, prerequisites, build order, "is there a cycle"</td><td><strong>Topological sort</strong></td><td class="num">O(V+E)</td></tr>
+        <tr><td>"Are these connected", merging groups, redundant edge, islands with unions</td><td><strong>Union-Find</strong></td><td class="num">~O(α(n))</td></tr>
+        <tr><td>"All combinations/permutations/partitions", N-queens, sudoku</td><td><strong>Backtracking</strong></td><td class="num">exponential</td></tr>
+        <tr><td>"How many ways", "min/max cost to", overlapping subproblems</td><td><strong>Dynamic programming</strong></td><td class="num">O(states × transitions)</td></tr>
+        <tr><td>Prefix matching, autocomplete, word search on a board</td><td><strong>Trie</strong></td><td class="num">O(len)</td></tr>
+        <tr><td>Weighted shortest path, "cheapest route"</td><td><strong>Dijkstra</strong></td><td class="num">O(E log V)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>The templates</h3>
+  <p>Type these from memory until they come out clean. Every one is written the way you should actually write it in an interview: named variables, no cleverness, easy to explain while typing.</p>
+
+  <div class="codehead"><span>1 · sliding window — variable size, the shape that covers most of them</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">def</span> longest_ok_window(s):
+    <span class="st">"""Longest substring satisfying a condition. The invariant: the window</span>
+<span class="st">    [left, right] is always valid at the bottom of the loop."""</span>
+    count = {}
+    left = best = <span class="nu">0</span>
+    <span class="kw">for</span> right, ch <span class="kw">in</span> enumerate(s):
+        count[ch] = count.get(ch, <span class="nu">0</span>) + <span class="nu">1</span>          <span class="cm"># 1. grow right</span>
+
+        <span class="kw">while</span> len(count) > <span class="nu">2</span>:                       <span class="cm"># 2. shrink while INVALID</span>
+            count[s[left]] -= <span class="nu">1</span>
+            <span class="kw">if</span> count[s[left]] == <span class="nu">0</span>:
+                <span class="kw">del</span> count[s[left]]
+            left += <span class="nu">1</span>
+
+        best = max(best, right - left + <span class="nu">1</span>)         <span class="cm"># 3. record</span>
+    <span class="kw">return</span> best
+
+<span class="cm"># Fixed-size variant: no while loop -- just evict s[right-k] once right >= k.</span>
+<span class="cm"># Minimum-window variant: shrink while VALID, and record inside the while.</span>
+</code></pre>
+
+  <div class="codehead"><span>2 · binary search — the two forms worth memorizing</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="cm"># FORM A: leftmost index where a sorted array meets a condition.</span>
+<span class="cm"># Using lo &lt; hi with hi = mid avoids every off-by-one I have ever written.</span>
+<span class="kw">def</span> lower_bound(a, target):
+    lo, hi = <span class="nu">0</span>, len(a)                <span class="cm"># hi is exclusive</span>
+    <span class="kw">while</span> lo &lt; hi:
+        mid = (lo + hi) // <span class="nu">2</span>
+        <span class="kw">if</span> a[mid] &lt; target: lo = mid + <span class="nu">1</span>
+        <span class="kw">else</span>:               hi = mid       <span class="cm"># mid might be the answer -- keep it</span>
+    <span class="kw">return</span> lo                          <span class="cm"># == len(a) if no element qualifies</span>
+
+
+<span class="cm"># FORM B: BINARY SEARCH ON THE ANSWER. The high-value one -- most</span>
+<span class="cm"># candidates never spot it. Trigger: "minimize the maximum X" or</span>
+<span class="cm"># "maximum X such that it is still possible".</span>
+<span class="kw">def</span> ship_within_days(weights, days):
+    <span class="kw">def</span> feasible(cap):                 <span class="cm"># monotone: True stays True as cap grows</span>
+        used, load = <span class="nu">1</span>, <span class="nu">0</span>
+        <span class="kw">for</span> w <span class="kw">in</span> weights:
+            <span class="kw">if</span> load + w > cap:
+                used, load = used + <span class="nu">1</span>, <span class="nu">0</span>
+            load += w
+        <span class="kw">return</span> used &lt;= days
+
+    lo, hi = max(weights), sum(weights)   <span class="cm"># tightest and loosest possible answers</span>
+    <span class="kw">while</span> lo &lt; hi:
+        mid = (lo + hi) // <span class="nu">2</span>
+        <span class="kw">if</span> feasible(mid): hi = mid
+        <span class="kw">else</span>:             lo = mid + <span class="nu">1</span>
+    <span class="kw">return</span> lo
+</code></pre>
+
+  <div class="codehead"><span>3 · monotonic stack — next greater element</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">def</span> next_greater(nums):
+    <span class="st">"""For each index, the next value to its right that is larger.</span>
+<span class="st">    Stack holds INDICES whose answers are still unknown, values decreasing."""</span>
+    res = [-<span class="nu">1</span>] * len(nums)
+    stack = []
+    <span class="kw">for</span> i, v <span class="kw">in</span> enumerate(nums):
+        <span class="kw">while</span> stack <span class="kw">and</span> nums[stack[-<span class="nu">1</span>]] &lt; v:   <span class="cm"># v resolves everything smaller</span>
+            res[stack.pop()] = v
+        stack.append(i)
+    <span class="kw">return</span> res
+
+<span class="cm"># Each index is pushed once and popped once -> O(n) despite the nested loop.</span>
+<span class="cm"># Say that out loud; interviewers check whether you know why it isn't O(n^2).</span>
+<span class="cm"># Largest rectangle in a histogram is this template with the popped bar's</span>
+<span class="cm"># width computed as (i - stack[-1] - 1).</span>
+</code></pre>
+
+  <div class="codehead"><span>4 · heap — top K, and why a MIN-heap finds the MAX elements</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">import</span> heapq
+
+<span class="kw">def</span> k_largest(nums, k):
+    <span class="st">"""Keep a min-heap of size k: its root is the smallest of the k best</span>
+<span class="st">    so far, so it is exactly the element to evict. O(n log k), O(k) space --</span>
+<span class="st">    beats sorting when k is small, and works on a stream that doesn't fit."""</span>
+    heap = []
+    <span class="kw">for</span> v <span class="kw">in</span> nums:
+        heapq.heappush(heap, v)
+        <span class="kw">if</span> len(heap) > k:
+            heapq.heappop(heap)        <span class="cm"># drop the smallest</span>
+    <span class="kw">return</span> heap
+
+<span class="kw">def</span> merge_k_sorted(lists):
+    <span class="cm"># Seed with the head of each list, then pull-and-replace. O(N log k).</span>
+    heap = [(lst[<span class="nu">0</span>], i, <span class="nu">0</span>) <span class="kw">for</span> i, lst <span class="kw">in</span> enumerate(lists) <span class="kw">if</span> lst]
+    heapq.heapify(heap)
+    out = []
+    <span class="kw">while</span> heap:
+        val, li, idx = heapq.heappop(heap)
+        out.append(val)
+        <span class="kw">if</span> idx + <span class="nu">1</span> &lt; len(lists[li]):
+            heapq.heappush(heap, (lists[li][idx + <span class="nu">1</span>], li, idx + <span class="nu">1</span>))
+    <span class="kw">return</span> out
+</code></pre>
+
+  <div class="codehead"><span>5 · intervals — sort, then sweep</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">def</span> merge(intervals):
+    intervals.sort(key=<span class="kw">lambda</span> x: x[<span class="nu">0</span>])          <span class="cm"># sorting by START is the whole trick</span>
+    out = []
+    <span class="kw">for</span> start, end <span class="kw">in</span> intervals:
+        <span class="kw">if</span> out <span class="kw">and</span> start &lt;= out[-<span class="nu">1</span>][<span class="nu">1</span>]:          <span class="cm"># overlaps the last kept interval</span>
+            out[-<span class="nu">1</span>][<span class="nu">1</span>] = max(out[-<span class="nu">1</span>][<span class="nu">1</span>], end)
+        <span class="kw">else</span>:
+            out.append([start, end])
+    <span class="kw">return</span> out
+
+<span class="kw">def</span> min_meeting_rooms(intervals):
+    <span class="cm"># The other interval shape: a difference array / sweep line.</span>
+    events = []
+    <span class="kw">for</span> s, e <span class="kw">in</span> intervals:
+        events.append((s, <span class="nu">1</span>))                  <span class="cm"># a room is taken</span>
+        events.append((e, -<span class="nu">1</span>))                 <span class="cm"># a room is freed</span>
+    events.sort()          <span class="cm"># at equal times, -1 sorts first: a room frees before it fills</span>
+    cur = best = <span class="nu">0</span>
+    <span class="kw">for</span> _, delta <span class="kw">in</span> events:
+        cur += delta
+        best = max(best, cur)
+    <span class="kw">return</span> best
+</code></pre>
+
+  <div class="codehead"><span>6 · graphs — BFS, and Kahn's topological sort</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">from</span> collections <span class="kw">import</span> deque
+
+<span class="kw">def</span> shortest_path_grid(grid, start, goal):
+    <span class="st">"""BFS is the shortest path when every edge costs the same.</span>
+<span class="st">    The level-by-level inner loop is what lets you count distance."""</span>
+    rows, cols = len(grid), len(grid[<span class="nu">0</span>])
+    q = deque([start])
+    seen = {start}
+    dist = <span class="nu">0</span>
+    <span class="kw">while</span> q:
+        <span class="kw">for</span> _ <span class="kw">in</span> range(len(q)):              <span class="cm"># drain exactly one level</span>
+            r, c = q.popleft()
+            <span class="kw">if</span> (r, c) == goal:
+                <span class="kw">return</span> dist
+            <span class="kw">for</span> nr, nc <span class="kw">in</span> ((r+<span class="nu">1</span>,c), (r-<span class="nu">1</span>,c), (r,c+<span class="nu">1</span>), (r,c-<span class="nu">1</span>)):
+                <span class="kw">if</span> (<span class="nu">0</span> &lt;= nr &lt; rows <span class="kw">and</span> <span class="nu">0</span> &lt;= nc &lt; cols
+                        <span class="kw">and</span> (nr, nc) <span class="kw">not</span> <span class="kw">in</span> seen <span class="kw">and</span> grid[nr][nc] != <span class="st">'#'</span>):
+                    seen.add((nr, nc))       <span class="cm"># mark on PUSH, not on pop --</span>
+                    q.append((nr, nc))       <span class="cm"># otherwise nodes enter the queue twice</span>
+        dist += <span class="nu">1</span>
+    <span class="kw">return</span> -<span class="nu">1</span>
+
+
+<span class="kw">def</span> topo_order(n, edges):
+    <span class="st">"""edges are (u, v) meaning u must come before v.</span>
+<span class="st">    Returns [] if there is a cycle -- which is also the cycle detector."""</span>
+    adj = [[] <span class="kw">for</span> _ <span class="kw">in</span> range(n)]
+    indeg = [<span class="nu">0</span>] * n
+    <span class="kw">for</span> u, v <span class="kw">in</span> edges:
+        adj[u].append(v)
+        indeg[v] += <span class="nu">1</span>
+
+    q = deque(i <span class="kw">for</span> i <span class="kw">in</span> range(n) <span class="kw">if</span> indeg[i] == <span class="nu">0</span>)
+    order = []
+    <span class="kw">while</span> q:
+        u = q.popleft()
+        order.append(u)
+        <span class="kw">for</span> v <span class="kw">in</span> adj[u]:
+            indeg[v] -= <span class="nu">1</span>
+            <span class="kw">if</span> indeg[v] == <span class="nu">0</span>:
+                q.append(v)
+    <span class="kw">return</span> order <span class="kw">if</span> len(order) == n <span class="kw">else</span> []
+</code></pre>
+
+  <div class="codehead"><span>7 · union-find — with both optimizations, which is the whole point</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">class</span> DSU:
+    <span class="kw">def</span> __init__(self, n):
+        self.parent = list(range(n))
+        self.rank = [<span class="nu">0</span>] * n
+        self.components = n
+
+    <span class="kw">def</span> find(self, x):
+        <span class="kw">while</span> self.parent[x] != x:
+            self.parent[x] = self.parent[self.parent[x]]   <span class="cm"># path halving</span>
+            x = self.parent[x]
+        <span class="kw">return</span> x
+
+    <span class="kw">def</span> union(self, a, b):
+        ra, rb = self.find(a), self.find(b)
+        <span class="kw">if</span> ra == rb:
+            <span class="kw">return</span> <span class="kw">False</span>                     <span class="cm"># already connected -> this edge is redundant</span>
+        <span class="kw">if</span> self.rank[ra] &lt; self.rank[rb]:
+            ra, rb = rb, ra                    <span class="cm"># attach smaller tree under larger</span>
+        self.parent[rb] = ra
+        <span class="kw">if</span> self.rank[ra] == self.rank[rb]:
+            self.rank[ra] += <span class="nu">1</span>
+        self.components -= <span class="nu">1</span>
+        <span class="kw">return</span> <span class="kw">True</span>
+
+<span class="cm"># With both optimizations, amortized ~O(alpha(n)) -- effectively constant.</span>
+<span class="cm"># Kruskal's MST is: sort edges by weight, union them, skip the False ones.</span>
+</code></pre>
+
+  <div class="codehead"><span>8 · backtracking — one shape, three problems</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">def</span> combination_sum(candidates, target):
+    <span class="st">"""choose -> recurse -> UNDO. The undo is what makes it backtracking."""</span>
+    candidates.sort()                    <span class="cm"># enables both pruning and dedup</span>
+    res, path = [], []
+
+    <span class="kw">def</span> backtrack(start, remaining):
+        <span class="kw">if</span> remaining == <span class="nu">0</span>:
+            res.append(path[:])          <span class="cm"># COPY -- path is mutated after this</span>
+            <span class="kw">return</span>
+        <span class="kw">for</span> i <span class="kw">in</span> range(start, len(candidates)):
+            <span class="kw">if</span> candidates[i] > remaining:
+                <span class="kw">break</span>                    <span class="cm"># sorted, so everything after is too big</span>
+            <span class="kw">if</span> i > start <span class="kw">and</span> candidates[i] == candidates[i-<span class="nu">1</span>]:
+                <span class="kw">continue</span>                 <span class="cm"># skip duplicates at the same depth</span>
+            path.append(candidates[i])
+            backtrack(i + <span class="nu">1</span>, remaining - candidates[i])
+            path.pop()                   <span class="cm"># undo</span>
+
+    backtrack(<span class="nu">0</span>, target)
+    <span class="kw">return</span> res
+
+<span class="cm"># Subsets: append path[:] at EVERY node instead of only at the base case.</span>
+<span class="cm"># Permutations: iterate all indices with a `used` array instead of `start`.</span>
+</code></pre>
+
+  <div class="codehead"><span>9 · dynamic programming — 1-D and 2-D, with the questions that build them</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="cm"># Build every DP by answering four questions OUT LOUD, in this order:</span>
+<span class="cm">#   1. What is the STATE?        dp[i] = the best answer considering the first i items</span>
+<span class="cm">#   2. What is the TRANSITION?   how does dp[i] follow from smaller states?</span>
+<span class="cm">#   3. What is the BASE CASE?</span>
+<span class="cm">#   4. What ORDER fills it?      every dependency must already be computed</span>
+
+<span class="kw">def</span> coin_change(coins, amount):
+    <span class="cm"># state: dp[a] = fewest coins summing to exactly a</span>
+    UNREACHABLE = amount + <span class="nu">1</span>
+    dp = [<span class="nu">0</span>] + [UNREACHABLE] * amount
+    <span class="kw">for</span> a <span class="kw">in</span> range(<span class="nu">1</span>, amount + <span class="nu">1</span>):
+        <span class="kw">for</span> c <span class="kw">in</span> coins:
+            <span class="kw">if</span> c &lt;= a:
+                dp[a] = min(dp[a], dp[a - c] + <span class="nu">1</span>)
+    <span class="kw">return</span> -<span class="nu">1</span> <span class="kw">if</span> dp[amount] == UNREACHABLE <span class="kw">else</span> dp[amount]
+
+
+<span class="kw">def</span> longest_common_subsequence(a, b):
+    <span class="cm"># state: dp[i][j] = LCS of a[:i] and b[:j]. Two-string problems are</span>
+    <span class="cm"># nearly always this grid -- edit distance is the same shape.</span>
+    m, n = len(a), len(b)
+    dp = [[<span class="nu">0</span>] * (n + <span class="nu">1</span>) <span class="kw">for</span> _ <span class="kw">in</span> range(m + <span class="nu">1</span>)]
+    <span class="kw">for</span> i <span class="kw">in</span> range(<span class="nu">1</span>, m + <span class="nu">1</span>):
+        <span class="kw">for</span> j <span class="kw">in</span> range(<span class="nu">1</span>, n + <span class="nu">1</span>):
+            <span class="kw">if</span> a[i-<span class="nu">1</span>] == b[j-<span class="nu">1</span>]:
+                dp[i][j] = dp[i-<span class="nu">1</span>][j-<span class="nu">1</span>] + <span class="nu">1</span>       <span class="cm"># match: consume both</span>
+            <span class="kw">else</span>:
+                dp[i][j] = max(dp[i-<span class="nu">1</span>][j], dp[i][j-<span class="nu">1</span>])  <span class="cm"># drop one or the other</span>
+    <span class="kw">return</span> dp[m][n]
+
+<span class="cm"># Space optimization to mention (and only implement if asked): each row</span>
+<span class="cm"># depends only on the previous row, so two rows suffice -> O(min(m,n)) space.</span>
+</code></pre>
+
+  <div class="codehead"><span>10 · trie and dijkstra — the two "know it when you need it" structures</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">class</span> Trie:
+    <span class="kw">def</span> __init__(self):
+        self.root = {}                      <span class="cm"># plain dicts beat a Node class under time pressure</span>
+
+    <span class="kw">def</span> insert(self, word):
+        node = self.root
+        <span class="kw">for</span> ch <span class="kw">in</span> word:
+            node = node.setdefault(ch, {})
+        node[<span class="st">'$'</span>] = <span class="kw">True</span>                    <span class="cm"># sentinel marks a complete word</span>
+
+    <span class="kw">def</span> starts_with(self, prefix):
+        node = self.root
+        <span class="kw">for</span> ch <span class="kw">in</span> prefix:
+            <span class="kw">if</span> ch <span class="kw">not</span> <span class="kw">in</span> node:
+                <span class="kw">return</span> <span class="kw">None</span>
+            node = node[ch]
+        <span class="kw">return</span> node                         <span class="cm"># the subtree = every completion</span>
+
+
+<span class="kw">import</span> heapq, math
+
+<span class="kw">def</span> dijkstra(adj, src, n):
+    <span class="st">"""adj[u] = [(v, weight), ...]. Non-negative weights only --</span>
+<span class="st">    if there are negative edges the answer is Bellman-Ford, and saying</span>
+<span class="st">    that unprompted is worth more than the implementation."""</span>
+    dist = [math.inf] * n
+    dist[src] = <span class="nu">0</span>
+    pq = [(<span class="nu">0</span>, src)]
+    <span class="kw">while</span> pq:
+        d, u = heapq.heappop(pq)
+        <span class="kw">if</span> d > dist[u]:
+            <span class="kw">continue</span>                    <span class="cm"># stale entry; we already did better</span>
+        <span class="kw">for</span> v, w <span class="kw">in</span> adj[u]:
+            <span class="kw">if</span> d + w &lt; dist[v]:
+                dist[v] = d + w
+                heapq.heappush(pq, (dist[v], v))
+    <span class="kw">return</span> dist
+</code></pre>
+
+  <h3>Complexity, for when they ask "can you do better?"</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>If the input size is…</th><th class="num">Then the intended complexity is about…</th><th>Which means</th></tr></thead>
+      <tbody>
+        <tr><td>n ≤ 12</td><td class="num">O(n!)</td><td>Permutations. Brute force is expected.</td></tr>
+        <tr><td>n ≤ 25</td><td class="num">O(2ⁿ)</td><td>Subsets, bitmask DP.</td></tr>
+        <tr><td>n ≤ 100</td><td class="num">O(n³)</td><td>Floyd–Warshall, interval DP.</td></tr>
+        <tr><td>n ≤ 5,000</td><td class="num">O(n²)</td><td>Two-string DP, all-pairs comparison.</td></tr>
+        <tr><td>n ≤ 10⁶</td><td class="num">O(n log n)</td><td>Sorting, heap, binary search. The most common target.</td></tr>
+        <tr><td>n &gt; 10⁶</td><td class="num">O(n) or O(log n)</td><td>Single pass, hash map, two pointers, or math.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout">
+    <div class="ct">Use the constraints as a hint, out loud</div>
+    <p>"n is up to a million, so an O(n²) solution is off the table — that points me at sorting or a single pass with a hash map." This is one of the cheapest strong signals available: it shows you reason about the problem before coding, and it often makes the interviewer confirm your direction for free.</p>
+  </div>
+</section>
+
+
+<section id="patterns2">
+  <div class="sec-head">
+    <div class="eyebrow">Section 05 · Algorithms</div>
+    <h2>Six more patterns, and the tricks inside them</h2>
+    <p>The first fourteen cover most rounds. These six cover most of the rest — and three of them (prefix sums, bit manipulation, quickselect) are the ones candidates most often don't recognize, which makes them disproportionately valuable.</p>
+  </div>
+
+  <h3>15 · Prefix sums and difference arrays</h3>
+  <p>Trigger: <em>many queries of "sum of the range from i to j"</em>, or <em>many range updates followed by one read</em>. Precompute once, answer in O(1).</p>
+  <div class="codehead"><span>prefix.py · three shapes of the same idea</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="cm"># A. Range SUM queries: O(n) build, O(1) per query.</span>
+<span class="kw">def</span> build_prefix(a):
+    pre = [<span class="nu">0</span>] * (len(a) + <span class="nu">1</span>)          <span class="cm"># pre[i] = sum of a[0:i]</span>
+    <span class="kw">for</span> i, v <span class="kw">in</span> enumerate(a):
+        pre[i + <span class="nu">1</span>] = pre[i] + v
+    <span class="kw">return</span> pre
+<span class="cm"># sum(a[l:r]) == pre[r] - pre[l]   <- the whole pattern, in one line</span>
+
+
+<span class="cm"># B. Range UPDATES, one final read: the difference array (inverse trick).</span>
+<span class="kw">def</span> range_add(n, updates):
+    diff = [<span class="nu">0</span>] * (n + <span class="nu">1</span>)
+    <span class="kw">for</span> l, r, val <span class="kw">in</span> updates:          <span class="cm"># add val to a[l..r] inclusive</span>
+        diff[l] += val
+        diff[r + <span class="nu">1</span>] -= val               <span class="cm"># cancel it just past the end</span>
+    out, run = [], <span class="nu">0</span>
+    <span class="kw">for</span> i <span class="kw">in</span> range(n):
+        run += diff[i]
+        out.append(run)
+    <span class="kw">return</span> out
+<span class="cm"># m updates in O(m + n) instead of O(m * n). This is also the sweep-line</span>
+<span class="cm"># used for "minimum meeting rooms" and for car-pooling problems.</span>
+
+
+<span class="cm"># C. The high-value combination: prefix sum + hash map.</span>
+<span class="kw">def</span> subarrays_summing_to_k(nums, k):
+    <span class="st">"""Count subarrays with sum exactly k -- including negatives, so</span>
+<span class="st">    sliding window does NOT work here. This distinction gets tested."""</span>
+    seen = {<span class="nu">0</span>: <span class="nu">1</span>}          <span class="cm"># a prefix sum of 0 has occurred once (empty prefix)</span>
+    total = running = <span class="nu">0</span>
+    <span class="kw">for</span> v <span class="kw">in</span> nums:
+        running += v
+        total += seen.get(running - k, <span class="nu">0</span>)   <span class="cm"># how many earlier prefixes make this work</span>
+        seen[running] = seen.get(running, <span class="nu">0</span>) + <span class="nu">1</span>
+    <span class="kw">return</span> total
+</code></pre>
+  <p><strong>Extensions worth naming:</strong> a 2-D prefix sum answers rectangle-sum queries with the inclusion–exclusion formula <code>P[r2][c2] − P[r1][c2] − P[r2][c1] + P[r1][c1]</code>; prefix XOR solves the same family of problems for XOR ranges; and if the array is <em>mutable</em>, prefix sums stop working and you need a Fenwick tree (below).</p>
+
+  <h3>16 · Bit manipulation</h3>
+  <p>Trigger: <em>"without extra space"</em>, subsets of a small set, "every element appears twice except one", or anything with n ≤ 20 that smells like enumerating combinations.</p>
+  <div class="codehead"><span>bits.py · the identities to have memorized</span><button class="copy" type="button">Copy</button></div>
+<pre><code>x &amp; <span class="nu">1</span>              <span class="cm"># is x odd</span>
+x &gt;&gt; <span class="nu">1</span>  /  x &lt;&lt; <span class="nu">1</span> <span class="cm"># divide / multiply by 2</span>
+x &amp; (<span class="nu">1</span> &lt;&lt; i)       <span class="cm"># test bit i</span>
+x | (<span class="nu">1</span> &lt;&lt; i)       <span class="cm"># set bit i</span>
+x &amp; ~(<span class="nu">1</span> &lt;&lt; i)      <span class="cm"># clear bit i</span>
+x ^ (<span class="nu">1</span> &lt;&lt; i)       <span class="cm"># toggle bit i</span>
+
+x &amp; (x - <span class="nu">1</span>)        <span class="cm"># clear the LOWEST set bit  -> x &amp; (x-1) == 0 means power of two</span>
+x &amp; -x             <span class="cm"># ISOLATE the lowest set bit (this is what a Fenwick tree uses)</span>
+
+<span class="cm"># XOR facts that solve whole problems:</span>
+<span class="cm">#   a ^ a == 0 ,  a ^ 0 == a ,  XOR is commutative and associative</span>
+<span class="kw">def</span> single_number(nums):
+    <span class="st">"""Every number appears twice except one. O(n) time, O(1) space --</span>
+<span class="st">    the pairs annihilate and only the loner survives."""</span>
+    out = <span class="nu">0</span>
+    <span class="kw">for</span> v <span class="kw">in</span> nums:
+        out ^= v
+    <span class="kw">return</span> out
+
+<span class="cm"># Enumerate all 2^n subsets of n items:</span>
+<span class="kw">for</span> mask <span class="kw">in</span> range(<span class="nu">1</span> &lt;&lt; n):
+    subset = [items[i] <span class="kw">for</span> i <span class="kw">in</span> range(n) <span class="kw">if</span> mask &amp; (<span class="nu">1</span> &lt;&lt; i)]
+
+<span class="cm"># Enumerate all SUBMASKS of a mask (bitmask DP -- rarer, and impressive):</span>
+sub = mask
+<span class="kw">while</span> sub:
+    ...            <span class="cm"># use sub</span>
+    sub = (sub - <span class="nu">1</span>) &amp; mask
+</code></pre>
+  <p>Python-specific gotcha to state out loud: Python integers are arbitrary precision, so there is no 32-bit overflow and no sign bit to worry about — but that means problems assuming 32-bit two's complement need an explicit <code>&amp; 0xFFFFFFFF</code> mask and a manual sign fix.</p>
+
+  <h3>17 · Matrix and in-place simulation</h3>
+  <p>Trigger: a grid, and the words <em>rotate</em>, <em>spiral</em>, or <em>in place</em>. These are less about insight than about writing careful index code under pressure — which is exactly what they're testing.</p>
+  <div class="codehead"><span>matrix.py · the two that come up constantly</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">def</span> rotate_90_clockwise(m):
+    <span class="st">"""In place, O(1) extra space. The trick: transpose, then reverse rows.</span>
+<span class="st">    Deriving this on the spot is hard; recognizing it is easy."""</span>
+    n = len(m)
+    <span class="kw">for</span> i <span class="kw">in</span> range(n):
+        <span class="kw">for</span> j <span class="kw">in</span> range(i + <span class="nu">1</span>, n):        <span class="cm"># j starts at i+1 -- swapping twice undoes it</span>
+            m[i][j], m[j][i] = m[j][i], m[i][j]
+    <span class="kw">for</span> row <span class="kw">in</span> m:
+        row.reverse()
+    <span class="cm"># counter-clockwise = transpose, then reverse the COLUMN order (m.reverse())</span>
+
+
+<span class="kw">def</span> spiral(m):
+    <span class="st">"""Four moving boundaries. The two guards in the second half are the</span>
+<span class="st">    bug everyone hits on non-square matrices."""</span>
+    out = []
+    top, bottom, left, right = <span class="nu">0</span>, len(m) - <span class="nu">1</span>, <span class="nu">0</span>, len(m[<span class="nu">0</span>]) - <span class="nu">1</span>
+    <span class="kw">while</span> top &lt;= bottom <span class="kw">and</span> left &lt;= right:
+        <span class="kw">for</span> c <span class="kw">in</span> range(left, right + <span class="nu">1</span>): out.append(m[top][c])
+        top += <span class="nu">1</span>
+        <span class="kw">for</span> r <span class="kw">in</span> range(top, bottom + <span class="nu">1</span>): out.append(m[r][right])
+        right -= <span class="nu">1</span>
+        <span class="kw">if</span> top &lt;= bottom:                     <span class="cm"># guard: the row may already be consumed</span>
+            <span class="kw">for</span> c <span class="kw">in</span> range(right, left - <span class="nu">1</span>, -<span class="nu">1</span>): out.append(m[bottom][c])
+            bottom -= <span class="nu">1</span>
+        <span class="kw">if</span> left &lt;= right:                     <span class="cm"># guard: same for the column</span>
+            <span class="kw">for</span> r <span class="kw">in</span> range(bottom, top - <span class="nu">1</span>, -<span class="nu">1</span>): out.append(m[r][left])
+            left += <span class="nu">1</span>
+    <span class="kw">return</span> out
+</code></pre>
+
+  <h3>18 · Greedy, and how to know it's safe</h3>
+  <p>Greedy takes the locally best option and never reconsiders. It is O(n log n) and beautiful when it works, and quietly wrong when it doesn't — so the interview question is always <em>why is greedy correct here?</em></p>
+  <p>The justification you should be able to give is the <strong>exchange argument</strong>: assume an optimal solution differs from the greedy one; show you can swap in the greedy choice without making it worse; conclude a greedy solution is also optimal. For interval scheduling — <em>maximum number of non-overlapping meetings</em> — sorting by <strong>earliest end time</strong> is optimal because taking the meeting that frees the room soonest never eliminates a possibility that another choice preserves. Sorting by start time or by duration is <em>not</em> optimal, and being able to say which sort key and why is the entire question.</p>
+  <div class="callout warnbox">
+    <div class="ct">Greedy vs DP, the decision rule</div>
+    <p>If a locally optimal choice provably can't hurt the global optimum, greedy works. If a choice's value depends on choices you'll make later, you need DP. <strong>Coin change is the canonical pair:</strong> with US denominations, always taking the largest coin is optimal; with coins {1, 3, 4} and a target of 6, greedy gives 4+1+1 = 3 coins and the optimum is 3+3 = 2. Have that counterexample ready — it's the fastest way to show you know why the distinction exists.</p>
+  </div>
+
+  <h3>19 · Cyclic sort — the O(1)-space trick for values 1…n</h3>
+  <p>Trigger: <em>an array of n numbers containing values in the range 1 to n</em>, and a question about a missing, duplicate, or first-positive number, usually with an O(1) space constraint. The insight: the array can be its own hash table, because value <em>v</em> belongs at index <em>v</em>−1.</p>
+  <div class="codehead"><span>cyclic.py</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">def</span> cyclic_sort(nums):
+    <span class="st">"""Place every value v at index v-1. O(n): each swap puts one value</span>
+<span class="st">    permanently home, so there are at most n swaps despite the while."""</span>
+    i = <span class="nu">0</span>
+    <span class="kw">while</span> i &lt; len(nums):
+        target = nums[i] - <span class="nu">1</span>
+        <span class="kw">if</span> <span class="nu">0</span> &lt;= target &lt; len(nums) <span class="kw">and</span> nums[i] != nums[target]:
+            nums[target], nums[i] = nums[i], nums[target]   <span class="cm"># swap it home</span>
+        <span class="kw">else</span>:
+            i += <span class="nu">1</span>                                          <span class="cm"># home already, or out of range</span>
+    <span class="kw">return</span> nums
+
+<span class="cm"># Then: the first index where nums[i] != i+1 is the missing/duplicate answer.</span>
+<span class="cm"># Variant without sorting -- mark presence by NEGATING nums[abs(v)-1].</span>
+<span class="cm"># Both are "use the array itself as storage", which is the pattern.</span>
+</code></pre>
+
+  <h3>20 · Quickselect — top-K without the log</h3>
+  <p>Trigger: <em>the k-th largest/smallest element</em>, when you want to beat the heap's O(n log k). Quickselect is <strong>O(n) average</strong> — it partitions like quicksort but recurses into only the side that can contain the answer.</p>
+  <div class="codehead"><span>quickselect.py</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">import</span> random
+
+<span class="kw">def</span> quickselect(a, k):
+    <span class="st">"""k-th SMALLEST, 0-indexed. Average O(n): n + n/2 + n/4 + ... = 2n.</span>
+<span class="st">    Worst case O(n^2) on adversarial input -- the random pivot is what</span>
+<span class="st">    makes that vanishingly unlikely, and saying so is the point."""</span>
+    lo, hi = <span class="nu">0</span>, len(a) - <span class="nu">1</span>
+    <span class="kw">while</span> <span class="kw">True</span>:
+        <span class="kw">if</span> lo == hi:
+            <span class="kw">return</span> a[lo]
+        p = random.randint(lo, hi)
+        a[p], a[hi] = a[hi], a[p]              <span class="cm"># move pivot out of the way</span>
+        pivot, store = a[hi], lo
+        <span class="kw">for</span> i <span class="kw">in</span> range(lo, hi):               <span class="cm"># Lomuto partition</span>
+            <span class="kw">if</span> a[i] &lt; pivot:
+                a[store], a[i] = a[i], a[store]
+                store += <span class="nu">1</span>
+        a[hi], a[store] = a[store], a[hi]      <span class="cm"># pivot lands at its final index</span>
+
+        <span class="kw">if</span> store == k:   <span class="kw">return</span> a[store]
+        <span class="kw">if</span> store &lt; k:    lo = store + <span class="nu">1</span>
+        <span class="kw">else</span>:            hi = store - <span class="nu">1</span>
+</code></pre>
+  <p><strong>The comparison to state:</strong> heap is O(n log k) time, O(k) space, works on a stream, and preserves the input. Quickselect is O(n) average, O(1) space, needs the whole array in memory, and mutates it. For "top 10 of a billion streamed events" the heap is the only option; for "median of an array in memory" quickselect wins.</p>
+
+  <hr class="rule">
+
+  <h3>Two structures to recognize, not necessarily implement</h3>
+  <p>If a problem needs <strong>range queries over data that changes</strong>, prefix sums are dead and you need one of these. Naming the right one and giving its complexity is usually enough; implementing a segment tree in 40 minutes is rarely the intent.</p>
+  <div class="codehead"><span>fenwick.py · a Fenwick / binary indexed tree is short enough to memorize</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">class</span> BIT:
+    <span class="st">"""Prefix sums with point updates, both O(log n). The whole structure</span>
+<span class="st">    is the `i &amp; -i` trick: jump by the lowest set bit."""</span>
+    <span class="kw">def</span> __init__(self, n):
+        self.n = n
+        self.tree = [<span class="nu">0</span>] * (n + <span class="nu">1</span>)          <span class="cm"># 1-indexed internally</span>
+
+    <span class="kw">def</span> add(self, i, delta):               <span class="cm"># i is 0-indexed</span>
+        i += <span class="nu">1</span>
+        <span class="kw">while</span> i &lt;= self.n:
+            self.tree[i] += delta
+            i += i &amp; -i                    <span class="cm"># move to the next range that covers i</span>
+
+    <span class="kw">def</span> prefix_sum(self, count):           <span class="cm"># sum of the first `count` elements</span>
+        total, i = <span class="nu">0</span>, count
+        <span class="kw">while</span> i &gt; <span class="nu">0</span>:
+            total += self.tree[i]
+            i -= i &amp; -i                    <span class="cm"># strip the lowest set bit</span>
+        <span class="kw">return</span> total
+
+    <span class="kw">def</span> range_sum(self, l, r):             <span class="cm"># [l, r)</span>
+        <span class="kw">return</span> self.prefix_sum(r) - self.prefix_sum(l)
+</code></pre>
+  <p>A <strong>segment tree</strong> is the more general version: O(log n) range query and update for any associative operation (sum, min, max, gcd), at ~4n space, and it supports lazy propagation for range <em>updates</em>. Use the sentence: "mutable range queries — Fenwick if it's prefix sums, segment tree if I need range min or range assignment."</p>
+
+  <h3>String algorithms, at the level actually asked</h3>
+  <p>Full KMP is rarely required, but <strong>rolling hash</strong> (Rabin–Karp) is, because it turns "compare every substring" from O(n·m) into O(n):</p>
+  <div class="codehead"><span>rolling_hash.py</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">def</span> find_substring(text, pattern):
+    n, m = len(text), len(pattern)
+    <span class="kw">if</span> m &gt; n: <span class="kw">return</span> -<span class="nu">1</span>
+    BASE, MOD = <span class="nu">257</span>, <span class="nu">10</span>**<span class="nu">9</span> + <span class="nu">7</span>
+
+    target = window = <span class="nu">0</span>
+    <span class="kw">for</span> i <span class="kw">in</span> range(m):
+        target = (target * BASE + ord(pattern[i])) % MOD
+        window = (window * BASE + ord(text[i]))    % MOD
+
+    high = pow(BASE, m - <span class="nu">1</span>, MOD)          <span class="cm"># value of the leading character's place</span>
+    <span class="kw">for</span> i <span class="kw">in</span> range(n - m + <span class="nu">1</span>):
+        <span class="kw">if</span> window == target <span class="kw">and</span> text[i:i+m] == pattern:   <span class="cm"># verify: hashes collide</span>
+            <span class="kw">return</span> i
+        <span class="kw">if</span> i + m &lt; n:
+            window = ((window - ord(text[i]) * high) * BASE + ord(text[i+m])) % MOD
+    <span class="kw">return</span> -<span class="nu">1</span>
+</code></pre>
+  <p>Also know that <strong>KMP</strong> preprocesses the pattern into a failure table so the search never backtracks in the text, giving O(n+m) worst case with no hash collisions; and that <strong>tries</strong> (§04) beat both when you're matching many patterns at once.</p>
+
+  <h3>The "implement it from memory" list</h3>
+  <p>Five things that appear as whole interview questions, not as sub-steps. If you can write each in ten minutes without reference, you've covered a surprising amount of surface area:</p>
+  <ol>
+    <li><strong>LRU cache</strong> — hash map plus a doubly linked list, O(1) get and put. (In Python you can say <code>OrderedDict.move_to_end</code> does this, then implement it manually anyway, because they want the linked list.)</li>
+    <li><strong>Min stack</strong> — a second stack holding the running minimum, so <code>min()</code> is O(1).</li>
+    <li><strong>Trie with wildcard search</strong> — the §04 trie plus a recursive branch on <code>.</code>.</li>
+    <li><strong>Iterator over a nested list</strong> — flatten lazily with an explicit stack, not eagerly.</li>
+    <li><strong>Rate limiter</strong> — the token bucket from §11, in-process rather than in Redis.</li>
+  </ol>
+</section>
+<section id="coding">
+  <div class="sec-head">
+    <div class="eyebrow">Section 09</div>
+    <h2>Running the coding hour</h2>
+    <p>Two candidates produce the same working function and get different scores. The difference is the twelve minutes before the first line of code and the four minutes after the last one.</p>
+  </div>
+
+  <h3>The protocol</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th class="num">Min</th><th>Do this</th><th>Say something like</th></tr></thead>
+      <tbody>
+        <tr><td class="num">0–2</td><td><strong>Restate the problem</strong> in your own words and confirm.</td><td>"So: given an array of ints and a target, return the indices of the two that sum to it. Exactly one solution guaranteed?"</td></tr>
+        <tr><td class="num">2–4</td><td><strong>Work one small example by hand.</strong> Then ask about edge cases: empty, single element, duplicates, negatives, overflow, all-equal, already sorted.</td><td>"With [2,7,11,15] and target 9 the answer is [0,1]. Can the same element be used twice? Are there negatives?"</td></tr>
+        <tr><td class="num">4–8</td><td><strong>State the brute force, its complexity, and why you're improving on it.</strong> Then propose the real approach — <em>and wait for a nod.</em></td><td>"Nested loops is O(n²). I can trade space for time: one pass with a hash map of value → index, checking for the complement. O(n) time, O(n) space. Shall I code that?"</td></tr>
+        <tr><td class="num">8–28</td><td><strong>Code it.</strong> Meaningful names, small helpers, narrate the non-obvious lines only. Silence is fine while writing a loop body; it is not fine while you are stuck.</td><td>"I'm checking the complement before inserting, so an element can't pair with itself."</td></tr>
+        <tr><td class="num">28–36</td><td><strong>Trace your own code on the example, out loud, line by line.</strong> Find your own bug before they do — this is worth more than writing bug-free code, because it's the signal they can't get any other way.</td><td>"i=0, num=2, complement=7, not in map, store {2:0}. i=1, num=7, complement=2, found → return [0,1]. Correct."</td></tr>
+        <tr><td class="num">36–40</td><td><strong>State complexity and the edge cases you handled.</strong> Then propose one improvement, even if you don't implement it.</td><td>"O(n) time, O(n) space. If the array were sorted I'd use two pointers for O(1) space instead."</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warnbox">
+    <div class="ct">When you get stuck — a script, so you don't freeze</div>
+    <ol>
+      <li><strong>Say that you're stuck, and where.</strong> "I have the recursion but I'm not seeing how to memoize the second parameter." Interviewers can only help a stated problem.</li>
+      <li><strong>Go back to the example.</strong> Do a bigger case by hand and watch what your hand does — that's usually the algorithm.</li>
+      <li><strong>Solve a simpler version.</strong> Drop a constraint: assume sorted, assume no duplicates, assume k=1. Then add it back.</li>
+      <li><strong>Say the brute force and start coding it.</strong> A working O(n²) beats a beautiful unwritten O(n). You can optimize with time left.</li>
+      <li><strong>Take the hint.</strong> If they say "what if you sorted it first", they are not making conversation.</li>
+    </ol>
+  </div>
+
+  <h3>The bugs that actually cost points</h3>
+  <ul>
+    <li><strong>Off-by-one in binary search.</strong> Use the <code>lo &lt; hi</code> form in §08 every time and stop reinventing it.</li>
+    <li><strong>Mutating a list while iterating it.</strong> Iterate over a copy or build a new list.</li>
+    <li><strong>Appending a reference instead of a copy</strong> in backtracking — <code>res.append(path)</code> instead of <code>res.append(path[:])</code>. Every result ends up identical and empty.</li>
+    <li><strong>Marking visited on pop instead of on push</strong> in BFS — nodes enter the queue multiple times and the complexity quietly becomes exponential.</li>
+    <li><strong>Integer division and negative numbers</strong> — Python's <code>//</code> floors toward negative infinity; most other languages truncate toward zero.</li>
+    <li><strong>Default mutable arguments</strong> (<code>def f(acc=[])</code>) — shared across calls, and a classic.</li>
+    <li><strong>Forgetting the empty input.</strong> Check it first, always, in the first line of the function.</li>
+  </ul>
+
+  <h3>Pick a language and stop thinking about it</h3>
+  <p>Python unless you have a strong reason otherwise — the least syntax between your thinking and the whiteboard. Have these memorized so you never stall on mechanics: <code>collections.defaultdict / Counter / deque</code>, <code>heapq.heappush/heappop/nlargest</code>, <code>bisect.bisect_left/insort</code>, <code>sorted(x, key=lambda v: (-v[1], v[0]))</code>, <code>itertools.accumulate</code>, and <code>float('inf')</code>. Know that <code>list.pop(0)</code> is O(n) and <code>deque.popleft()</code> is O(1) — that one difference has failed real candidates.</p>
 </section>
 
 <section id="framework">
@@ -903,6 +1919,150 @@ redis.call(<span class="st">'EXPIRE'</span>, KEYS[<span class="nu">1</span>], ma
   <p><strong>Failure modes:</strong> a cell shard hot-spotting during an event (replicate hot cells read-only) · drivers oscillating across a cell boundary (hysteresis — only move cells after a real displacement) · Redis loss (the data is 4 seconds from being fully rebuilt by the drivers themselves, which makes durability a non-requirement — a genuinely nice thing to point out).</p>
 </section>
 
+
+<section id="designs2">
+  <div class="sec-head">
+    <div class="eyebrow">Section 12 · System design</div>
+    <h2>Four harder designs</h2>
+    <p>These four are chosen because each one forces a concept the first four don't: time-based work distribution, conflict resolution without a lock, extreme write compression, and correctness where being wrong costs money.</p>
+  </div>
+
+  <h3>Design 9 — Distributed job scheduler</h3>
+  <p>Prompt: <em>schedule 100M jobs a day — one-off and recurring — with retries, at-least-once execution, and second-level precision.</em> Deceptively hard, because the naive query is a landmine.</p>
+
+  <h4>Scale</h4>
+  <p>100M jobs/day → ~1,200/s average. But scheduled work is <strong>violently non-uniform</strong>: a huge fraction of cron entries fire at the top of the hour and at midnight, so peak is easily 50–100× average. Design for the spike, not the mean — that's the first thing to say.</p>
+
+  <div class="callout warnbox">
+    <div class="ct">Why the obvious query kills you</div>
+    <p><code>SELECT * FROM jobs WHERE next_run_at &lt;= NOW() AND status = 'pending' LIMIT 100</code>, polled every second by 50 scheduler nodes, means 50 queries per second all scanning the same index range and all fighting over the same rows. You get lock contention, duplicate pickup, and an index whose hot end every node hammers. The interview is about avoiding this.</p>
+  </div>
+
+  <p><strong>The design:</strong> partition the time axis and the job space together. Jobs are hashed into N shards; each shard keeps its due jobs in a <strong>time-bucketed sorted set</strong> (Redis <code>ZSET</code> scored by <code>next_run_at</code>, or a table partitioned by minute). Each scheduler node holds a lease on a subset of shards from a consistent store, so exactly one node polls each shard — no contention, and rebalancing on node failure is a lease expiry rather than a coordination protocol.</p>
+
+  <div class="diagram">
+    <div class="dflow">
+      <div class="dcol"><div class="node">API<small>create / cancel</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node store">Job store<small>definition + state</small></div><div class="node pri">Timer index<small>ZSET per shard,<br>score = next_run_at</small></div></div>
+      <div class="arrow">→<span>lease</span></div>
+      <div class="dcol"><div class="node pri">Scheduler<small>owns shards 0-31<br>polls due window</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node">Queue<small>visibility timeout</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node">Workers<small>idempotent execution</small></div><div class="node store">DLQ<small>after N retries</small></div></div>
+    </div>
+    <div class="dcap">Two indexes on purpose: the durable job store is the source of truth, the timer index is a fast derived view that can be rebuilt.</div>
+  </div>
+
+  <h4>Deep dive: the execution guarantee</h4>
+  <p>You cannot have exactly-once. What you build is <strong>at-least-once with idempotent execution</strong>: the scheduler moves a job to <code>in_flight</code> with a lease deadline before enqueueing; the worker must finish and acknowledge before the lease expires or the job is redelivered. Every job carries an execution id, and the work it does must be safe to repeat under that id.</p>
+  <p>Retries use <strong>exponential backoff with full jitter</strong> — <code>sleep = random(0, min(cap, base · 2^attempt))</code>. Without jitter, a downstream outage produces synchronized retry waves that keep it down. After N attempts the job goes to a dead-letter queue with its failure history, because silently dropping work is worse than an alert.</p>
+  <p><strong>The midnight thundering herd:</strong> if ten million cron jobs all specify <code>0 0 * * *</code>, they all become due in the same second. Two mitigations, and you should offer both: <em>deterministic jitter</em> — spread each job by <code>hash(job_id) % 60</code> seconds, which is stable across runs so it doesn't drift — and <em>rate-limited dispatch</em> per shard so the queue absorbs the spike rather than the workers.</p>
+  <p><strong>Failure modes:</strong> clock skew between schedulers (use a single source for "now", or accept ±1 s and make it a documented guarantee) · a scheduler that pauses (GC, network) and resumes after its lease expired must not dispatch — check lease validity before every batch, a classic fencing-token problem · a job whose execution takes longer than its interval (either skip the overlap or queue it, but make it a per-job policy, and say which is the default).</p>
+
+  <hr class="rule">
+
+  <h3>Design 10 — Collaborative document editor</h3>
+  <p>Prompt: <em>Google Docs — many people typing in one document, live cursors, and it must work offline and reconcile.</em> The whole question is one problem: two people edit the same position at the same time, and there is no lock.</p>
+
+  <h4>Why a naive approach fails</h4>
+  <p>Sending "insert 'x' at index 7" is unsafe: by the time it arrives, someone else inserted three characters before index 7, so it lands in the wrong place. Sending the whole document on every keystroke is correct and unusable. You need operations that can be <strong>transformed or merged</strong> to converge regardless of arrival order.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Approach</th><th>How it works</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Operational transformation</strong> (OT)</td><td>Operations carry a version; the server transforms each incoming op against every op it missed, then broadcasts. Clients transform against their own pending ops.</td><td>Requires a <strong>central server</strong> to define the canonical order. Transform functions are notoriously easy to get subtly wrong — this is where the real complexity is. Small payloads, no metadata growth.</td></tr>
+        <tr><td><strong>CRDT</strong></td><td>Every character gets a globally unique, densely ordered identifier, so concurrent inserts have a deterministic total order with no transformation at all.</td><td>Works peer-to-peer and offline indefinitely. Costs metadata per character (mitigated by run-length encoding) and tombstones for deletions that need periodic garbage collection.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Pick one and justify it:</strong> "CRDT, because offline support is a stated requirement and CRDTs don't need a central authority to converge — I'll pay the metadata cost and compact runs." Or: "OT, because we already have a server in the path, payloads stay small, and the mature implementations are OT." Either is a good answer; having no reason is not.</p>
+
+  <div class="diagram">
+    <div class="dflow">
+      <div class="dcol"><div class="node">Clients<small>local-first, optimistic</small></div></div>
+      <div class="arrow">↔<span>WebSocket</span></div>
+      <div class="dcol"><div class="node pri">Doc session<small>one owner per doc,<br>held by lease</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node store">Op log<small>append-only,<br>ordered per doc</small></div><div class="node store">Snapshots<small>every N ops</small></div></div>
+      <div class="arrow">⇢</div>
+      <div class="dcol"><div class="node">Presence<small>cursors, ephemeral,<br>never persisted</small></div></div>
+    </div>
+    <div class="dcap">Routing every edit for one document to a single owning process turns a distributed consensus problem into a local one. That is the highest-leverage decision in this design.</div>
+  </div>
+
+  <h4>Deep dive: the pieces that make it practical</h4>
+  <ul>
+    <li><strong>Single writer per document.</strong> Route by <code>hash(doc_id)</code> to one process that holds a lease. Ordering becomes trivial, and the failure story is "the lease expires and another node loads the doc from its snapshot plus op log".</li>
+    <li><strong>Optimistic local application.</strong> Apply the keystroke locally at once, send it, and reconcile when the server's version arrives. Any round trip in the typing path feels broken.</li>
+    <li><strong>Snapshot plus log.</strong> Replaying a million ops to open a document is unacceptable; snapshot every few hundred ops and keep only the tail. This is the same read-optimization/write-optimization split as an LSM tree.</li>
+    <li><strong>Presence is not document data.</strong> Cursors and selections are high-frequency, worthless after a second, and must never enter the durable log. Ephemeral pub/sub, dropped freely under load.</li>
+    <li><strong>Undo is per-user, and it's the hard part.</strong> Undo must revert <em>your</em> last operation, not the document's, and the document has moved since — so undo is itself a new operation computed against the current state, not a rollback.</li>
+  </ul>
+
+  <hr class="rule">
+
+  <h3>Design 11 — Metrics and alerting platform</h3>
+  <p>Prompt: <em>10 million active time series at 1-second resolution, 13-month retention, alert evaluation in near real time.</em> A pure write-throughput and compression problem.</p>
+
+  <div class="codehead"><span>The arithmetic that dictates the entire storage design</span><button class="copy" type="button">Copy</button></div>
+<pre><code>ingest      = 10M series x 1 sample/s      = <span class="nu">10M samples/s</span>
+raw sample  = 8 B timestamp + 8 B float64  = 16 B
+raw rate    = 10M x 16 B                   = <span class="nu">160 MB/s</span>
+raw/year    = 160 MB/s x 30M s             ≈ <span class="nu">5 PB/year</span>   <span class="cm"># unaffordable</span>
+
+<span class="cm"># Gorilla-style compression: delta-of-delta on timestamps (regular intervals</span>
+<span class="cm"># compress to a couple of BITS), XOR on values (adjacent floats share most bits).</span>
+<span class="cm"># Reported average in production: ~1.4 bytes per sample, ~12x reduction.</span>
+compressed  = 10M x 1.4 B                  ≈ <span class="nu">14 MB/s</span>
+compressed/year                            ≈ <span class="nu">440 TB/year</span>
+
+<span class="cm"># Then tier by age -- nobody queries per-second data from 9 months ago:</span>
+<span class="cm">#   0-7 days   : full resolution        (~8 TB)</span>
+<span class="cm">#   7-90 days  : 1-minute rollups       (60x smaller)</span>
+<span class="cm">#   90-395 days: 1-hour rollups         (3600x smaller)</span>
+<span class="cm"># Total lands in the tens of TB. THAT is a buildable system.</span>
+</code></pre>
+
+  <p><strong>The architecture</strong> is a specialized LSM tree: agents push samples to an ingest tier, which appends to a write-ahead log and accumulates a <strong>head block</strong> in memory (the last couple of hours, uncompressed and queryable). Periodically the head block is compressed and written out as an immutable block to object storage, with its own index. Queries fan out across the blocks covering the time range, plus the head block, and merge. Old blocks are compacted and downsampled by a background job.</p>
+  <p>A series is identified by its <strong>label set</strong> — <code>http_requests{service="api", region="us-east", status="500"}</code> — and lookup is an inverted index: label pair → posting list of series ids, intersected across the query's matchers. This is literally the search-engine design from §14 applied to metrics, and pointing that out is a nice moment of synthesis.</p>
+
+  <h4>Deep dive: cardinality is the thing that kills these systems</h4>
+  <p>Every distinct combination of label values is a separate series with its own index entry and its own memory. Adding one label with a high-cardinality value — <code>user_id</code>, <code>request_id</code>, a raw URL with ids in it — multiplies your series count by millions and takes the cluster down. <strong>This is the number one production failure of every metrics system</strong>, and naming it unprompted is a strong signal. Defenses: enforce a per-metric series limit at ingest and reject beyond it, strip unbounded labels at the agent, expose cardinality as a first-class metric, and route genuinely high-cardinality data to a logging or tracing system instead — those are designed for it, and metrics are not.</p>
+  <p><strong>Alerting</strong> runs the query set on a schedule (say every 15 s), which means the alert evaluator is your heaviest, most predictable query client — size for it explicitly. Add a <code>for: 5m</code> duration so a single bad scrape doesn't page anyone, deduplicate and group alerts before notifying, and support silences during deploys. And keep the alerting path independent of the long-term storage path, so you can still alert when the historical tier is down.</p>
+
+  <hr class="rule">
+
+  <h3>Design 12 — Payment processing</h3>
+  <p>Prompt: <em>charge a customer's card, and never double-charge, even when the network lies to you.</em> The only design here where "eventually consistent" is not an acceptable answer, which makes it a favorite for testing rigor.</p>
+
+  <h4>The two ideas that carry the whole design</h4>
+  <p><strong>1. A double-entry ledger.</strong> Don't store a balance you mutate. Store an append-only sequence of entries where every transaction has balanced debits and credits, and derive the balance by summing (with periodic materialized checkpoints so you're not summing ten years of history on every read). This gives you a complete audit trail, makes every state reachable from the log, and makes bugs detectable — if debits and credits don't sum to zero, something is wrong and you can prove it. Every real payment system works this way, and mutable-balance designs are how money quietly disappears.</p>
+  <p><strong>2. An explicit state machine.</strong> <code>created → authorized → captured → settled</code>, with branches to <code>failed</code>, <code>refunded</code>, and the important one: <code>unknown</code>. Transitions are recorded as ledger entries. Nothing moves state except a valid transition, so an unexpected callback can't corrupt the record.</p>
+
+  <div class="diagram">
+    <div class="dflow">
+      <div class="dcol"><div class="node">Client<small>Idempotency-Key</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node pri">Payment service<small>dedupe on key,<br>write intent FIRST</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node store">Ledger<small>append-only,<br>double entry</small></div><div class="node">Outbox<small>same txn</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node">Processor call<small>same key passed<br>downstream</small></div></div>
+      <div class="arrow">⇄</div>
+      <div class="dcol"><div class="node">Reconciler<small>daily settlement file<br>vs ledger</small></div></div>
+    </div>
+    <div class="dcap">The intent is durably written <em>before</em> the external call, so a crash mid-call leaves evidence that the call may have happened.</div>
+  </div>
+
+  <h4>Deep dive: the timeout with an unknown outcome</h4>
+  <p>This is the actual hard case, and the one that separates a good answer from a generic one. You call the payment processor and the connection times out. <strong>You do not know whether the charge happened.</strong> Retrying blindly may double-charge; giving up may take money without recording it.</p>
+  <p>The resolution has three parts: <strong>(a)</strong> pass <em>your</em> idempotency key to the processor so a retry with the same key is deduplicated on their side — every serious processor supports this; <strong>(b)</strong> before retrying, <em>query</em> the processor for the status of that key rather than re-issuing the charge; <strong>(c)</strong> if the status is still unknown, leave the payment in an explicit <code>unknown</code> state with a scheduled re-check, and never let it silently resolve to success or failure. Then the <strong>daily reconciliation</strong> job compares the processor's settlement file against your ledger line by line, and every mismatch is an alert that a human looks at. Reconciliation is not a nice-to-have here; it is the mechanism that makes the system trustworthy, and candidates who mention it unprompted stand out.</p>
+  <p><strong>Consistency choice:</strong> this is the one system where you take strong consistency and pay for it. Ledger writes go through a single-leader relational database with serializable-or-close isolation; balance checks and debits happen in one transaction; cross-service flows use a saga with explicit compensation (refund) rather than two-phase commit, because holding locks across a third-party network call is untenable.</p>
+  <p><strong>Failure modes worth naming:</strong> a duplicate webhook from the processor (dedupe on their event id, and treat webhooks as at-least-once) · out-of-order webhooks (the state machine rejects invalid transitions rather than trusting arrival order) · a partial refund arriving after a chargeback (model both as ledger entries, never as edits) · currency and rounding (integer minor units only — never floating point for money, and say this out loud, because it is a real disqualifier).</p>
+</section>
 <section id="mlframework">
   <div class="sec-head">
     <div class="eyebrow">Section 05 · The AI track</div>
@@ -1276,408 +2436,6 @@ tokens/s (single stream) ≈ HBM bandwidth / bytes read per token
     <p>Ask what the input depends on. If a prediction depends only on things known in advance (user history, item catalog) and the set of inputs is enumerable, <strong>precompute in batch</strong> and serve it as a lookup — orders of magnitude cheaper, trivially cacheable, and it can't time out. If the prediction depends on the request itself (the query, the current session, the candidate set), it has to be real-time.</p>
     <p>Most large systems are hybrid, and describing the split is the good answer: user and item embeddings computed nightly in batch, the interaction scored in real time. There's also <strong>near-real-time</strong> — a streaming job maintaining counters and short-window aggregates — which covers most "but it needs fresh data" objections at a fraction of the cost of per-request computation.</p>
   </div></details>
-</section>
-
-<section id="dsa">
-  <div class="sec-head">
-    <div class="eyebrow">Section 08</div>
-    <h2>The 14 patterns</h2>
-    <p>Interview algorithm problems are recombinations of a small number of patterns. The skill being tested is <strong>recognition speed</strong> — mapping a novel problem statement onto a template you already own within the first two minutes. Learn the trigger phrases first; the code is the easy half.</p>
-  </div>
-
-  <h3>Recognition table — read this one until it's automatic</h3>
-  <div class="tbl-wrap">
-    <table>
-      <thead><tr><th>When you see…</th><th>Reach for</th><th class="num">Typical</th></tr></thead>
-      <tbody>
-        <tr><td>"has this appeared before", pairs summing to a target, grouping</td><td><strong>Hash map</strong></td><td class="num">O(n)</td></tr>
-        <tr><td><strong>Sorted</strong> array, pair/triple search, in-place partition, palindrome</td><td><strong>Two pointers</strong></td><td class="num">O(n)</td></tr>
-        <tr><td>"longest/shortest <strong>contiguous</strong> subarray or substring such that…"</td><td><strong>Sliding window</strong></td><td class="num">O(n)</td></tr>
-        <tr><td>Sorted input, or "minimize the maximum", or a monotone yes/no predicate</td><td><strong>Binary search</strong> (on index or on the answer)</td><td class="num">O(n log n)</td></tr>
-        <tr><td>"next greater/smaller", histogram, span, temperatures</td><td><strong>Monotonic stack</strong></td><td class="num">O(n)</td></tr>
-        <tr><td>"top K", "K most/least", running median, merge K sorted</td><td><strong>Heap</strong></td><td class="num">O(n log k)</td></tr>
-        <tr><td>Meetings, ranges, calendars, overlaps</td><td><strong>Sort + sweep intervals</strong></td><td class="num">O(n log n)</td></tr>
-        <tr><td>Cycle detection, middle node, reorder in place</td><td><strong>Fast/slow pointers</strong></td><td class="num">O(n)</td></tr>
-        <tr><td>Tree, "level by level", "shortest path in an unweighted graph", grid flood</td><td><strong>BFS</strong></td><td class="num">O(V+E)</td></tr>
-        <tr><td>Tree paths, connected components, "explore fully"</td><td><strong>DFS</strong></td><td class="num">O(V+E)</td></tr>
-        <tr><td>Dependencies, prerequisites, build order, "is there a cycle"</td><td><strong>Topological sort</strong></td><td class="num">O(V+E)</td></tr>
-        <tr><td>"Are these connected", merging groups, redundant edge, islands with unions</td><td><strong>Union-Find</strong></td><td class="num">~O(α(n))</td></tr>
-        <tr><td>"All combinations/permutations/partitions", N-queens, sudoku</td><td><strong>Backtracking</strong></td><td class="num">exponential</td></tr>
-        <tr><td>"How many ways", "min/max cost to", overlapping subproblems</td><td><strong>Dynamic programming</strong></td><td class="num">O(states × transitions)</td></tr>
-        <tr><td>Prefix matching, autocomplete, word search on a board</td><td><strong>Trie</strong></td><td class="num">O(len)</td></tr>
-        <tr><td>Weighted shortest path, "cheapest route"</td><td><strong>Dijkstra</strong></td><td class="num">O(E log V)</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <h3>The templates</h3>
-  <p>Type these from memory until they come out clean. Every one is written the way you should actually write it in an interview: named variables, no cleverness, easy to explain while typing.</p>
-
-  <div class="codehead"><span>1 · sliding window — variable size, the shape that covers most of them</span><button class="copy" type="button">Copy</button></div>
-<pre><code><span class="kw">def</span> longest_ok_window(s):
-    <span class="st">"""Longest substring satisfying a condition. The invariant: the window</span>
-<span class="st">    [left, right] is always valid at the bottom of the loop."""</span>
-    count = {}
-    left = best = <span class="nu">0</span>
-    <span class="kw">for</span> right, ch <span class="kw">in</span> enumerate(s):
-        count[ch] = count.get(ch, <span class="nu">0</span>) + <span class="nu">1</span>          <span class="cm"># 1. grow right</span>
-
-        <span class="kw">while</span> len(count) > <span class="nu">2</span>:                       <span class="cm"># 2. shrink while INVALID</span>
-            count[s[left]] -= <span class="nu">1</span>
-            <span class="kw">if</span> count[s[left]] == <span class="nu">0</span>:
-                <span class="kw">del</span> count[s[left]]
-            left += <span class="nu">1</span>
-
-        best = max(best, right - left + <span class="nu">1</span>)         <span class="cm"># 3. record</span>
-    <span class="kw">return</span> best
-
-<span class="cm"># Fixed-size variant: no while loop -- just evict s[right-k] once right >= k.</span>
-<span class="cm"># Minimum-window variant: shrink while VALID, and record inside the while.</span>
-</code></pre>
-
-  <div class="codehead"><span>2 · binary search — the two forms worth memorizing</span><button class="copy" type="button">Copy</button></div>
-<pre><code><span class="cm"># FORM A: leftmost index where a sorted array meets a condition.</span>
-<span class="cm"># Using lo &lt; hi with hi = mid avoids every off-by-one I have ever written.</span>
-<span class="kw">def</span> lower_bound(a, target):
-    lo, hi = <span class="nu">0</span>, len(a)                <span class="cm"># hi is exclusive</span>
-    <span class="kw">while</span> lo &lt; hi:
-        mid = (lo + hi) // <span class="nu">2</span>
-        <span class="kw">if</span> a[mid] &lt; target: lo = mid + <span class="nu">1</span>
-        <span class="kw">else</span>:               hi = mid       <span class="cm"># mid might be the answer -- keep it</span>
-    <span class="kw">return</span> lo                          <span class="cm"># == len(a) if no element qualifies</span>
-
-
-<span class="cm"># FORM B: BINARY SEARCH ON THE ANSWER. The high-value one -- most</span>
-<span class="cm"># candidates never spot it. Trigger: "minimize the maximum X" or</span>
-<span class="cm"># "maximum X such that it is still possible".</span>
-<span class="kw">def</span> ship_within_days(weights, days):
-    <span class="kw">def</span> feasible(cap):                 <span class="cm"># monotone: True stays True as cap grows</span>
-        used, load = <span class="nu">1</span>, <span class="nu">0</span>
-        <span class="kw">for</span> w <span class="kw">in</span> weights:
-            <span class="kw">if</span> load + w > cap:
-                used, load = used + <span class="nu">1</span>, <span class="nu">0</span>
-            load += w
-        <span class="kw">return</span> used &lt;= days
-
-    lo, hi = max(weights), sum(weights)   <span class="cm"># tightest and loosest possible answers</span>
-    <span class="kw">while</span> lo &lt; hi:
-        mid = (lo + hi) // <span class="nu">2</span>
-        <span class="kw">if</span> feasible(mid): hi = mid
-        <span class="kw">else</span>:             lo = mid + <span class="nu">1</span>
-    <span class="kw">return</span> lo
-</code></pre>
-
-  <div class="codehead"><span>3 · monotonic stack — next greater element</span><button class="copy" type="button">Copy</button></div>
-<pre><code><span class="kw">def</span> next_greater(nums):
-    <span class="st">"""For each index, the next value to its right that is larger.</span>
-<span class="st">    Stack holds INDICES whose answers are still unknown, values decreasing."""</span>
-    res = [-<span class="nu">1</span>] * len(nums)
-    stack = []
-    <span class="kw">for</span> i, v <span class="kw">in</span> enumerate(nums):
-        <span class="kw">while</span> stack <span class="kw">and</span> nums[stack[-<span class="nu">1</span>]] &lt; v:   <span class="cm"># v resolves everything smaller</span>
-            res[stack.pop()] = v
-        stack.append(i)
-    <span class="kw">return</span> res
-
-<span class="cm"># Each index is pushed once and popped once -> O(n) despite the nested loop.</span>
-<span class="cm"># Say that out loud; interviewers check whether you know why it isn't O(n^2).</span>
-<span class="cm"># Largest rectangle in a histogram is this template with the popped bar's</span>
-<span class="cm"># width computed as (i - stack[-1] - 1).</span>
-</code></pre>
-
-  <div class="codehead"><span>4 · heap — top K, and why a MIN-heap finds the MAX elements</span><button class="copy" type="button">Copy</button></div>
-<pre><code><span class="kw">import</span> heapq
-
-<span class="kw">def</span> k_largest(nums, k):
-    <span class="st">"""Keep a min-heap of size k: its root is the smallest of the k best</span>
-<span class="st">    so far, so it is exactly the element to evict. O(n log k), O(k) space --</span>
-<span class="st">    beats sorting when k is small, and works on a stream that doesn't fit."""</span>
-    heap = []
-    <span class="kw">for</span> v <span class="kw">in</span> nums:
-        heapq.heappush(heap, v)
-        <span class="kw">if</span> len(heap) > k:
-            heapq.heappop(heap)        <span class="cm"># drop the smallest</span>
-    <span class="kw">return</span> heap
-
-<span class="kw">def</span> merge_k_sorted(lists):
-    <span class="cm"># Seed with the head of each list, then pull-and-replace. O(N log k).</span>
-    heap = [(lst[<span class="nu">0</span>], i, <span class="nu">0</span>) <span class="kw">for</span> i, lst <span class="kw">in</span> enumerate(lists) <span class="kw">if</span> lst]
-    heapq.heapify(heap)
-    out = []
-    <span class="kw">while</span> heap:
-        val, li, idx = heapq.heappop(heap)
-        out.append(val)
-        <span class="kw">if</span> idx + <span class="nu">1</span> &lt; len(lists[li]):
-            heapq.heappush(heap, (lists[li][idx + <span class="nu">1</span>], li, idx + <span class="nu">1</span>))
-    <span class="kw">return</span> out
-</code></pre>
-
-  <div class="codehead"><span>5 · intervals — sort, then sweep</span><button class="copy" type="button">Copy</button></div>
-<pre><code><span class="kw">def</span> merge(intervals):
-    intervals.sort(key=<span class="kw">lambda</span> x: x[<span class="nu">0</span>])          <span class="cm"># sorting by START is the whole trick</span>
-    out = []
-    <span class="kw">for</span> start, end <span class="kw">in</span> intervals:
-        <span class="kw">if</span> out <span class="kw">and</span> start &lt;= out[-<span class="nu">1</span>][<span class="nu">1</span>]:          <span class="cm"># overlaps the last kept interval</span>
-            out[-<span class="nu">1</span>][<span class="nu">1</span>] = max(out[-<span class="nu">1</span>][<span class="nu">1</span>], end)
-        <span class="kw">else</span>:
-            out.append([start, end])
-    <span class="kw">return</span> out
-
-<span class="kw">def</span> min_meeting_rooms(intervals):
-    <span class="cm"># The other interval shape: a difference array / sweep line.</span>
-    events = []
-    <span class="kw">for</span> s, e <span class="kw">in</span> intervals:
-        events.append((s, <span class="nu">1</span>))                  <span class="cm"># a room is taken</span>
-        events.append((e, -<span class="nu">1</span>))                 <span class="cm"># a room is freed</span>
-    events.sort()          <span class="cm"># at equal times, -1 sorts first: a room frees before it fills</span>
-    cur = best = <span class="nu">0</span>
-    <span class="kw">for</span> _, delta <span class="kw">in</span> events:
-        cur += delta
-        best = max(best, cur)
-    <span class="kw">return</span> best
-</code></pre>
-
-  <div class="codehead"><span>6 · graphs — BFS, and Kahn's topological sort</span><button class="copy" type="button">Copy</button></div>
-<pre><code><span class="kw">from</span> collections <span class="kw">import</span> deque
-
-<span class="kw">def</span> shortest_path_grid(grid, start, goal):
-    <span class="st">"""BFS is the shortest path when every edge costs the same.</span>
-<span class="st">    The level-by-level inner loop is what lets you count distance."""</span>
-    rows, cols = len(grid), len(grid[<span class="nu">0</span>])
-    q = deque([start])
-    seen = {start}
-    dist = <span class="nu">0</span>
-    <span class="kw">while</span> q:
-        <span class="kw">for</span> _ <span class="kw">in</span> range(len(q)):              <span class="cm"># drain exactly one level</span>
-            r, c = q.popleft()
-            <span class="kw">if</span> (r, c) == goal:
-                <span class="kw">return</span> dist
-            <span class="kw">for</span> nr, nc <span class="kw">in</span> ((r+<span class="nu">1</span>,c), (r-<span class="nu">1</span>,c), (r,c+<span class="nu">1</span>), (r,c-<span class="nu">1</span>)):
-                <span class="kw">if</span> (<span class="nu">0</span> &lt;= nr &lt; rows <span class="kw">and</span> <span class="nu">0</span> &lt;= nc &lt; cols
-                        <span class="kw">and</span> (nr, nc) <span class="kw">not</span> <span class="kw">in</span> seen <span class="kw">and</span> grid[nr][nc] != <span class="st">'#'</span>):
-                    seen.add((nr, nc))       <span class="cm"># mark on PUSH, not on pop --</span>
-                    q.append((nr, nc))       <span class="cm"># otherwise nodes enter the queue twice</span>
-        dist += <span class="nu">1</span>
-    <span class="kw">return</span> -<span class="nu">1</span>
-
-
-<span class="kw">def</span> topo_order(n, edges):
-    <span class="st">"""edges are (u, v) meaning u must come before v.</span>
-<span class="st">    Returns [] if there is a cycle -- which is also the cycle detector."""</span>
-    adj = [[] <span class="kw">for</span> _ <span class="kw">in</span> range(n)]
-    indeg = [<span class="nu">0</span>] * n
-    <span class="kw">for</span> u, v <span class="kw">in</span> edges:
-        adj[u].append(v)
-        indeg[v] += <span class="nu">1</span>
-
-    q = deque(i <span class="kw">for</span> i <span class="kw">in</span> range(n) <span class="kw">if</span> indeg[i] == <span class="nu">0</span>)
-    order = []
-    <span class="kw">while</span> q:
-        u = q.popleft()
-        order.append(u)
-        <span class="kw">for</span> v <span class="kw">in</span> adj[u]:
-            indeg[v] -= <span class="nu">1</span>
-            <span class="kw">if</span> indeg[v] == <span class="nu">0</span>:
-                q.append(v)
-    <span class="kw">return</span> order <span class="kw">if</span> len(order) == n <span class="kw">else</span> []
-</code></pre>
-
-  <div class="codehead"><span>7 · union-find — with both optimizations, which is the whole point</span><button class="copy" type="button">Copy</button></div>
-<pre><code><span class="kw">class</span> DSU:
-    <span class="kw">def</span> __init__(self, n):
-        self.parent = list(range(n))
-        self.rank = [<span class="nu">0</span>] * n
-        self.components = n
-
-    <span class="kw">def</span> find(self, x):
-        <span class="kw">while</span> self.parent[x] != x:
-            self.parent[x] = self.parent[self.parent[x]]   <span class="cm"># path halving</span>
-            x = self.parent[x]
-        <span class="kw">return</span> x
-
-    <span class="kw">def</span> union(self, a, b):
-        ra, rb = self.find(a), self.find(b)
-        <span class="kw">if</span> ra == rb:
-            <span class="kw">return</span> <span class="kw">False</span>                     <span class="cm"># already connected -> this edge is redundant</span>
-        <span class="kw">if</span> self.rank[ra] &lt; self.rank[rb]:
-            ra, rb = rb, ra                    <span class="cm"># attach smaller tree under larger</span>
-        self.parent[rb] = ra
-        <span class="kw">if</span> self.rank[ra] == self.rank[rb]:
-            self.rank[ra] += <span class="nu">1</span>
-        self.components -= <span class="nu">1</span>
-        <span class="kw">return</span> <span class="kw">True</span>
-
-<span class="cm"># With both optimizations, amortized ~O(alpha(n)) -- effectively constant.</span>
-<span class="cm"># Kruskal's MST is: sort edges by weight, union them, skip the False ones.</span>
-</code></pre>
-
-  <div class="codehead"><span>8 · backtracking — one shape, three problems</span><button class="copy" type="button">Copy</button></div>
-<pre><code><span class="kw">def</span> combination_sum(candidates, target):
-    <span class="st">"""choose -> recurse -> UNDO. The undo is what makes it backtracking."""</span>
-    candidates.sort()                    <span class="cm"># enables both pruning and dedup</span>
-    res, path = [], []
-
-    <span class="kw">def</span> backtrack(start, remaining):
-        <span class="kw">if</span> remaining == <span class="nu">0</span>:
-            res.append(path[:])          <span class="cm"># COPY -- path is mutated after this</span>
-            <span class="kw">return</span>
-        <span class="kw">for</span> i <span class="kw">in</span> range(start, len(candidates)):
-            <span class="kw">if</span> candidates[i] > remaining:
-                <span class="kw">break</span>                    <span class="cm"># sorted, so everything after is too big</span>
-            <span class="kw">if</span> i > start <span class="kw">and</span> candidates[i] == candidates[i-<span class="nu">1</span>]:
-                <span class="kw">continue</span>                 <span class="cm"># skip duplicates at the same depth</span>
-            path.append(candidates[i])
-            backtrack(i + <span class="nu">1</span>, remaining - candidates[i])
-            path.pop()                   <span class="cm"># undo</span>
-
-    backtrack(<span class="nu">0</span>, target)
-    <span class="kw">return</span> res
-
-<span class="cm"># Subsets: append path[:] at EVERY node instead of only at the base case.</span>
-<span class="cm"># Permutations: iterate all indices with a `used` array instead of `start`.</span>
-</code></pre>
-
-  <div class="codehead"><span>9 · dynamic programming — 1-D and 2-D, with the questions that build them</span><button class="copy" type="button">Copy</button></div>
-<pre><code><span class="cm"># Build every DP by answering four questions OUT LOUD, in this order:</span>
-<span class="cm">#   1. What is the STATE?        dp[i] = the best answer considering the first i items</span>
-<span class="cm">#   2. What is the TRANSITION?   how does dp[i] follow from smaller states?</span>
-<span class="cm">#   3. What is the BASE CASE?</span>
-<span class="cm">#   4. What ORDER fills it?      every dependency must already be computed</span>
-
-<span class="kw">def</span> coin_change(coins, amount):
-    <span class="cm"># state: dp[a] = fewest coins summing to exactly a</span>
-    UNREACHABLE = amount + <span class="nu">1</span>
-    dp = [<span class="nu">0</span>] + [UNREACHABLE] * amount
-    <span class="kw">for</span> a <span class="kw">in</span> range(<span class="nu">1</span>, amount + <span class="nu">1</span>):
-        <span class="kw">for</span> c <span class="kw">in</span> coins:
-            <span class="kw">if</span> c &lt;= a:
-                dp[a] = min(dp[a], dp[a - c] + <span class="nu">1</span>)
-    <span class="kw">return</span> -<span class="nu">1</span> <span class="kw">if</span> dp[amount] == UNREACHABLE <span class="kw">else</span> dp[amount]
-
-
-<span class="kw">def</span> longest_common_subsequence(a, b):
-    <span class="cm"># state: dp[i][j] = LCS of a[:i] and b[:j]. Two-string problems are</span>
-    <span class="cm"># nearly always this grid -- edit distance is the same shape.</span>
-    m, n = len(a), len(b)
-    dp = [[<span class="nu">0</span>] * (n + <span class="nu">1</span>) <span class="kw">for</span> _ <span class="kw">in</span> range(m + <span class="nu">1</span>)]
-    <span class="kw">for</span> i <span class="kw">in</span> range(<span class="nu">1</span>, m + <span class="nu">1</span>):
-        <span class="kw">for</span> j <span class="kw">in</span> range(<span class="nu">1</span>, n + <span class="nu">1</span>):
-            <span class="kw">if</span> a[i-<span class="nu">1</span>] == b[j-<span class="nu">1</span>]:
-                dp[i][j] = dp[i-<span class="nu">1</span>][j-<span class="nu">1</span>] + <span class="nu">1</span>       <span class="cm"># match: consume both</span>
-            <span class="kw">else</span>:
-                dp[i][j] = max(dp[i-<span class="nu">1</span>][j], dp[i][j-<span class="nu">1</span>])  <span class="cm"># drop one or the other</span>
-    <span class="kw">return</span> dp[m][n]
-
-<span class="cm"># Space optimization to mention (and only implement if asked): each row</span>
-<span class="cm"># depends only on the previous row, so two rows suffice -> O(min(m,n)) space.</span>
-</code></pre>
-
-  <div class="codehead"><span>10 · trie and dijkstra — the two "know it when you need it" structures</span><button class="copy" type="button">Copy</button></div>
-<pre><code><span class="kw">class</span> Trie:
-    <span class="kw">def</span> __init__(self):
-        self.root = {}                      <span class="cm"># plain dicts beat a Node class under time pressure</span>
-
-    <span class="kw">def</span> insert(self, word):
-        node = self.root
-        <span class="kw">for</span> ch <span class="kw">in</span> word:
-            node = node.setdefault(ch, {})
-        node[<span class="st">'$'</span>] = <span class="kw">True</span>                    <span class="cm"># sentinel marks a complete word</span>
-
-    <span class="kw">def</span> starts_with(self, prefix):
-        node = self.root
-        <span class="kw">for</span> ch <span class="kw">in</span> prefix:
-            <span class="kw">if</span> ch <span class="kw">not</span> <span class="kw">in</span> node:
-                <span class="kw">return</span> <span class="kw">None</span>
-            node = node[ch]
-        <span class="kw">return</span> node                         <span class="cm"># the subtree = every completion</span>
-
-
-<span class="kw">import</span> heapq, math
-
-<span class="kw">def</span> dijkstra(adj, src, n):
-    <span class="st">"""adj[u] = [(v, weight), ...]. Non-negative weights only --</span>
-<span class="st">    if there are negative edges the answer is Bellman-Ford, and saying</span>
-<span class="st">    that unprompted is worth more than the implementation."""</span>
-    dist = [math.inf] * n
-    dist[src] = <span class="nu">0</span>
-    pq = [(<span class="nu">0</span>, src)]
-    <span class="kw">while</span> pq:
-        d, u = heapq.heappop(pq)
-        <span class="kw">if</span> d > dist[u]:
-            <span class="kw">continue</span>                    <span class="cm"># stale entry; we already did better</span>
-        <span class="kw">for</span> v, w <span class="kw">in</span> adj[u]:
-            <span class="kw">if</span> d + w &lt; dist[v]:
-                dist[v] = d + w
-                heapq.heappush(pq, (dist[v], v))
-    <span class="kw">return</span> dist
-</code></pre>
-
-  <h3>Complexity, for when they ask "can you do better?"</h3>
-  <div class="tbl-wrap">
-    <table>
-      <thead><tr><th>If the input size is…</th><th class="num">Then the intended complexity is about…</th><th>Which means</th></tr></thead>
-      <tbody>
-        <tr><td>n ≤ 12</td><td class="num">O(n!)</td><td>Permutations. Brute force is expected.</td></tr>
-        <tr><td>n ≤ 25</td><td class="num">O(2ⁿ)</td><td>Subsets, bitmask DP.</td></tr>
-        <tr><td>n ≤ 100</td><td class="num">O(n³)</td><td>Floyd–Warshall, interval DP.</td></tr>
-        <tr><td>n ≤ 5,000</td><td class="num">O(n²)</td><td>Two-string DP, all-pairs comparison.</td></tr>
-        <tr><td>n ≤ 10⁶</td><td class="num">O(n log n)</td><td>Sorting, heap, binary search. The most common target.</td></tr>
-        <tr><td>n &gt; 10⁶</td><td class="num">O(n) or O(log n)</td><td>Single pass, hash map, two pointers, or math.</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="callout">
-    <div class="ct">Use the constraints as a hint, out loud</div>
-    <p>"n is up to a million, so an O(n²) solution is off the table — that points me at sorting or a single pass with a hash map." This is one of the cheapest strong signals available: it shows you reason about the problem before coding, and it often makes the interviewer confirm your direction for free.</p>
-  </div>
-</section>
-
-<section id="coding">
-  <div class="sec-head">
-    <div class="eyebrow">Section 09</div>
-    <h2>Running the coding hour</h2>
-    <p>Two candidates produce the same working function and get different scores. The difference is the twelve minutes before the first line of code and the four minutes after the last one.</p>
-  </div>
-
-  <h3>The protocol</h3>
-  <div class="tbl-wrap">
-    <table>
-      <thead><tr><th class="num">Min</th><th>Do this</th><th>Say something like</th></tr></thead>
-      <tbody>
-        <tr><td class="num">0–2</td><td><strong>Restate the problem</strong> in your own words and confirm.</td><td>"So: given an array of ints and a target, return the indices of the two that sum to it. Exactly one solution guaranteed?"</td></tr>
-        <tr><td class="num">2–4</td><td><strong>Work one small example by hand.</strong> Then ask about edge cases: empty, single element, duplicates, negatives, overflow, all-equal, already sorted.</td><td>"With [2,7,11,15] and target 9 the answer is [0,1]. Can the same element be used twice? Are there negatives?"</td></tr>
-        <tr><td class="num">4–8</td><td><strong>State the brute force, its complexity, and why you're improving on it.</strong> Then propose the real approach — <em>and wait for a nod.</em></td><td>"Nested loops is O(n²). I can trade space for time: one pass with a hash map of value → index, checking for the complement. O(n) time, O(n) space. Shall I code that?"</td></tr>
-        <tr><td class="num">8–28</td><td><strong>Code it.</strong> Meaningful names, small helpers, narrate the non-obvious lines only. Silence is fine while writing a loop body; it is not fine while you are stuck.</td><td>"I'm checking the complement before inserting, so an element can't pair with itself."</td></tr>
-        <tr><td class="num">28–36</td><td><strong>Trace your own code on the example, out loud, line by line.</strong> Find your own bug before they do — this is worth more than writing bug-free code, because it's the signal they can't get any other way.</td><td>"i=0, num=2, complement=7, not in map, store {2:0}. i=1, num=7, complement=2, found → return [0,1]. Correct."</td></tr>
-        <tr><td class="num">36–40</td><td><strong>State complexity and the edge cases you handled.</strong> Then propose one improvement, even if you don't implement it.</td><td>"O(n) time, O(n) space. If the array were sorted I'd use two pointers for O(1) space instead."</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="callout warnbox">
-    <div class="ct">When you get stuck — a script, so you don't freeze</div>
-    <ol>
-      <li><strong>Say that you're stuck, and where.</strong> "I have the recursion but I'm not seeing how to memoize the second parameter." Interviewers can only help a stated problem.</li>
-      <li><strong>Go back to the example.</strong> Do a bigger case by hand and watch what your hand does — that's usually the algorithm.</li>
-      <li><strong>Solve a simpler version.</strong> Drop a constraint: assume sorted, assume no duplicates, assume k=1. Then add it back.</li>
-      <li><strong>Say the brute force and start coding it.</strong> A working O(n²) beats a beautiful unwritten O(n). You can optimize with time left.</li>
-      <li><strong>Take the hint.</strong> If they say "what if you sorted it first", they are not making conversation.</li>
-    </ol>
-  </div>
-
-  <h3>The bugs that actually cost points</h3>
-  <ul>
-    <li><strong>Off-by-one in binary search.</strong> Use the <code>lo &lt; hi</code> form in §08 every time and stop reinventing it.</li>
-    <li><strong>Mutating a list while iterating it.</strong> Iterate over a copy or build a new list.</li>
-    <li><strong>Appending a reference instead of a copy</strong> in backtracking — <code>res.append(path)</code> instead of <code>res.append(path[:])</code>. Every result ends up identical and empty.</li>
-    <li><strong>Marking visited on pop instead of on push</strong> in BFS — nodes enter the queue multiple times and the complexity quietly becomes exponential.</li>
-    <li><strong>Integer division and negative numbers</strong> — Python's <code>//</code> floors toward negative infinity; most other languages truncate toward zero.</li>
-    <li><strong>Default mutable arguments</strong> (<code>def f(acc=[])</code>) — shared across calls, and a classic.</li>
-    <li><strong>Forgetting the empty input.</strong> Check it first, always, in the first line of the function.</li>
-  </ul>
-
-  <h3>Pick a language and stop thinking about it</h3>
-  <p>Python unless you have a strong reason otherwise — the least syntax between your thinking and the whiteboard. Have these memorized so you never stall on mechanics: <code>collections.defaultdict / Counter / deque</code>, <code>heapq.heappush/heappop/nlargest</code>, <code>bisect.bisect_left/insort</code>, <code>sorted(x, key=lambda v: (-v[1], v[0]))</code>, <code>itertools.accumulate</code>, and <code>float('inf')</code>. Know that <code>list.pop(0)</code> is O(n) and <code>deque.popleft()</code> is O(1) — that one difference has failed real candidates.</p>
 </section>
 
 <section id="behavioral">

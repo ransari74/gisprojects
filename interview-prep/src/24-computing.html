@@ -1,0 +1,118 @@
+
+<section id="request">
+  <div class="sec-head">
+    <div class="eyebrow">Section 01 · Foundations</div>
+    <h2>What happens when you load a page</h2>
+    <p>One question — <em>type a URL, press enter, what happens?</em> — has been asked in interviews for twenty years, because a complete answer touches DNS, TCP, TLS, HTTP, load balancing, caching, databases, and rendering. Learn it once as a spine, and every later topic hangs off it.</p>
+  </div>
+
+  <ol class="stepline">
+    <li class="hot"><b>The browser parses the URL</b>
+      <p><code>https://api.example.com:443/v1/users?id=42#top</code> decomposes into scheme (<code>https</code>, which sets the default port and demands TLS), host, port, path, query string, and fragment. The fragment after <code>#</code> is <strong>never sent to the server</strong> — it's browser-only. That detail alone has decided interview questions about analytics.</p>
+    </li>
+    <li class="hot"><b>DNS resolves the hostname to an IP address</b>
+      <p>The browser checks its own cache, then the OS cache, then asks the configured <em>recursive resolver</em> (your ISP's, or 8.8.8.8). If the resolver doesn't have it cached, it walks the hierarchy: root nameserver → <code>.com</code> TLD server → <code>example.com</code>'s authoritative nameserver, which returns the record. Each answer carries a <strong>TTL</strong> that controls how long it may be cached.</p>
+      <p>Why this matters in design: DNS is the first place you can do load balancing and failover — return different IPs to different regions (<em>GeoDNS</em>) or rotate records. And DNS TTL is why a failover isn't instant: clients keep the old IP until the TTL expires. Modern services use <strong>anycast</strong> instead — the same IP announced from many locations, and the network routes you to the nearest one.</p>
+    </li>
+    <li><b>TCP connects: the three-way handshake</b>
+      <p>Client sends <code>SYN</code>, server replies <code>SYN-ACK</code>, client sends <code>ACK</code>. That's <strong>one full round trip before any data moves</strong> — 1 ms inside a datacenter, 70 ms across a continent. This is why connection reuse (keep-alive, connection pools) matters so much, and why a service that opens a new connection per request is slow for reasons that have nothing to do with its code.</p>
+      <p>TCP gives you ordered, reliable, congestion-controlled delivery. It costs you head-of-line blocking: one lost packet stalls everything behind it. <strong>UDP</strong> gives you none of the guarantees and none of the cost — which is why video calls, gaming, and DNS use it, and why they handle loss at the application layer instead.</p>
+    </li>
+    <li><b>TLS negotiates encryption</b>
+      <p>The client offers cipher suites; the server returns its certificate chain; the client validates it against trusted roots; both derive a shared symmetric key. TLS 1.3 does this in <strong>one round trip</strong> (1.2 needed two), and supports 0-RTT resumption for repeat visitors — at the cost of replay risk, which is why 0-RTT is only safe for idempotent requests.</p>
+      <p>The design consequence: TLS termination usually happens at the load balancer or CDN edge, close to the user, so the expensive handshake crosses a short distance. Traffic inside the trust boundary may then be plaintext, or re-encrypted for zero-trust environments.</p>
+    </li>
+    <li class="hot"><b>The HTTP request travels to a load balancer</b>
+      <p>The IP you resolved almost certainly belongs to a load balancer, not to a server. Two kinds, and knowing the difference is table stakes:</p>
+      <ul>
+        <li><strong>Layer 4</strong> (transport) forwards TCP connections by IP and port. It cannot see the URL. Very fast, very dumb, and it can't retry a failed request because it doesn't know what a request is.</li>
+        <li><strong>Layer 7</strong> (application) terminates the connection and reads the HTTP request. It can route by path or header, retry idempotent requests, do TLS termination, compression, rate limiting, and sticky sessions. Slower per request, and vastly more useful.</li>
+      </ul>
+      <p>Algorithms it might use: round-robin, weighted round-robin, least-connections (usually the best default), consistent hashing on a key (for cache affinity), and <em>power of two random choices</em> — pick two backends at random and send to the less loaded one, which gets nearly the benefit of least-connections without global state.</p>
+      <p>The load balancer also runs <strong>health checks</strong>, and this is where candidates get caught: a shallow check (<em>does the port accept a connection?</em>) will happily route traffic to a process whose database connection pool is exhausted. A deep check verifies dependencies, but then one slow database can mark your entire fleet unhealthy at once. The real answer is a shallow check for routing plus a separate deep check for alerting.</p>
+    </li>
+    <li><b>A server handles the request</b>
+      <p>The kernel accepts the connection, the application reads it off a socket, routes it to a handler, and the handler does work — usually meaning it calls other things: a cache, a database, two other services. Nearly all of the request's wall-clock time is spent <em>waiting</em> on those calls, not computing. That single fact is why concurrency models matter more than raw language speed for most web services.</p>
+    </li>
+    <li><b>The response comes back, and caching decides how much of this ever happens again</b>
+      <p><code>Cache-Control: max-age=3600</code> lets any cache reuse the response for an hour. <code>ETag</code> plus <code>If-None-Match</code> lets the client ask "has it changed?" and receive a 40-byte <code>304 Not Modified</code> instead of the body. <code>Cache-Control: no-store</code> means never write it down; <code>private</code> means only the browser, not shared caches. Getting these headers right removes more load than most optimizations you can make in code.</p>
+    </li>
+  </ol>
+
+  <h3>HTTP, the parts you're expected to know cold</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Method</th><th class="num">Safe</th><th class="num">Idempotent</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td><code>GET</code></td><td class="num">yes</td><td class="num">yes</td><td>Read. Must have no side effects — a GET that mutates will be triggered by crawlers and prefetchers.</td></tr>
+        <tr><td><code>POST</code></td><td class="num">no</td><td class="num">no</td><td>Create, or "do something". The only non-idempotent method, which is exactly why it needs idempotency keys.</td></tr>
+        <tr><td><code>PUT</code></td><td class="num">no</td><td class="num">yes</td><td>Replace the whole resource at a known URL. Sending it twice leaves the same state.</td></tr>
+        <tr><td><code>PATCH</code></td><td class="num">no</td><td class="num">no*</td><td>Partial update. Idempotent only if you write absolute values, not increments.</td></tr>
+        <tr><td><code>DELETE</code></td><td class="num">no</td><td class="num">yes</td><td>Remove. The second call returns 404, but the <em>state</em> is the same — that's what idempotent means.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Status codes that carry meaning:</strong> 200 OK · 201 Created (with a <code>Location</code> header) · 204 No Content · 301 permanent redirect (cached forever by browsers) · 302 temporary · 304 Not Modified · 400 malformed · 401 not authenticated · 403 authenticated but not allowed · 404 not found · 409 conflict (the version you're updating moved) · 422 semantically invalid · 429 rate limited (send <code>Retry-After</code>) · 500 your bug · 502 bad gateway · 503 unavailable, try later · 504 upstream timed out. <strong>The 401/403 and 502/503/504 distinctions get asked</strong>, because they show whether you've actually debugged production.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Version</th><th>What it added</th><th>Why you'd care</th></tr></thead>
+      <tbody>
+        <tr><td>HTTP/1.1</td><td>Keep-alive, chunked transfer, <code>Host</code> header</td><td>One request at a time per connection → browsers open ~6 connections per host to fake parallelism.</td></tr>
+        <tr><td>HTTP/2</td><td>Multiplexed streams over one TCP connection, header compression, server push</td><td>Removes the 6-connection hack. Still suffers TCP head-of-line blocking: one dropped packet stalls every stream.</td></tr>
+        <tr><td>HTTP/3</td><td>Runs over QUIC (UDP), with per-stream reliability</td><td>Loss on one stream doesn't stall the others; connection survives a network change (wifi → cellular) because the connection id isn't the IP.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>How services talk to each other</h3>
+  <div class="deflist">
+    <dt>REST</dt><dd>Resources as URLs, verbs as HTTP methods, JSON bodies. Universal, cacheable by every proxy on earth, easy to debug with curl. Costs: over-fetching, under-fetching, and the N+1 problem where a list view triggers a request per item.</dd>
+    <dt>gRPC</dt><dd>Binary protobuf over HTTP/2, with generated clients and a strict schema. Much smaller payloads and faster serialization, plus native streaming in both directions. The default for internal service-to-service traffic. Costs: not human-readable, needs a proxy for browsers, and schema evolution requires discipline.</dd>
+    <dt>GraphQL</dt><dd>The client specifies exactly the fields it needs in one round trip. Great for mobile clients and for many-shaped frontends. Costs: caching is hard (everything is a POST to one endpoint), and an unbounded query can be an accidental denial of service — you need depth limits and query cost analysis.</dd>
+    <dt>WebSocket / SSE</dt><dd>For server-initiated data. See §11 — the tradeoff is stateful connections, which change how you scale and deploy.</dd>
+    <dt>Message queue</dt><dd>Not a request/response protocol at all. Use when the caller shouldn't wait, when the work can be retried, or when several systems need the same event.</dd>
+  </div>
+
+  <hr class="rule">
+
+  <h3>The operating system half</h3>
+  <p>You need enough of this to reason about capacity and failure, not enough to write a kernel.</p>
+
+  <h4>Processes, threads, and why the distinction costs money</h4>
+  <p>A <strong>process</strong> is an isolated address space: its own memory, its own file descriptors. A <strong>thread</strong> lives inside a process and shares that memory with its siblings. Sharing is what makes threads cheap to communicate between and dangerous to get wrong — two threads touching the same variable without coordination is a data race, and data races produce bugs that appear once a week in production and never in tests.</p>
+  <p>A <strong>context switch</strong> — the kernel swapping one thread off a core for another — costs on the order of a microsecond, plus the cache pollution afterward, which often costs more. Thousands of threads means the machine spends its time switching rather than working. That is the whole reason for the next idea.</p>
+
+  <h4>Blocking vs non-blocking I/O: the C10K problem</h4>
+  <p>If each connection needs its own thread and each thread blocks while waiting for the network, then 10,000 concurrent connections needs 10,000 threads, and the machine dies of context switching. The fix is an <strong>event loop</strong>: a single thread asks the kernel (via <code>epoll</code>/<code>kqueue</code>/IOCP) "which of these 10,000 sockets are ready?", handles those, and goes back to waiting. One thread, tens of thousands of connections, as long as no handler ever blocks.</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Model</th><th>Examples</th><th>Good at</th><th>Fails at</th></tr></thead>
+      <tbody>
+        <tr><td>Thread per request</td><td>Classic Java/Rails/PHP, Go (with cheap goroutines)</td><td>Simple code — blocking calls look sequential</td><td>Very high connection counts, unless threads are lightweight</td></tr>
+        <tr><td>Event loop</td><td>Node.js, nginx, Redis, Python asyncio</td><td>Enormous numbers of mostly-idle connections</td><td>Any CPU-heavy handler blocks <em>everything</em>; one slow function stalls the process</td></tr>
+        <tr><td>Green threads / coroutines</td><td>Go, Erlang, Java virtual threads, Kotlin</td><td>Both — blocking-style code on an event loop underneath</td><td>Debugging and profiling are less obvious</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The interview-ready summary: <strong>I/O-bound work wants concurrency</strong> (many things in flight, mostly waiting); <strong>CPU-bound work wants parallelism</strong> (many cores actually computing). Confusing them produces both of the classic mistakes — an async web server that pins a core doing JSON parsing, and a thread pool sized for CPU count that spends its life waiting on a database.</p>
+
+  <h4>Memory, and why "it fits in RAM" is a design decision</h4>
+  <p>The hierarchy — registers, L1/L2/L3 cache, RAM, SSD, network, disk — spans about eight orders of magnitude in latency (§10). Two practical consequences: <strong>sequential access is dramatically faster than random access at every level</strong>, because each level prefetches ahead; and the operating system's <strong>page cache</strong> means "reading from disk" often isn't — a hot file lives in free RAM, which is why a database can look fast until its working set exceeds memory, and then fall off a cliff. When you hear "performance degraded gradually then collapsed", suspect a working set that outgrew RAM.</p>
+
+  <h4>Concurrency control, in the order you'll need it</h4>
+  <div class="deflist">
+    <dt>Race condition</dt><dd>Two threads read-modify-write the same value; one update is lost. <code>counter += 1</code> is three operations, not one.</dd>
+    <dt>Mutex / lock</dt><dd>Only one thread in the critical section. Correct and slow; the cost is contention, where threads spend their time queueing rather than working.</dd>
+    <dt>Deadlock</dt><dd>A holds lock 1 and wants 2; B holds 2 and wants 1. Requires all four Coffman conditions; the practical fix is a <strong>global lock ordering</strong> — always acquire in the same order — plus timeouts.</dd>
+    <dt>Atomic operation</dt><dd>Compare-and-swap and friends: hardware-level, lock-free, the foundation of every concurrent data structure. <code>INCR</code> in Redis is this idea over the network.</dd>
+    <dt>Optimistic locking</dt><dd>Don't lock. Read a version number, and on write assert it hasn't changed (<code>UPDATE … WHERE version = 7</code>); retry if it has. Best when conflicts are rare — which is nearly always.</dd>
+    <dt>Pessimistic locking</dt><dd><code>SELECT … FOR UPDATE</code>. Take the lock first. Correct under heavy contention, and a throughput ceiling — plus a deadlock risk you now own.</dd>
+    <dt>Immutability</dt><dd>The cheapest concurrency strategy: if nothing is mutated, nothing needs coordinating. This is why event logs, append-only stores, and copy-on-write structures are so common in distributed systems.</dd>
+  </div>
+
+  <div class="callout">
+    <div class="ct">Practice this one out loud tonight</div>
+    <p>Give the full URL-to-pixels answer, unprompted, in four minutes. Then do it again in ninety seconds. The long version proves you know the machinery; the short version proves you know what matters. Interviewers use this question precisely because the compression is the signal.</p>
+  </div>
+</section>

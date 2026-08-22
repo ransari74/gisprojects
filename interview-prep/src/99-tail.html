@@ -1,0 +1,79 @@
+</main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "loop28.v1";
+
+  /* ---- theme toggle: cycles system -> light -> dark ---- */
+  var root = document.documentElement;
+  function readStore(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+  function writeStore(k,v){ try { localStorage.setItem(k,v); } catch(e){ /* private mode */ } }
+
+  var saved = readStore(KEY + ".theme");
+  if (saved === "light" || saved === "dark") root.setAttribute("data-theme", saved);
+
+  var themeBtn = document.getElementById("themebtn");
+  if (themeBtn) themeBtn.addEventListener("click", function(){
+    var cur = root.getAttribute("data-theme");
+    var next = cur === "light" ? "dark" : (cur === "dark" ? null : "light");
+    if (next) { root.setAttribute("data-theme", next); writeStore(KEY + ".theme", next); }
+    else { root.removeAttribute("data-theme"); writeStore(KEY + ".theme", "system"); }
+  });
+
+  /* ---- checkbox progress, persisted per viewer ---- */
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.check input[type="checkbox"]'));
+  var bar = document.getElementById("progbar");
+  var txt = document.getElementById("progtext");
+
+  function paint(){
+    var done = boxes.filter(function(b){ return b.checked; }).length;
+    if (txt) txt.textContent = done + " / " + boxes.length + " checked";
+    if (bar) bar.style.width = (boxes.length ? (done / boxes.length * 100) : 0) + "%";
+  }
+  boxes.forEach(function(b){
+    if (readStore(KEY + "." + b.id) === "1") b.checked = true;
+    b.addEventListener("change", function(){
+      writeStore(KEY + "." + b.id, b.checked ? "1" : "0");
+      paint();
+    });
+  });
+  paint();
+
+  var reset = document.getElementById("resetbtn");
+  if (reset) reset.addEventListener("click", function(){
+    boxes.forEach(function(b){ b.checked = false; writeStore(KEY + "." + b.id, "0"); });
+    paint();
+  });
+
+  /* ---- scrollspy on the rail ---- */
+  var links = Array.prototype.slice.call(document.querySelectorAll("nav.toc a"));
+  var sections = links.map(function(a){ return document.querySelector(a.getAttribute("href")); })
+                      .filter(Boolean);
+  if ("IntersectionObserver" in window && sections.length) {
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (!en.isIntersecting) return;
+        links.forEach(function(a){
+          a.classList.toggle("on", a.getAttribute("href") === "#" + en.target.id);
+        });
+      });
+    }, { rootMargin: "-15% 0px -75% 0px", threshold: 0 });
+    sections.forEach(function(s){ obs.observe(s); });
+  }
+
+  /* ---- copy buttons on code blocks ---- */
+  document.querySelectorAll(".copy").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var pre = btn.closest(".codehead") && btn.closest(".codehead").nextElementSibling;
+      if (!pre) return;
+      var text = pre.innerText;
+      var done = function(){ var o = btn.textContent; btn.textContent = "Copied"; setTimeout(function(){ btn.textContent = o; }, 1400); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function(){});
+      }
+    });
+  });
+})();
+</script>

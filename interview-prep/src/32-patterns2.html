@@ -1,0 +1,237 @@
+
+<section id="patterns2">
+  <div class="sec-head">
+    <div class="eyebrow">Section 05 · Algorithms</div>
+    <h2>Six more patterns, and the tricks inside them</h2>
+    <p>The first fourteen cover most rounds. These six cover most of the rest — and three of them (prefix sums, bit manipulation, quickselect) are the ones candidates most often don't recognize, which makes them disproportionately valuable.</p>
+  </div>
+
+  <h3>15 · Prefix sums and difference arrays</h3>
+  <p>Trigger: <em>many queries of "sum of the range from i to j"</em>, or <em>many range updates followed by one read</em>. Precompute once, answer in O(1).</p>
+  <div class="codehead"><span>prefix.py · three shapes of the same idea</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="cm"># A. Range SUM queries: O(n) build, O(1) per query.</span>
+<span class="kw">def</span> build_prefix(a):
+    pre = [<span class="nu">0</span>] * (len(a) + <span class="nu">1</span>)          <span class="cm"># pre[i] = sum of a[0:i]</span>
+    <span class="kw">for</span> i, v <span class="kw">in</span> enumerate(a):
+        pre[i + <span class="nu">1</span>] = pre[i] + v
+    <span class="kw">return</span> pre
+<span class="cm"># sum(a[l:r]) == pre[r] - pre[l]   <- the whole pattern, in one line</span>
+
+
+<span class="cm"># B. Range UPDATES, one final read: the difference array (inverse trick).</span>
+<span class="kw">def</span> range_add(n, updates):
+    diff = [<span class="nu">0</span>] * (n + <span class="nu">1</span>)
+    <span class="kw">for</span> l, r, val <span class="kw">in</span> updates:          <span class="cm"># add val to a[l..r] inclusive</span>
+        diff[l] += val
+        diff[r + <span class="nu">1</span>] -= val               <span class="cm"># cancel it just past the end</span>
+    out, run = [], <span class="nu">0</span>
+    <span class="kw">for</span> i <span class="kw">in</span> range(n):
+        run += diff[i]
+        out.append(run)
+    <span class="kw">return</span> out
+<span class="cm"># m updates in O(m + n) instead of O(m * n). This is also the sweep-line</span>
+<span class="cm"># used for "minimum meeting rooms" and for car-pooling problems.</span>
+
+
+<span class="cm"># C. The high-value combination: prefix sum + hash map.</span>
+<span class="kw">def</span> subarrays_summing_to_k(nums, k):
+    <span class="st">"""Count subarrays with sum exactly k -- including negatives, so</span>
+<span class="st">    sliding window does NOT work here. This distinction gets tested."""</span>
+    seen = {<span class="nu">0</span>: <span class="nu">1</span>}          <span class="cm"># a prefix sum of 0 has occurred once (empty prefix)</span>
+    total = running = <span class="nu">0</span>
+    <span class="kw">for</span> v <span class="kw">in</span> nums:
+        running += v
+        total += seen.get(running - k, <span class="nu">0</span>)   <span class="cm"># how many earlier prefixes make this work</span>
+        seen[running] = seen.get(running, <span class="nu">0</span>) + <span class="nu">1</span>
+    <span class="kw">return</span> total
+</code></pre>
+  <p><strong>Extensions worth naming:</strong> a 2-D prefix sum answers rectangle-sum queries with the inclusion–exclusion formula <code>P[r2][c2] − P[r1][c2] − P[r2][c1] + P[r1][c1]</code>; prefix XOR solves the same family of problems for XOR ranges; and if the array is <em>mutable</em>, prefix sums stop working and you need a Fenwick tree (below).</p>
+
+  <h3>16 · Bit manipulation</h3>
+  <p>Trigger: <em>"without extra space"</em>, subsets of a small set, "every element appears twice except one", or anything with n ≤ 20 that smells like enumerating combinations.</p>
+  <div class="codehead"><span>bits.py · the identities to have memorized</span><button class="copy" type="button">Copy</button></div>
+<pre><code>x &amp; <span class="nu">1</span>              <span class="cm"># is x odd</span>
+x &gt;&gt; <span class="nu">1</span>  /  x &lt;&lt; <span class="nu">1</span> <span class="cm"># divide / multiply by 2</span>
+x &amp; (<span class="nu">1</span> &lt;&lt; i)       <span class="cm"># test bit i</span>
+x | (<span class="nu">1</span> &lt;&lt; i)       <span class="cm"># set bit i</span>
+x &amp; ~(<span class="nu">1</span> &lt;&lt; i)      <span class="cm"># clear bit i</span>
+x ^ (<span class="nu">1</span> &lt;&lt; i)       <span class="cm"># toggle bit i</span>
+
+x &amp; (x - <span class="nu">1</span>)        <span class="cm"># clear the LOWEST set bit  -> x &amp; (x-1) == 0 means power of two</span>
+x &amp; -x             <span class="cm"># ISOLATE the lowest set bit (this is what a Fenwick tree uses)</span>
+
+<span class="cm"># XOR facts that solve whole problems:</span>
+<span class="cm">#   a ^ a == 0 ,  a ^ 0 == a ,  XOR is commutative and associative</span>
+<span class="kw">def</span> single_number(nums):
+    <span class="st">"""Every number appears twice except one. O(n) time, O(1) space --</span>
+<span class="st">    the pairs annihilate and only the loner survives."""</span>
+    out = <span class="nu">0</span>
+    <span class="kw">for</span> v <span class="kw">in</span> nums:
+        out ^= v
+    <span class="kw">return</span> out
+
+<span class="cm"># Enumerate all 2^n subsets of n items:</span>
+<span class="kw">for</span> mask <span class="kw">in</span> range(<span class="nu">1</span> &lt;&lt; n):
+    subset = [items[i] <span class="kw">for</span> i <span class="kw">in</span> range(n) <span class="kw">if</span> mask &amp; (<span class="nu">1</span> &lt;&lt; i)]
+
+<span class="cm"># Enumerate all SUBMASKS of a mask (bitmask DP -- rarer, and impressive):</span>
+sub = mask
+<span class="kw">while</span> sub:
+    ...            <span class="cm"># use sub</span>
+    sub = (sub - <span class="nu">1</span>) &amp; mask
+</code></pre>
+  <p>Python-specific gotcha to state out loud: Python integers are arbitrary precision, so there is no 32-bit overflow and no sign bit to worry about — but that means problems assuming 32-bit two's complement need an explicit <code>&amp; 0xFFFFFFFF</code> mask and a manual sign fix.</p>
+
+  <h3>17 · Matrix and in-place simulation</h3>
+  <p>Trigger: a grid, and the words <em>rotate</em>, <em>spiral</em>, or <em>in place</em>. These are less about insight than about writing careful index code under pressure — which is exactly what they're testing.</p>
+  <div class="codehead"><span>matrix.py · the two that come up constantly</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">def</span> rotate_90_clockwise(m):
+    <span class="st">"""In place, O(1) extra space. The trick: transpose, then reverse rows.</span>
+<span class="st">    Deriving this on the spot is hard; recognizing it is easy."""</span>
+    n = len(m)
+    <span class="kw">for</span> i <span class="kw">in</span> range(n):
+        <span class="kw">for</span> j <span class="kw">in</span> range(i + <span class="nu">1</span>, n):        <span class="cm"># j starts at i+1 -- swapping twice undoes it</span>
+            m[i][j], m[j][i] = m[j][i], m[i][j]
+    <span class="kw">for</span> row <span class="kw">in</span> m:
+        row.reverse()
+    <span class="cm"># counter-clockwise = transpose, then reverse the COLUMN order (m.reverse())</span>
+
+
+<span class="kw">def</span> spiral(m):
+    <span class="st">"""Four moving boundaries. The two guards in the second half are the</span>
+<span class="st">    bug everyone hits on non-square matrices."""</span>
+    out = []
+    top, bottom, left, right = <span class="nu">0</span>, len(m) - <span class="nu">1</span>, <span class="nu">0</span>, len(m[<span class="nu">0</span>]) - <span class="nu">1</span>
+    <span class="kw">while</span> top &lt;= bottom <span class="kw">and</span> left &lt;= right:
+        <span class="kw">for</span> c <span class="kw">in</span> range(left, right + <span class="nu">1</span>): out.append(m[top][c])
+        top += <span class="nu">1</span>
+        <span class="kw">for</span> r <span class="kw">in</span> range(top, bottom + <span class="nu">1</span>): out.append(m[r][right])
+        right -= <span class="nu">1</span>
+        <span class="kw">if</span> top &lt;= bottom:                     <span class="cm"># guard: the row may already be consumed</span>
+            <span class="kw">for</span> c <span class="kw">in</span> range(right, left - <span class="nu">1</span>, -<span class="nu">1</span>): out.append(m[bottom][c])
+            bottom -= <span class="nu">1</span>
+        <span class="kw">if</span> left &lt;= right:                     <span class="cm"># guard: same for the column</span>
+            <span class="kw">for</span> r <span class="kw">in</span> range(bottom, top - <span class="nu">1</span>, -<span class="nu">1</span>): out.append(m[r][left])
+            left += <span class="nu">1</span>
+    <span class="kw">return</span> out
+</code></pre>
+
+  <h3>18 · Greedy, and how to know it's safe</h3>
+  <p>Greedy takes the locally best option and never reconsiders. It is O(n log n) and beautiful when it works, and quietly wrong when it doesn't — so the interview question is always <em>why is greedy correct here?</em></p>
+  <p>The justification you should be able to give is the <strong>exchange argument</strong>: assume an optimal solution differs from the greedy one; show you can swap in the greedy choice without making it worse; conclude a greedy solution is also optimal. For interval scheduling — <em>maximum number of non-overlapping meetings</em> — sorting by <strong>earliest end time</strong> is optimal because taking the meeting that frees the room soonest never eliminates a possibility that another choice preserves. Sorting by start time or by duration is <em>not</em> optimal, and being able to say which sort key and why is the entire question.</p>
+  <div class="callout warnbox">
+    <div class="ct">Greedy vs DP, the decision rule</div>
+    <p>If a locally optimal choice provably can't hurt the global optimum, greedy works. If a choice's value depends on choices you'll make later, you need DP. <strong>Coin change is the canonical pair:</strong> with US denominations, always taking the largest coin is optimal; with coins {1, 3, 4} and a target of 6, greedy gives 4+1+1 = 3 coins and the optimum is 3+3 = 2. Have that counterexample ready — it's the fastest way to show you know why the distinction exists.</p>
+  </div>
+
+  <h3>19 · Cyclic sort — the O(1)-space trick for values 1…n</h3>
+  <p>Trigger: <em>an array of n numbers containing values in the range 1 to n</em>, and a question about a missing, duplicate, or first-positive number, usually with an O(1) space constraint. The insight: the array can be its own hash table, because value <em>v</em> belongs at index <em>v</em>−1.</p>
+  <div class="codehead"><span>cyclic.py</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">def</span> cyclic_sort(nums):
+    <span class="st">"""Place every value v at index v-1. O(n): each swap puts one value</span>
+<span class="st">    permanently home, so there are at most n swaps despite the while."""</span>
+    i = <span class="nu">0</span>
+    <span class="kw">while</span> i &lt; len(nums):
+        target = nums[i] - <span class="nu">1</span>
+        <span class="kw">if</span> <span class="nu">0</span> &lt;= target &lt; len(nums) <span class="kw">and</span> nums[i] != nums[target]:
+            nums[target], nums[i] = nums[i], nums[target]   <span class="cm"># swap it home</span>
+        <span class="kw">else</span>:
+            i += <span class="nu">1</span>                                          <span class="cm"># home already, or out of range</span>
+    <span class="kw">return</span> nums
+
+<span class="cm"># Then: the first index where nums[i] != i+1 is the missing/duplicate answer.</span>
+<span class="cm"># Variant without sorting -- mark presence by NEGATING nums[abs(v)-1].</span>
+<span class="cm"># Both are "use the array itself as storage", which is the pattern.</span>
+</code></pre>
+
+  <h3>20 · Quickselect — top-K without the log</h3>
+  <p>Trigger: <em>the k-th largest/smallest element</em>, when you want to beat the heap's O(n log k). Quickselect is <strong>O(n) average</strong> — it partitions like quicksort but recurses into only the side that can contain the answer.</p>
+  <div class="codehead"><span>quickselect.py</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">import</span> random
+
+<span class="kw">def</span> quickselect(a, k):
+    <span class="st">"""k-th SMALLEST, 0-indexed. Average O(n): n + n/2 + n/4 + ... = 2n.</span>
+<span class="st">    Worst case O(n^2) on adversarial input -- the random pivot is what</span>
+<span class="st">    makes that vanishingly unlikely, and saying so is the point."""</span>
+    lo, hi = <span class="nu">0</span>, len(a) - <span class="nu">1</span>
+    <span class="kw">while</span> <span class="kw">True</span>:
+        <span class="kw">if</span> lo == hi:
+            <span class="kw">return</span> a[lo]
+        p = random.randint(lo, hi)
+        a[p], a[hi] = a[hi], a[p]              <span class="cm"># move pivot out of the way</span>
+        pivot, store = a[hi], lo
+        <span class="kw">for</span> i <span class="kw">in</span> range(lo, hi):               <span class="cm"># Lomuto partition</span>
+            <span class="kw">if</span> a[i] &lt; pivot:
+                a[store], a[i] = a[i], a[store]
+                store += <span class="nu">1</span>
+        a[hi], a[store] = a[store], a[hi]      <span class="cm"># pivot lands at its final index</span>
+
+        <span class="kw">if</span> store == k:   <span class="kw">return</span> a[store]
+        <span class="kw">if</span> store &lt; k:    lo = store + <span class="nu">1</span>
+        <span class="kw">else</span>:            hi = store - <span class="nu">1</span>
+</code></pre>
+  <p><strong>The comparison to state:</strong> heap is O(n log k) time, O(k) space, works on a stream, and preserves the input. Quickselect is O(n) average, O(1) space, needs the whole array in memory, and mutates it. For "top 10 of a billion streamed events" the heap is the only option; for "median of an array in memory" quickselect wins.</p>
+
+  <hr class="rule">
+
+  <h3>Two structures to recognize, not necessarily implement</h3>
+  <p>If a problem needs <strong>range queries over data that changes</strong>, prefix sums are dead and you need one of these. Naming the right one and giving its complexity is usually enough; implementing a segment tree in 40 minutes is rarely the intent.</p>
+  <div class="codehead"><span>fenwick.py · a Fenwick / binary indexed tree is short enough to memorize</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">class</span> BIT:
+    <span class="st">"""Prefix sums with point updates, both O(log n). The whole structure</span>
+<span class="st">    is the `i &amp; -i` trick: jump by the lowest set bit."""</span>
+    <span class="kw">def</span> __init__(self, n):
+        self.n = n
+        self.tree = [<span class="nu">0</span>] * (n + <span class="nu">1</span>)          <span class="cm"># 1-indexed internally</span>
+
+    <span class="kw">def</span> add(self, i, delta):               <span class="cm"># i is 0-indexed</span>
+        i += <span class="nu">1</span>
+        <span class="kw">while</span> i &lt;= self.n:
+            self.tree[i] += delta
+            i += i &amp; -i                    <span class="cm"># move to the next range that covers i</span>
+
+    <span class="kw">def</span> prefix_sum(self, count):           <span class="cm"># sum of the first `count` elements</span>
+        total, i = <span class="nu">0</span>, count
+        <span class="kw">while</span> i &gt; <span class="nu">0</span>:
+            total += self.tree[i]
+            i -= i &amp; -i                    <span class="cm"># strip the lowest set bit</span>
+        <span class="kw">return</span> total
+
+    <span class="kw">def</span> range_sum(self, l, r):             <span class="cm"># [l, r)</span>
+        <span class="kw">return</span> self.prefix_sum(r) - self.prefix_sum(l)
+</code></pre>
+  <p>A <strong>segment tree</strong> is the more general version: O(log n) range query and update for any associative operation (sum, min, max, gcd), at ~4n space, and it supports lazy propagation for range <em>updates</em>. Use the sentence: "mutable range queries — Fenwick if it's prefix sums, segment tree if I need range min or range assignment."</p>
+
+  <h3>String algorithms, at the level actually asked</h3>
+  <p>Full KMP is rarely required, but <strong>rolling hash</strong> (Rabin–Karp) is, because it turns "compare every substring" from O(n·m) into O(n):</p>
+  <div class="codehead"><span>rolling_hash.py</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">def</span> find_substring(text, pattern):
+    n, m = len(text), len(pattern)
+    <span class="kw">if</span> m &gt; n: <span class="kw">return</span> -<span class="nu">1</span>
+    BASE, MOD = <span class="nu">257</span>, <span class="nu">10</span>**<span class="nu">9</span> + <span class="nu">7</span>
+
+    target = window = <span class="nu">0</span>
+    <span class="kw">for</span> i <span class="kw">in</span> range(m):
+        target = (target * BASE + ord(pattern[i])) % MOD
+        window = (window * BASE + ord(text[i]))    % MOD
+
+    high = pow(BASE, m - <span class="nu">1</span>, MOD)          <span class="cm"># value of the leading character's place</span>
+    <span class="kw">for</span> i <span class="kw">in</span> range(n - m + <span class="nu">1</span>):
+        <span class="kw">if</span> window == target <span class="kw">and</span> text[i:i+m] == pattern:   <span class="cm"># verify: hashes collide</span>
+            <span class="kw">return</span> i
+        <span class="kw">if</span> i + m &lt; n:
+            window = ((window - ord(text[i]) * high) * BASE + ord(text[i+m])) % MOD
+    <span class="kw">return</span> -<span class="nu">1</span>
+</code></pre>
+  <p>Also know that <strong>KMP</strong> preprocesses the pattern into a failure table so the search never backtracks in the text, giving O(n+m) worst case with no hash collisions; and that <strong>tries</strong> (§04) beat both when you're matching many patterns at once.</p>
+
+  <h3>The "implement it from memory" list</h3>
+  <p>Five things that appear as whole interview questions, not as sub-steps. If you can write each in ten minutes without reference, you've covered a surprising amount of surface area:</p>
+  <ol>
+    <li><strong>LRU cache</strong> — hash map plus a doubly linked list, O(1) get and put. (In Python you can say <code>OrderedDict.move_to_end</code> does this, then implement it manually anyway, because they want the linked list.)</li>
+    <li><strong>Min stack</strong> — a second stack holding the running minimum, so <code>min()</code> is O(1).</li>
+    <li><strong>Trie with wildcard search</strong> — the §04 trie plus a recursive branch on <code>.</code>.</li>
+    <li><strong>Iterator over a nested list</strong> — flatten lazily with an explicit stack, not eagerly.</li>
+    <li><strong>Rate limiter</strong> — the token bucket from §11, in-process rather than in Redis.</li>
+  </ol>
+</section>

@@ -1,0 +1,108 @@
+
+<section id="bigo">
+  <div class="sec-head">
+    <div class="eyebrow">Section 03 · Foundations</div>
+    <h2>Complexity, properly</h2>
+    <p>Big-O is not trivia. It is the language you use to justify a design choice in ten seconds, and it is scored in every coding round. The goal is to compute it correctly and quickly for code you just wrote — including the cases where the answer isn't obvious.</p>
+  </div>
+
+  <h3>What the notation means</h3>
+  <p>O(f(n)) is an <strong>upper bound on growth</strong> as n gets large. Constants and lower-order terms drop, because they stop mattering: 3n² + 500n + 90000 is O(n²), and for large enough n a 500× constant advantage loses to a single extra factor of n. Ω is a lower bound, Θ is both. Interviews say "O" and mean "tight bound"; nobody will correct you for saying O(n) instead of Θ(n).</p>
+  <p>What the constants <em>do</em> matter for: n is small (an O(n²) algorithm over 50 items is fine and simpler), or the constant is enormous (a "linear" algorithm doing a database round trip per element is not fast).</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Growth</th><th>Name</th><th class="num">n = 10</th><th class="num">n = 1,000</th><th class="num">n = 1,000,000</th></tr></thead>
+      <tbody>
+        <tr><td>O(1)</td><td>constant</td><td class="num">1</td><td class="num">1</td><td class="num">1</td></tr>
+        <tr><td>O(log n)</td><td>logarithmic</td><td class="num">3</td><td class="num">10</td><td class="num">20</td></tr>
+        <tr><td>O(n)</td><td>linear</td><td class="num">10</td><td class="num">1,000</td><td class="num">10⁶</td></tr>
+        <tr><td>O(n log n)</td><td>linearithmic</td><td class="num">33</td><td class="num">10⁴</td><td class="num">2 × 10⁷</td></tr>
+        <tr><td>O(n²)</td><td>quadratic</td><td class="num">100</td><td class="num">10⁶</td><td class="num">10¹² <em>— hours</em></td></tr>
+        <tr><td>O(2ⁿ)</td><td>exponential</td><td class="num">1,024</td><td class="num">beyond the universe</td><td class="num">—</td></tr>
+        <tr><td>O(n!)</td><td>factorial</td><td class="num">3.6 × 10⁶</td><td class="num">—</td><td class="num">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>A useful anchor: a modern CPU does roughly <strong>10⁸ simple operations per second</strong> in an interpreted language like Python, 10⁹ in a compiled one. So at n = 10⁶, O(n log n) is comfortable and O(n²) is a coffee break.</p>
+
+  <h3>Counting it in four cases</h3>
+  <div class="codehead"><span>Read the loop structure, not the line count</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="cm"># 1. SEQUENTIAL work ADDS -> take the max.</span>
+sort(a)          <span class="cm"># O(n log n)</span>
+<span class="kw">for</span> x <span class="kw">in</span> a: ...   <span class="cm"># O(n)          total: O(n log n + n) = O(n log n)</span>
+
+<span class="cm"># 2. NESTED work MULTIPLIES.</span>
+<span class="kw">for</span> i <span class="kw">in</span> range(n):
+    <span class="kw">for</span> j <span class="kw">in</span> range(n): ...        <span class="cm"># O(n^2)</span>
+
+<span class="cm"># 3. But watch the BOUNDS. This is NOT O(n^2)... it is.</span>
+<span class="kw">for</span> i <span class="kw">in</span> range(n):
+    <span class="kw">for</span> j <span class="kw">in</span> range(i, n): ...     <span class="cm"># n + (n-1) + ... + 1 = n(n+1)/2 -> still O(n^2)</span>
+
+<span class="cm"># 4. HALVING gives a log. Doubling does too.</span>
+<span class="kw">while</span> n > <span class="nu">1</span>:
+    n = n // <span class="nu">2</span>                     <span class="cm"># O(log n)</span>
+
+<span class="cm"># The trap: a loop that LOOKS nested but isn't.</span>
+left = <span class="nu">0</span>
+<span class="kw">for</span> right <span class="kw">in</span> range(n):
+    <span class="kw">while</span> left &lt; right <span class="kw">and</span> bad():
+        left += <span class="nu">1</span>                  <span class="cm"># `left` only ever moves FORWARD, at most n times</span>
+<span class="cm"># total: O(n), not O(n^2). Say this out loud in sliding-window and</span>
+<span class="cm"># monotonic-stack problems -- interviewers specifically check for it.</span>
+</code></pre>
+
+  <h4>Recursion: draw the tree</h4>
+  <p>The cost of a recursive function is <strong>(number of nodes in the call tree) × (work per node)</strong>.</p>
+  <ul>
+    <li><code>fib(n)</code> naive: each call spawns two, depth n → about 2ⁿ nodes, O(1) each → <strong>O(2ⁿ)</strong>.</li>
+    <li>Merge sort: each level splits in half (log n levels), each level does O(n) merging → <strong>O(n log n)</strong>.</li>
+    <li>Binary search recursive: one branch survives per level → <strong>O(log n)</strong>.</li>
+    <li>Permutations: n choices, then n−1, … → <strong>O(n!)</strong> nodes, O(n) to copy each → O(n · n!).</li>
+  </ul>
+  <p>For divide-and-conquer, the <strong>master theorem</strong> in the only form you need: for <code>T(n) = a·T(n/b) + O(n^d)</code>, compare <code>d</code> with <code>log_b(a)</code> — if d is larger the top level dominates (O(n^d)), if equal it's O(n^d log n), if smaller the leaves dominate (O(n^log_b a)). Merge sort is a=2, b=2, d=1 → equal → O(n log n).</p>
+
+  <h4>Amortized: the dynamic array</h4>
+  <p>Appending to a Python list is usually O(1), but occasionally the array is full and must be copied to a bigger one — O(n). Because the size doubles, that copy happens rarely enough that the <em>average over any sequence of n appends</em> is O(1). That is <strong>amortized O(1)</strong>, and it is not the same as average-case: amortized is a worst-case guarantee over a sequence, not a probabilistic claim. Hash table insertion is the same story. Say "amortized" when it applies — it's a precision marker interviewers notice.</p>
+
+  <h3>Costs you should know without thinking</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Structure</th><th class="num">Access</th><th class="num">Search</th><th class="num">Insert</th><th class="num">Delete</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>Dynamic array</td><td class="num">O(1)</td><td class="num">O(n)</td><td class="num">O(1)*</td><td class="num">O(n)</td><td>*amortized at the end; O(n) in the middle</td></tr>
+        <tr><td>Linked list</td><td class="num">O(n)</td><td class="num">O(n)</td><td class="num">O(1)</td><td class="num">O(1)</td><td>O(1) only if you already hold the node</td></tr>
+        <tr><td>Hash table</td><td class="num">—</td><td class="num">O(1)*</td><td class="num">O(1)*</td><td class="num">O(1)*</td><td>*average; O(n) worst case under collisions</td></tr>
+        <tr><td>Balanced BST</td><td class="num">—</td><td class="num">O(log n)</td><td class="num">O(log n)</td><td class="num">O(log n)</td><td>Keeps order — supports range queries and successor</td></tr>
+        <tr><td>Binary heap</td><td class="num">O(1) min</td><td class="num">O(n)</td><td class="num">O(log n)</td><td class="num">O(log n)</td><td>Only the extreme element is cheap</td></tr>
+        <tr><td>Trie</td><td class="num">—</td><td class="num">O(L)</td><td class="num">O(L)</td><td class="num">O(L)</td><td>L = key length, independent of how many keys</td></tr>
+        <tr><td>Union-Find</td><td class="num">—</td><td class="num">O(α(n))</td><td class="num">O(α(n))</td><td class="num">—</td><td>Effectively constant with both optimizations</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Python operation</th><th class="num">Cost</th><th>The trap</th></tr></thead>
+      <tbody>
+        <tr><td><code>list.append(x)</code> / <code>list.pop()</code></td><td class="num">O(1)</td><td>—</td></tr>
+        <tr><td><code>list.pop(0)</code> / <code>list.insert(0, x)</code></td><td class="num">O(n)</td><td>Shifts everything. Use <code>collections.deque</code> — this has failed real candidates.</td></tr>
+        <tr><td><code>x in list</code></td><td class="num">O(n)</td><td><code>x in set</code> is O(1). Swapping one for the other is the single most common interview fix.</td></tr>
+        <tr><td><code>list[a:b]</code></td><td class="num">O(b−a)</td><td>Slicing in a loop turns O(n) into O(n²) silently.</td></tr>
+        <tr><td><code>s += "x"</code> in a loop</td><td class="num">O(n²)</td><td>Strings are immutable. Build a list and <code>"".join()</code> it.</td></tr>
+        <tr><td><code>sorted(x)</code></td><td class="num">O(n log n)</td><td>Timsort — genuinely O(n) on already-sorted input.</td></tr>
+        <tr><td><code>heapq.heapify(x)</code></td><td class="num">O(n)</td><td>Building a heap is linear; n individual pushes is O(n log n).</td></tr>
+        <tr><td><code>dict</code> / <code>set</code> lookup</td><td class="num">O(1)</td><td>Keys must be hashable — a list can't be a key, a tuple can.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Space, including the part people forget</h3>
+  <p>Count what you allocate <em>and the recursion stack</em>. A recursive DFS over a tree is O(h) space where h is the height — which is O(n) for a degenerate tree, and that's the answer they're looking for. "O(1) extra space" means you may not allocate proportional to input; the input itself doesn't count, and mutating it in place is usually the intent.</p>
+
+  <div class="callout">
+    <div class="ct">The sentence to have ready</div>
+    <p>"That's O(n log n) time from the sort, O(n) space for the hash map, and the recursion adds O(log n) stack depth." Complete, specific, unprompted. State it before they ask, every single time — it costs five seconds and it closes an entire scoring axis.</p>
+  </div>
+</section>

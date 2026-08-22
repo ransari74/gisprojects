@@ -1,0 +1,188 @@
+<section id="mldesigns">
+  <div class="sec-head">
+    <div class="eyebrow">Section 06 · The AI track</div>
+    <h2>Four worked ML designs</h2>
+    <p>Two classical (ranking and retrieval) and two that now show up in nearly every loop (RAG and LLM serving). The pattern to internalize from the first two is <strong>multi-stage funnels</strong>; from the second two, <strong>memory and batching arithmetic</strong>.</p>
+  </div>
+
+  <h3>Design 5 — Video recommendation feed</h3>
+  <p>Prompt: <em>rank a personalized home feed over a catalog of 1 billion videos, 500M DAU, p99 under 200 ms.</em></p>
+
+  <div class="callout mlbox">
+    <div class="ct">Why a funnel, in one sentence of arithmetic</div>
+    <p>A good ranking model costs ~1 ms per item. Scoring 1 billion candidates per request is 10<sup>6</sup> seconds. You have 200 ms. So the design is forced: <strong>cheap filters over billions, expensive models over hundreds</strong> — each stage cuts the candidate set by ~100× and can afford ~100× more compute per item.</p>
+  </div>
+
+  <div class="diagram">
+    <div class="dflow">
+      <div class="dcol"><div class="node">1B videos</div></div>
+      <div class="arrow">→<span>~1 ms</span></div>
+      <div class="dcol"><div class="node ml">Retrieval<small>N sources, ANN + rules<br>→ ~1,000</small></div></div>
+      <div class="arrow">→<span>~10 ms</span></div>
+      <div class="dcol"><div class="node ml">Light ranker<small>GBDT / small NN<br>→ ~200</small></div></div>
+      <div class="arrow">→<span>~50 ms</span></div>
+      <div class="dcol"><div class="node ml">Heavy ranker<small>multi-task DNN<br>→ scored</small></div></div>
+      <div class="arrow">→<span>~5 ms</span></div>
+      <div class="dcol"><div class="node pri">Re-rank<small>diversity, dedupe,<br>freshness, policy → 20</small></div></div>
+    </div>
+    <div class="dcap">Each stage optimizes a different thing: retrieval maximizes recall, ranking maximizes precision at the top, re-ranking optimizes the <em>set</em> rather than the items.</div>
+  </div>
+
+  <h4>Retrieval: blend several sources, don't build one perfect one</h4>
+  <ul>
+    <li><strong>Two-tower embedding retrieval</strong> — a user tower and an item tower trained so that <code>dot(u, v)</code> is high for engaged pairs. Item embeddings are precomputed into an ANN index; the user embedding is computed per request. This is the workhorse.</li>
+    <li><strong>Collaborative signals</strong> — "users who watched X also watched Y", precomputed offline.</li>
+    <li><strong>Trending / fresh</strong> — a small, always-on slice so new content can ever be discovered.</li>
+    <li><strong>Followed creators</strong> — a straight lookup, no model.</li>
+  </ul>
+  <p>Union the sources, dedupe, and let ranking sort it out. The interesting part is <strong>negative sampling</strong>: train with in-batch negatives (other items in the same batch, essentially free) plus hard negatives (items shown but not clicked). Train only on positives and the model learns that everything is great.</p>
+
+  <h4>Ranking: it is multi-task, and the weights are a product decision</h4>
+  <p>A single "will they click" head optimizes for clickbait. Real systems predict several heads from one shared trunk — <code>P(click)</code>, <code>P(watch &gt; 30s)</code>, <code>P(complete)</code>, <code>P(like)</code>, <code>P(hide)</code> — and combine them:</p>
+  <div class="codehead"><span>The scoring function is where product strategy actually lives</span><button class="copy" type="button">Copy</button></div>
+<pre><code>score = (w1*p_click + w2*p_watch30 + w3*p_complete + w4*p_like
+         - w5*p_hide - w6*p_report)
+        * quality_prior(video)
+        * freshness_decay(age)
+
+<span class="cm"># Say this out loud: the weights are not learned end-to-end, they are</span>
+<span class="cm"># tuned against the A/B guardrails. Learning them from engagement alone</span>
+<span class="cm"># is how a feed optimizes itself into outrage. Naming that tradeoff is</span>
+<span class="cm"># a strong senior signal — it is a values question, not a modeling one.</span>
+</code></pre>
+  <p><strong>Features</strong>, grouped the way you should say them: <em>user</em> (long-term embedding, watch history, demographics), <em>item</em> (embedding, age, creator, historical CTR — smoothed, or new items look terrible), <em>cross</em> (has the user watched this creator, topic affinity, similarity of user and item embeddings), <em>context</em> (hour, device, network speed, session depth). Real-time counters ("views in the last 5 minutes") come from a streaming aggregation, and they are the features most likely to skew between training and serving.</p>
+
+  <h4>Re-ranking and the cold-start question</h4>
+  <p>Never ship the raw sorted list. Apply <strong>diversity</strong> (cap items per creator or topic — MMR, or a simple greedy per-slot constraint), <strong>dedupe</strong> against recent impressions, and <strong>exploration</strong>: a small epsilon of random or Thompson-sampled items so the system keeps learning and new content has a path to discovery. For <strong>cold-start users</strong>, fall back to popularity within their coarse segment and update on the first few interactions; for <strong>cold-start items</strong>, rely on content embeddings (title, thumbnail, audio, creator prior) rather than behavioral signals, and give a deliberate exploration budget of impressions to gather them.</p>
+
+  <hr class="rule">
+
+  <h3>Design 6 — Search ranking with embeddings</h3>
+  <p>Prompt: <em>build search over 10 billion documents — return the 10 best results in under 300 ms.</em></p>
+  <p>Same funnel, different retrieval. Two complementary retrieval paths, and the right answer is <strong>hybrid</strong>:</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Path</th><th>Mechanism</th><th>Strong at</th><th>Weak at</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Lexical</strong> (BM25 over an inverted index)</td><td>term → posting list, scored by term frequency and inverse document frequency</td><td>Exact terms, rare words, product codes, names. Cheap, explainable, no training.</td><td>Synonyms and paraphrase. "cheap flights" misses "affordable airfare".</td></tr>
+        <tr><td><strong>Semantic</strong> (dense vectors + ANN)</td><td>encode query and documents into the same space, nearest-neighbor search</td><td>Meaning, paraphrase, cross-lingual, "that movie with the spinning top".</td><td>Exact identifiers. Vector search happily returns something <em>similar</em> to a part number that is not it.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Run both, then fuse — <strong>reciprocal rank fusion</strong> (<code>Σ 1/(k + rank_i)</code>, k≈60) needs no score calibration between the two systems and is what you should name. Then a <strong>cross-encoder re-ranker</strong> scores the top ~100: it reads query and document <em>together</em> so it can model interaction, which is far more accurate and far too slow to run over more than a couple hundred items. That accuracy/cost split — bi-encoder for retrieval, cross-encoder for re-ranking — is the single most useful idea in modern retrieval.</p>
+
+  <h4>ANN indexes: know the tradeoff, not just the names</h4>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Index</th><th>Idea</th><th>Tradeoff</th></tr></thead>
+      <tbody>
+        <tr><td><strong>HNSW</strong></td><td>Multi-layer navigable small-world graph; greedy descent from a sparse top layer</td><td>Best recall/latency available. Memory hungry (graph plus full vectors) and expensive to update in bulk.</td></tr>
+        <tr><td><strong>IVF</strong> (inverted file)</td><td>Cluster vectors, search only the <code>nprobe</code> nearest clusters</td><td>Simple knob for recall vs speed. Recall drops at cluster boundaries.</td></tr>
+        <tr><td><strong>PQ</strong> (product quantization)</td><td>Split the vector into subvectors, replace each with a codebook id</td><td>10–30× memory reduction, some recall loss. Usually combined: IVF-PQ.</td></tr>
+        <tr><td><strong>ScaNN / DiskANN</strong></td><td>Anisotropic quantization; SSD-resident graphs</td><td>When the index cannot fit in RAM at any price.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout mlbox">
+    <div class="ct">The sizing question you will be asked</div>
+    <p>10B documents × 768-dim float32 = <code>10<sup>10</sup> × 768 × 4 B</code> ≈ <strong>30 TB</strong> of raw vectors. That does not fit in one machine's RAM, so: shard the index by document (each shard searches its slice, results merged — scatter-gather), reduce dimensions to 256 via matryoshka-style truncation or a learned projection, and quantize to int8 (4× smaller) or PQ (up to 30×). 30 TB → about 1 TB → about 12 machines. <em>Do this arithmetic out loud; it is the whole reason quantization exists.</em></p>
+  </div>
+
+  <hr class="rule">
+
+  <h3>Design 7 — RAG assistant over company documents</h3>
+  <p>Prompt: <em>an internal assistant that answers questions from 10M documents, with citations, and must not make things up.</em> This is now one of the most common ML design prompts, and the bar is whether you treat it as an <strong>information retrieval problem with a generation step</strong> — which it is — rather than a prompt engineering problem.</p>
+
+  <div class="diagram">
+    <div class="dflow">
+      <div class="dcol"><div class="node">Query</div><div class="node ml">Rewrite<small>+ conversation ctx</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node ml">Hybrid retrieve<small>BM25 + vector<br>→ 100 chunks</small></div><div class="node store">ACL filter<small>pre-filter, always</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node ml">Cross-encoder<small>rerank → 8</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node pri">LLM<small>grounded prompt<br>+ citations</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node">Guardrails<small>citation check,<br>PII, refusal</small></div><div class="node">Stream to client<small>SSE</small></div></div>
+    </div>
+    <div class="dcap">Retrieval quality caps answer quality. If the right chunk is not in the top 8, no model and no prompt can save the answer.</div>
+  </div>
+
+  <h4>Indexing: chunking is the decision that matters most</h4>
+  <ul>
+    <li><strong>Chunk on structure, not on character count.</strong> Split at headings and paragraphs, target ~500 tokens with ~15% overlap so a sentence spanning a boundary survives in one piece.</li>
+    <li><strong>Keep the parent.</strong> Retrieve small chunks for precision, but pass the surrounding section to the model for context — "small-to-big" retrieval.</li>
+    <li><strong>Prepend context to each chunk before embedding</strong> — document title, section path, and a one-line summary of what the parent document is about. A chunk reading "it increased 12% year over year" is unretrievable without it.</li>
+    <li><strong>Store metadata for filtering</strong> — ACL groups, source, timestamp, language. Filter <em>before</em> the vector search, not after, or a user's top-k gets emptied by post-filtering and they see nothing.</li>
+    <li><strong>Re-embed on model change.</strong> Changing the embedding model invalidates the entire index — 10M documents is a real re-indexing job, and planning for it (versioned indexes, dual-write, atomic swap) is a strong operational signal.</li>
+  </ul>
+
+  <h4>Grounding, and why "don't hallucinate" is a system property</h4>
+  <p>You cannot prompt a model into being honest; you build a system where unsupported claims are detectable. Layer it:</p>
+  <ol>
+    <li><strong>Require citations per claim</strong> — the prompt asks for spans tagged with chunk ids, and a post-processor verifies each cited id was actually retrieved. Hallucinated citations are trivially caught this way.</li>
+    <li><strong>Verify support</strong> — an entailment check (a small NLI model, or a second cheap LLM call) that asks "is this sentence supported by this chunk?" for the highest-stakes claims.</li>
+    <li><strong>Refuse deliberately</strong> — if the top retrieval score is below a threshold, answer "I don't have a document that covers this." A calibrated refusal rate is a shipped feature, not a failure.</li>
+    <li><strong>Show your work</strong> — render the source chunks alongside the answer so a human can check in two seconds.</li>
+  </ol>
+
+  <h4>Evaluation, which is where most candidates go vague</h4>
+  <p>Split it in two, because the fixes are different. <strong>Retrieval:</strong> build a golden set of ~200 question→document pairs (labelled by hand, once, and worth the day it takes) and track <em>recall@k</em> and <em>MRR</em>. <strong>Generation:</strong> track <em>faithfulness</em> (fraction of claims supported by the retrieved context), <em>answer relevance</em>, and <em>citation precision</em>, scored by an LLM judge that you have calibrated against human labels on a sample. Then online: thumbs, follow-up-question rate, escalation-to-human rate, and time-to-answer. <strong>Say the failure taxonomy out loud</strong> — retrieval miss, retrieval hit but ignored, hallucinated detail, stale document, permission leak — because each one points to a different part of the pipeline.</p>
+  <p><strong>Cost and latency:</strong> a semantic cache on normalized queries (embed the query, and if cosine similarity to a cached one exceeds ~0.97, return the cached answer) cuts a large fraction of repeat traffic. Stream tokens over SSE so time-to-first-token — the number users actually feel — stays under ~500 ms even when the full answer takes 5 s. Route by difficulty: a small model handles the easy majority, a large one handles the rest.</p>
+
+  <hr class="rule">
+
+  <h3>Design 8 — LLM serving platform</h3>
+  <p>Prompt: <em>serve a 70B-parameter model to 10,000 requests per second across many teams.</em> This is an infrastructure question wearing an AI hat, and it is won with arithmetic.</p>
+
+  <h4>The memory math, which you should be able to do on the whiteboard</h4>
+  <div class="codehead"><span>Two numbers decide the whole architecture</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="cm"># 1. WEIGHTS — fixed cost, paid once per GPU replica</span>
+70B params x 2 bytes (fp16)  = <span class="nu">140 GB</span>   <span class="cm"># > 80 GB card -> must shard across GPUs</span>
+70B x 1 byte  (int8)         = <span class="nu">70 GB</span>    <span class="cm"># fits one H100, ~1% quality loss</span>
+70B x 0.5 byte (int4)        = <span class="nu">35 GB</span>    <span class="cm"># fits comfortably, quality loss is task-dependent</span>
+
+<span class="cm"># 2. KV CACHE — per token, per concurrent request. This is what limits batch size.</span>
+kv_per_token = 2 (K and V) x n_layers x kv_dim x bytes
+             = 2 x 80 x 1024 x 2 B      = <span class="nu">~320 KB / token</span>   <span class="cm"># 70B w/ grouped-query attn</span>
+4,096-token context           = <span class="nu">~1.3 GB per concurrent sequence</span>
+<span class="cm"># On an 80 GB card holding a 35 GB int4 model: ~45 GB left / 1.3 GB = ~34 concurrent</span>
+<span class="cm"># sequences per GPU. THAT is your concurrency ceiling -- not FLOPs.</span>
+
+<span class="cm"># 3. THROUGHPUT — decoding is memory-bandwidth bound, not compute bound.</span>
+tokens/s (single stream) ≈ HBM bandwidth / bytes read per token
+                         ≈ 3.3 TB/s / 35 GB ≈ <span class="nu">~90 tok/s</span>
+<span class="cm"># Batching is what turns 90 tok/s into thousands: the weights are read once</span>
+<span class="cm"># per step and amortized across every sequence in the batch.</span>
+</code></pre>
+
+  <h4>The four techniques to name</h4>
+  <ul>
+    <li><strong>Continuous (in-flight) batching</strong> — the single biggest throughput win. Static batching waits for the slowest sequence in the batch to finish; continuous batching evicts finished sequences and admits new ones every step, typically a multiple-times improvement in real throughput.</li>
+    <li><strong>Paged attention</strong> — allocate the KV cache in fixed-size blocks like OS virtual memory instead of one contiguous reservation per sequence. Kills the internal fragmentation caused by reserving for max context, and lets sequences with a shared prefix (a long system prompt) share physical blocks.</li>
+    <li><strong>Prefill/decode disaggregation</strong> — prefill is compute-bound and parallel over the prompt; decode is memory-bound and sequential. They have opposite hardware profiles, so running them in one pool means one of them is always starving the other. Split the pools and you can size and autoscale each correctly.</li>
+    <li><strong>Speculative decoding</strong> — a small draft model proposes several tokens, the large model verifies them in one forward pass, and accepted tokens come nearly free. Two to three times faster on predictable text, and — this is the part to say — <em>output is mathematically identical</em> to the large model's, so it is safe to enable everywhere.</li>
+  </ul>
+
+  <h4>The platform around the model</h4>
+  <p><strong>Routing:</strong> classify difficulty and send most traffic to a small model, escalating only when needed. <strong>Multi-tenancy:</strong> per-team token quotas with a token-bucket limiter (§03) — GPU time is the scarce resource, so rate limit in tokens, not requests. <strong>Caching:</strong> prefix-cache long shared system prompts so prefill is not re-paid on every call. <strong>Autoscaling:</strong> scale on queue depth and time-to-first-token, not CPU; and cold-starting a GPU node means loading 35 GB of weights, so keep a warm pool — a 90-second scale-up is useless during a spike. <strong>Fallbacks:</strong> a queue with an admission deadline, then load-shed with a clear error, then a smaller model as the degraded tier.</p>
+
+  <hr class="rule">
+
+  <h3>Three more prompts, sketched</h3>
+  <div class="grid g3 wide">
+    <div class="card">
+      <span class="tag t-ml">Ad click prediction</span>
+      <p style="margin-top:10px"><strong>The twist:</strong> calibration, not ranking — the score is multiplied by a bid, so it must be a true probability. Use log loss; check a calibration plot; recalibrate with isotonic regression after any negative downsampling (and correct the intercept for the sampling rate). Latency budget is ~10 ms inside the auction. Features are enormously sparse and high-cardinality → hashing trick plus learned embeddings.</p>
+    </div>
+    <div class="card">
+      <span class="tag t-ml">Fraud / abuse detection</span>
+      <p style="margin-top:10px"><strong>The twist:</strong> extreme imbalance (~0.1%), adversarial drift, and a 30-day label delay from chargebacks. Optimize PR-AUC. Pick the threshold from the <em>cost matrix</em> (a blocked good customer costs more than you think). Combine rules (instant, auditable, no training) with a model. Graph features — shared devices, IPs, payment instruments — carry most of the signal.</p>
+    </div>
+    <div class="card">
+      <span class="tag t-ml">Content moderation</span>
+      <p style="margin-top:10px"><strong>The twist:</strong> two thresholds, not one — auto-remove above the high one, auto-allow below the low one, and route the band between to human review. Design the review queue as part of the system, sized by capacity, and treat its output as your highest-quality labels. Multi-modal, multilingual, and precision is a policy decision made by people, not by you.</p>
+    </div>
+  </div>
+</section>
+

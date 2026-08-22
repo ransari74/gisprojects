@@ -1,0 +1,78 @@
+<section id="cheat">
+  <div class="sec-head">
+    <div class="eyebrow">Section 12</div>
+    <h2>The one-page recall sheet</h2>
+    <p>Day 28, and the morning of each interview. Read it out loud. Nothing new — this is only for pulling what you already know back to the surface.</p>
+  </div>
+
+  <div class="grid g2 wide">
+    <div class="card">
+      <span class="tag t-sd">Open every design round</span>
+      <ul style="margin-top:12px">
+        <li>Restate the problem, then list functional / non-functional / out-of-scope.</li>
+        <li>Read:write ratio? Staleness tolerance? p99 target? Biggest fan-out? Regions?</li>
+        <li>DAU → QPS → storage/year → bandwidth. One significant figure.</li>
+        <li>API, then entities, then the partition key. <em>Then</em> boxes.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag t-sd">Numbers</span>
+      <ul style="margin-top:12px">
+        <li>Memory 100 ns · SSD read 100 µs · DC round trip 0.5 ms · cross-country 70 ms.</li>
+        <li>100k seconds in a day. Peak = 3× average.</li>
+        <li>One Postgres box: ~10k writes/s. One Redis: ~100k ops/s. One app node: ~5k QPS.</li>
+        <li>768-dim float32 = 3 KB. 1B vectors = 3 TB → quantize or shard.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag t-sd">Reach-for list</span>
+      <ul style="margin-top:12px">
+        <li>Read-heavy → cache + CDN + read replicas. Say the invalidation strategy.</li>
+        <li>Write-heavy → queue, batch, LSM store, shard by a key with no hotspot.</li>
+        <li>Fan-out → hybrid push/pull with a celebrity threshold.</li>
+        <li>Anything async → at-least-once + idempotency key. Outbox for dual writes.</li>
+        <li>Stateful connections → a registry of user → node, plus pub/sub.</li>
+        <li>Spatial → cell index in a hash, not a 2-D range query.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag t-ml">Every ML answer</span>
+      <ul style="margin-top:12px">
+        <li>Frame the task: what is one training example, and where does the label come from?</li>
+        <li>Three metric tiers + guardrails. Baseline before model.</li>
+        <li>Multi-stage funnel: cheap over millions, expensive over hundreds.</li>
+        <li>Name the skew, the leakage, and the feedback loop before they ask.</li>
+        <li>Offline → shadow → canary → A/B → ramp, with automatic rollback.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag t-ml">LLM systems</span>
+      <ul style="margin-top:12px">
+        <li>Weights = params × bytes. KV cache = 2 × layers × kv_dim × bytes <em>per token per request</em>.</li>
+        <li>Decode is bandwidth-bound. Continuous batching is the throughput win.</li>
+        <li>RAG for knowledge, fine-tune for behavior, prompt first.</li>
+        <li>Retrieval quality caps answer quality. Hybrid + rerank + citation check.</li>
+        <li>Treat model output as untrusted input to the rest of the system.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag t-dsa">Coding hour</span>
+      <ul style="margin-top:12px">
+        <li>Restate → example → edge cases → brute force + complexity → approach → <em>get a nod</em> → code.</li>
+        <li>Use the constraint size to announce the target complexity.</li>
+        <li>Trace your own code out loud before saying you're done.</li>
+        <li>Stuck? Say where, simplify the problem, or start the brute force.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top:28px">
+    <div class="ct">Day 28</div>
+    <p>Stop studying by early afternoon. Cramming the night before a design round has never helped anyone — the round tests recall under pressure and improvisation, and both degrade with fatigue far faster than they improve with one more chapter. Reread this page, say your "tell me about yourself" once, and sleep.</p>
+  </div>
+
+  <div class="footer">
+    <p>Built as a study companion, not a syllabus to complete. Skip what you know. The parts you'd rather skip are usually the gap list.</p>
+  </div>
+</section>
+

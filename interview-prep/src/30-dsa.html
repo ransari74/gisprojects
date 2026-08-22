@@ -1,0 +1,354 @@
+<section id="dsa">
+  <div class="sec-head">
+    <div class="eyebrow">Section 08</div>
+    <h2>The 14 patterns</h2>
+    <p>Interview algorithm problems are recombinations of a small number of patterns. The skill being tested is <strong>recognition speed</strong> — mapping a novel problem statement onto a template you already own within the first two minutes. Learn the trigger phrases first; the code is the easy half.</p>
+  </div>
+
+  <h3>Recognition table — read this one until it's automatic</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>When you see…</th><th>Reach for</th><th class="num">Typical</th></tr></thead>
+      <tbody>
+        <tr><td>"has this appeared before", pairs summing to a target, grouping</td><td><strong>Hash map</strong></td><td class="num">O(n)</td></tr>
+        <tr><td><strong>Sorted</strong> array, pair/triple search, in-place partition, palindrome</td><td><strong>Two pointers</strong></td><td class="num">O(n)</td></tr>
+        <tr><td>"longest/shortest <strong>contiguous</strong> subarray or substring such that…"</td><td><strong>Sliding window</strong></td><td class="num">O(n)</td></tr>
+        <tr><td>Sorted input, or "minimize the maximum", or a monotone yes/no predicate</td><td><strong>Binary search</strong> (on index or on the answer)</td><td class="num">O(n log n)</td></tr>
+        <tr><td>"next greater/smaller", histogram, span, temperatures</td><td><strong>Monotonic stack</strong></td><td class="num">O(n)</td></tr>
+        <tr><td>"top K", "K most/least", running median, merge K sorted</td><td><strong>Heap</strong></td><td class="num">O(n log k)</td></tr>
+        <tr><td>Meetings, ranges, calendars, overlaps</td><td><strong>Sort + sweep intervals</strong></td><td class="num">O(n log n)</td></tr>
+        <tr><td>Cycle detection, middle node, reorder in place</td><td><strong>Fast/slow pointers</strong></td><td class="num">O(n)</td></tr>
+        <tr><td>Tree, "level by level", "shortest path in an unweighted graph", grid flood</td><td><strong>BFS</strong></td><td class="num">O(V+E)</td></tr>
+        <tr><td>Tree paths, connected components, "explore fully"</td><td><strong>DFS</strong></td><td class="num">O(V+E)</td></tr>
+        <tr><td>Dependencies, prerequisites, build order, "is there a cycle"</td><td><strong>Topological sort</strong></td><td class="num">O(V+E)</td></tr>
+        <tr><td>"Are these connected", merging groups, redundant edge, islands with unions</td><td><strong>Union-Find</strong></td><td class="num">~O(α(n))</td></tr>
+        <tr><td>"All combinations/permutations/partitions", N-queens, sudoku</td><td><strong>Backtracking</strong></td><td class="num">exponential</td></tr>
+        <tr><td>"How many ways", "min/max cost to", overlapping subproblems</td><td><strong>Dynamic programming</strong></td><td class="num">O(states × transitions)</td></tr>
+        <tr><td>Prefix matching, autocomplete, word search on a board</td><td><strong>Trie</strong></td><td class="num">O(len)</td></tr>
+        <tr><td>Weighted shortest path, "cheapest route"</td><td><strong>Dijkstra</strong></td><td class="num">O(E log V)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>The templates</h3>
+  <p>Type these from memory until they come out clean. Every one is written the way you should actually write it in an interview: named variables, no cleverness, easy to explain while typing.</p>
+
+  <div class="codehead"><span>1 · sliding window — variable size, the shape that covers most of them</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">def</span> longest_ok_window(s):
+    <span class="st">"""Longest substring satisfying a condition. The invariant: the window</span>
+<span class="st">    [left, right] is always valid at the bottom of the loop."""</span>
+    count = {}
+    left = best = <span class="nu">0</span>
+    <span class="kw">for</span> right, ch <span class="kw">in</span> enumerate(s):
+        count[ch] = count.get(ch, <span class="nu">0</span>) + <span class="nu">1</span>          <span class="cm"># 1. grow right</span>
+
+        <span class="kw">while</span> len(count) > <span class="nu">2</span>:                       <span class="cm"># 2. shrink while INVALID</span>
+            count[s[left]] -= <span class="nu">1</span>
+            <span class="kw">if</span> count[s[left]] == <span class="nu">0</span>:
+                <span class="kw">del</span> count[s[left]]
+            left += <span class="nu">1</span>
+
+        best = max(best, right - left + <span class="nu">1</span>)         <span class="cm"># 3. record</span>
+    <span class="kw">return</span> best
+
+<span class="cm"># Fixed-size variant: no while loop -- just evict s[right-k] once right >= k.</span>
+<span class="cm"># Minimum-window variant: shrink while VALID, and record inside the while.</span>
+</code></pre>
+
+  <div class="codehead"><span>2 · binary search — the two forms worth memorizing</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="cm"># FORM A: leftmost index where a sorted array meets a condition.</span>
+<span class="cm"># Using lo &lt; hi with hi = mid avoids every off-by-one I have ever written.</span>
+<span class="kw">def</span> lower_bound(a, target):
+    lo, hi = <span class="nu">0</span>, len(a)                <span class="cm"># hi is exclusive</span>
+    <span class="kw">while</span> lo &lt; hi:
+        mid = (lo + hi) // <span class="nu">2</span>
+        <span class="kw">if</span> a[mid] &lt; target: lo = mid + <span class="nu">1</span>
+        <span class="kw">else</span>:               hi = mid       <span class="cm"># mid might be the answer -- keep it</span>
+    <span class="kw">return</span> lo                          <span class="cm"># == len(a) if no element qualifies</span>
+
+
+<span class="cm"># FORM B: BINARY SEARCH ON THE ANSWER. The high-value one -- most</span>
+<span class="cm"># candidates never spot it. Trigger: "minimize the maximum X" or</span>
+<span class="cm"># "maximum X such that it is still possible".</span>
+<span class="kw">def</span> ship_within_days(weights, days):
+    <span class="kw">def</span> feasible(cap):                 <span class="cm"># monotone: True stays True as cap grows</span>
+        used, load = <span class="nu">1</span>, <span class="nu">0</span>
+        <span class="kw">for</span> w <span class="kw">in</span> weights:
+            <span class="kw">if</span> load + w > cap:
+                used, load = used + <span class="nu">1</span>, <span class="nu">0</span>
+            load += w
+        <span class="kw">return</span> used &lt;= days
+
+    lo, hi = max(weights), sum(weights)   <span class="cm"># tightest and loosest possible answers</span>
+    <span class="kw">while</span> lo &lt; hi:
+        mid = (lo + hi) // <span class="nu">2</span>
+        <span class="kw">if</span> feasible(mid): hi = mid
+        <span class="kw">else</span>:             lo = mid + <span class="nu">1</span>
+    <span class="kw">return</span> lo
+</code></pre>
+
+  <div class="codehead"><span>3 · monotonic stack — next greater element</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">def</span> next_greater(nums):
+    <span class="st">"""For each index, the next value to its right that is larger.</span>
+<span class="st">    Stack holds INDICES whose answers are still unknown, values decreasing."""</span>
+    res = [-<span class="nu">1</span>] * len(nums)
+    stack = []
+    <span class="kw">for</span> i, v <span class="kw">in</span> enumerate(nums):
+        <span class="kw">while</span> stack <span class="kw">and</span> nums[stack[-<span class="nu">1</span>]] &lt; v:   <span class="cm"># v resolves everything smaller</span>
+            res[stack.pop()] = v
+        stack.append(i)
+    <span class="kw">return</span> res
+
+<span class="cm"># Each index is pushed once and popped once -> O(n) despite the nested loop.</span>
+<span class="cm"># Say that out loud; interviewers check whether you know why it isn't O(n^2).</span>
+<span class="cm"># Largest rectangle in a histogram is this template with the popped bar's</span>
+<span class="cm"># width computed as (i - stack[-1] - 1).</span>
+</code></pre>
+
+  <div class="codehead"><span>4 · heap — top K, and why a MIN-heap finds the MAX elements</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">import</span> heapq
+
+<span class="kw">def</span> k_largest(nums, k):
+    <span class="st">"""Keep a min-heap of size k: its root is the smallest of the k best</span>
+<span class="st">    so far, so it is exactly the element to evict. O(n log k), O(k) space --</span>
+<span class="st">    beats sorting when k is small, and works on a stream that doesn't fit."""</span>
+    heap = []
+    <span class="kw">for</span> v <span class="kw">in</span> nums:
+        heapq.heappush(heap, v)
+        <span class="kw">if</span> len(heap) > k:
+            heapq.heappop(heap)        <span class="cm"># drop the smallest</span>
+    <span class="kw">return</span> heap
+
+<span class="kw">def</span> merge_k_sorted(lists):
+    <span class="cm"># Seed with the head of each list, then pull-and-replace. O(N log k).</span>
+    heap = [(lst[<span class="nu">0</span>], i, <span class="nu">0</span>) <span class="kw">for</span> i, lst <span class="kw">in</span> enumerate(lists) <span class="kw">if</span> lst]
+    heapq.heapify(heap)
+    out = []
+    <span class="kw">while</span> heap:
+        val, li, idx = heapq.heappop(heap)
+        out.append(val)
+        <span class="kw">if</span> idx + <span class="nu">1</span> &lt; len(lists[li]):
+            heapq.heappush(heap, (lists[li][idx + <span class="nu">1</span>], li, idx + <span class="nu">1</span>))
+    <span class="kw">return</span> out
+</code></pre>
+
+  <div class="codehead"><span>5 · intervals — sort, then sweep</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">def</span> merge(intervals):
+    intervals.sort(key=<span class="kw">lambda</span> x: x[<span class="nu">0</span>])          <span class="cm"># sorting by START is the whole trick</span>
+    out = []
+    <span class="kw">for</span> start, end <span class="kw">in</span> intervals:
+        <span class="kw">if</span> out <span class="kw">and</span> start &lt;= out[-<span class="nu">1</span>][<span class="nu">1</span>]:          <span class="cm"># overlaps the last kept interval</span>
+            out[-<span class="nu">1</span>][<span class="nu">1</span>] = max(out[-<span class="nu">1</span>][<span class="nu">1</span>], end)
+        <span class="kw">else</span>:
+            out.append([start, end])
+    <span class="kw">return</span> out
+
+<span class="kw">def</span> min_meeting_rooms(intervals):
+    <span class="cm"># The other interval shape: a difference array / sweep line.</span>
+    events = []
+    <span class="kw">for</span> s, e <span class="kw">in</span> intervals:
+        events.append((s, <span class="nu">1</span>))                  <span class="cm"># a room is taken</span>
+        events.append((e, -<span class="nu">1</span>))                 <span class="cm"># a room is freed</span>
+    events.sort()          <span class="cm"># at equal times, -1 sorts first: a room frees before it fills</span>
+    cur = best = <span class="nu">0</span>
+    <span class="kw">for</span> _, delta <span class="kw">in</span> events:
+        cur += delta
+        best = max(best, cur)
+    <span class="kw">return</span> best
+</code></pre>
+
+  <div class="codehead"><span>6 · graphs — BFS, and Kahn's topological sort</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">from</span> collections <span class="kw">import</span> deque
+
+<span class="kw">def</span> shortest_path_grid(grid, start, goal):
+    <span class="st">"""BFS is the shortest path when every edge costs the same.</span>
+<span class="st">    The level-by-level inner loop is what lets you count distance."""</span>
+    rows, cols = len(grid), len(grid[<span class="nu">0</span>])
+    q = deque([start])
+    seen = {start}
+    dist = <span class="nu">0</span>
+    <span class="kw">while</span> q:
+        <span class="kw">for</span> _ <span class="kw">in</span> range(len(q)):              <span class="cm"># drain exactly one level</span>
+            r, c = q.popleft()
+            <span class="kw">if</span> (r, c) == goal:
+                <span class="kw">return</span> dist
+            <span class="kw">for</span> nr, nc <span class="kw">in</span> ((r+<span class="nu">1</span>,c), (r-<span class="nu">1</span>,c), (r,c+<span class="nu">1</span>), (r,c-<span class="nu">1</span>)):
+                <span class="kw">if</span> (<span class="nu">0</span> &lt;= nr &lt; rows <span class="kw">and</span> <span class="nu">0</span> &lt;= nc &lt; cols
+                        <span class="kw">and</span> (nr, nc) <span class="kw">not</span> <span class="kw">in</span> seen <span class="kw">and</span> grid[nr][nc] != <span class="st">'#'</span>):
+                    seen.add((nr, nc))       <span class="cm"># mark on PUSH, not on pop --</span>
+                    q.append((nr, nc))       <span class="cm"># otherwise nodes enter the queue twice</span>
+        dist += <span class="nu">1</span>
+    <span class="kw">return</span> -<span class="nu">1</span>
+
+
+<span class="kw">def</span> topo_order(n, edges):
+    <span class="st">"""edges are (u, v) meaning u must come before v.</span>
+<span class="st">    Returns [] if there is a cycle -- which is also the cycle detector."""</span>
+    adj = [[] <span class="kw">for</span> _ <span class="kw">in</span> range(n)]
+    indeg = [<span class="nu">0</span>] * n
+    <span class="kw">for</span> u, v <span class="kw">in</span> edges:
+        adj[u].append(v)
+        indeg[v] += <span class="nu">1</span>
+
+    q = deque(i <span class="kw">for</span> i <span class="kw">in</span> range(n) <span class="kw">if</span> indeg[i] == <span class="nu">0</span>)
+    order = []
+    <span class="kw">while</span> q:
+        u = q.popleft()
+        order.append(u)
+        <span class="kw">for</span> v <span class="kw">in</span> adj[u]:
+            indeg[v] -= <span class="nu">1</span>
+            <span class="kw">if</span> indeg[v] == <span class="nu">0</span>:
+                q.append(v)
+    <span class="kw">return</span> order <span class="kw">if</span> len(order) == n <span class="kw">else</span> []
+</code></pre>
+
+  <div class="codehead"><span>7 · union-find — with both optimizations, which is the whole point</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">class</span> DSU:
+    <span class="kw">def</span> __init__(self, n):
+        self.parent = list(range(n))
+        self.rank = [<span class="nu">0</span>] * n
+        self.components = n
+
+    <span class="kw">def</span> find(self, x):
+        <span class="kw">while</span> self.parent[x] != x:
+            self.parent[x] = self.parent[self.parent[x]]   <span class="cm"># path halving</span>
+            x = self.parent[x]
+        <span class="kw">return</span> x
+
+    <span class="kw">def</span> union(self, a, b):
+        ra, rb = self.find(a), self.find(b)
+        <span class="kw">if</span> ra == rb:
+            <span class="kw">return</span> <span class="kw">False</span>                     <span class="cm"># already connected -> this edge is redundant</span>
+        <span class="kw">if</span> self.rank[ra] &lt; self.rank[rb]:
+            ra, rb = rb, ra                    <span class="cm"># attach smaller tree under larger</span>
+        self.parent[rb] = ra
+        <span class="kw">if</span> self.rank[ra] == self.rank[rb]:
+            self.rank[ra] += <span class="nu">1</span>
+        self.components -= <span class="nu">1</span>
+        <span class="kw">return</span> <span class="kw">True</span>
+
+<span class="cm"># With both optimizations, amortized ~O(alpha(n)) -- effectively constant.</span>
+<span class="cm"># Kruskal's MST is: sort edges by weight, union them, skip the False ones.</span>
+</code></pre>
+
+  <div class="codehead"><span>8 · backtracking — one shape, three problems</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">def</span> combination_sum(candidates, target):
+    <span class="st">"""choose -> recurse -> UNDO. The undo is what makes it backtracking."""</span>
+    candidates.sort()                    <span class="cm"># enables both pruning and dedup</span>
+    res, path = [], []
+
+    <span class="kw">def</span> backtrack(start, remaining):
+        <span class="kw">if</span> remaining == <span class="nu">0</span>:
+            res.append(path[:])          <span class="cm"># COPY -- path is mutated after this</span>
+            <span class="kw">return</span>
+        <span class="kw">for</span> i <span class="kw">in</span> range(start, len(candidates)):
+            <span class="kw">if</span> candidates[i] > remaining:
+                <span class="kw">break</span>                    <span class="cm"># sorted, so everything after is too big</span>
+            <span class="kw">if</span> i > start <span class="kw">and</span> candidates[i] == candidates[i-<span class="nu">1</span>]:
+                <span class="kw">continue</span>                 <span class="cm"># skip duplicates at the same depth</span>
+            path.append(candidates[i])
+            backtrack(i + <span class="nu">1</span>, remaining - candidates[i])
+            path.pop()                   <span class="cm"># undo</span>
+
+    backtrack(<span class="nu">0</span>, target)
+    <span class="kw">return</span> res
+
+<span class="cm"># Subsets: append path[:] at EVERY node instead of only at the base case.</span>
+<span class="cm"># Permutations: iterate all indices with a `used` array instead of `start`.</span>
+</code></pre>
+
+  <div class="codehead"><span>9 · dynamic programming — 1-D and 2-D, with the questions that build them</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="cm"># Build every DP by answering four questions OUT LOUD, in this order:</span>
+<span class="cm">#   1. What is the STATE?        dp[i] = the best answer considering the first i items</span>
+<span class="cm">#   2. What is the TRANSITION?   how does dp[i] follow from smaller states?</span>
+<span class="cm">#   3. What is the BASE CASE?</span>
+<span class="cm">#   4. What ORDER fills it?      every dependency must already be computed</span>
+
+<span class="kw">def</span> coin_change(coins, amount):
+    <span class="cm"># state: dp[a] = fewest coins summing to exactly a</span>
+    UNREACHABLE = amount + <span class="nu">1</span>
+    dp = [<span class="nu">0</span>] + [UNREACHABLE] * amount
+    <span class="kw">for</span> a <span class="kw">in</span> range(<span class="nu">1</span>, amount + <span class="nu">1</span>):
+        <span class="kw">for</span> c <span class="kw">in</span> coins:
+            <span class="kw">if</span> c &lt;= a:
+                dp[a] = min(dp[a], dp[a - c] + <span class="nu">1</span>)
+    <span class="kw">return</span> -<span class="nu">1</span> <span class="kw">if</span> dp[amount] == UNREACHABLE <span class="kw">else</span> dp[amount]
+
+
+<span class="kw">def</span> longest_common_subsequence(a, b):
+    <span class="cm"># state: dp[i][j] = LCS of a[:i] and b[:j]. Two-string problems are</span>
+    <span class="cm"># nearly always this grid -- edit distance is the same shape.</span>
+    m, n = len(a), len(b)
+    dp = [[<span class="nu">0</span>] * (n + <span class="nu">1</span>) <span class="kw">for</span> _ <span class="kw">in</span> range(m + <span class="nu">1</span>)]
+    <span class="kw">for</span> i <span class="kw">in</span> range(<span class="nu">1</span>, m + <span class="nu">1</span>):
+        <span class="kw">for</span> j <span class="kw">in</span> range(<span class="nu">1</span>, n + <span class="nu">1</span>):
+            <span class="kw">if</span> a[i-<span class="nu">1</span>] == b[j-<span class="nu">1</span>]:
+                dp[i][j] = dp[i-<span class="nu">1</span>][j-<span class="nu">1</span>] + <span class="nu">1</span>       <span class="cm"># match: consume both</span>
+            <span class="kw">else</span>:
+                dp[i][j] = max(dp[i-<span class="nu">1</span>][j], dp[i][j-<span class="nu">1</span>])  <span class="cm"># drop one or the other</span>
+    <span class="kw">return</span> dp[m][n]
+
+<span class="cm"># Space optimization to mention (and only implement if asked): each row</span>
+<span class="cm"># depends only on the previous row, so two rows suffice -> O(min(m,n)) space.</span>
+</code></pre>
+
+  <div class="codehead"><span>10 · trie and dijkstra — the two "know it when you need it" structures</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">class</span> Trie:
+    <span class="kw">def</span> __init__(self):
+        self.root = {}                      <span class="cm"># plain dicts beat a Node class under time pressure</span>
+
+    <span class="kw">def</span> insert(self, word):
+        node = self.root
+        <span class="kw">for</span> ch <span class="kw">in</span> word:
+            node = node.setdefault(ch, {})
+        node[<span class="st">'$'</span>] = <span class="kw">True</span>                    <span class="cm"># sentinel marks a complete word</span>
+
+    <span class="kw">def</span> starts_with(self, prefix):
+        node = self.root
+        <span class="kw">for</span> ch <span class="kw">in</span> prefix:
+            <span class="kw">if</span> ch <span class="kw">not</span> <span class="kw">in</span> node:
+                <span class="kw">return</span> <span class="kw">None</span>
+            node = node[ch]
+        <span class="kw">return</span> node                         <span class="cm"># the subtree = every completion</span>
+
+
+<span class="kw">import</span> heapq, math
+
+<span class="kw">def</span> dijkstra(adj, src, n):
+    <span class="st">"""adj[u] = [(v, weight), ...]. Non-negative weights only --</span>
+<span class="st">    if there are negative edges the answer is Bellman-Ford, and saying</span>
+<span class="st">    that unprompted is worth more than the implementation."""</span>
+    dist = [math.inf] * n
+    dist[src] = <span class="nu">0</span>
+    pq = [(<span class="nu">0</span>, src)]
+    <span class="kw">while</span> pq:
+        d, u = heapq.heappop(pq)
+        <span class="kw">if</span> d > dist[u]:
+            <span class="kw">continue</span>                    <span class="cm"># stale entry; we already did better</span>
+        <span class="kw">for</span> v, w <span class="kw">in</span> adj[u]:
+            <span class="kw">if</span> d + w &lt; dist[v]:
+                dist[v] = d + w
+                heapq.heappush(pq, (dist[v], v))
+    <span class="kw">return</span> dist
+</code></pre>
+
+  <h3>Complexity, for when they ask "can you do better?"</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>If the input size is…</th><th class="num">Then the intended complexity is about…</th><th>Which means</th></tr></thead>
+      <tbody>
+        <tr><td>n ≤ 12</td><td class="num">O(n!)</td><td>Permutations. Brute force is expected.</td></tr>
+        <tr><td>n ≤ 25</td><td class="num">O(2ⁿ)</td><td>Subsets, bitmask DP.</td></tr>
+        <tr><td>n ≤ 100</td><td class="num">O(n³)</td><td>Floyd–Warshall, interval DP.</td></tr>
+        <tr><td>n ≤ 5,000</td><td class="num">O(n²)</td><td>Two-string DP, all-pairs comparison.</td></tr>
+        <tr><td>n ≤ 10⁶</td><td class="num">O(n log n)</td><td>Sorting, heap, binary search. The most common target.</td></tr>
+        <tr><td>n &gt; 10⁶</td><td class="num">O(n) or O(log n)</td><td>Single pass, hash map, two pointers, or math.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout">
+    <div class="ct">Use the constraints as a hint, out loud</div>
+    <p>"n is up to a million, so an O(n²) solution is off the table — that points me at sorting or a single pass with a hash map." This is one of the cheapest strong signals available: it shows you reason about the problem before coding, and it often makes the interviewer confirm your direction for free.</p>
+  </div>
+</section>
+

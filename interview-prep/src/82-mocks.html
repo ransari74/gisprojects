@@ -1,0 +1,74 @@
+<section id="mocks">
+  <div class="sec-head">
+    <div class="eyebrow">Section 11</div>
+    <h2>Mocks &amp; self-grading</h2>
+    <p>Four graded mocks are scheduled — days 14, 21, and two on 27. A mock with a real person is better, but a solo mock done seriously is worth far more than another chapter of reading, and you can run one tonight.</p>
+  </div>
+
+  <h3>How to run one alone</h3>
+  <ol>
+    <li>Pick a prompt from the bank below <strong>without reading ahead</strong>. Set a timer for 45 minutes.</li>
+    <li><strong>Record yourself</strong> — audio is enough, and it is the entire trick. You will hear the filler, the tangents, and the ninety-second silences that you cannot feel from the inside.</li>
+    <li>Work on paper or a blank whiteboard tool. No searching, no notes, no tabs.</li>
+    <li>Talk the whole time, to an imagined interviewer. If it feels absurd, good — that discomfort is the thing you're desensitizing.</li>
+    <li>When the timer ends, <strong>stop mid-sentence</strong>. Then grade yourself on the rubric before listening back.</li>
+    <li>Listen at 1.5×. Write down every moment you'd want to redo. Those go on the gap list for day 25.</li>
+  </ol>
+
+  <h3>The rubric — score each 1–4, honestly</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Axis</th><th class="num">1 — miss</th><th class="num">2 — mixed</th><th class="num">3 — hire</th><th class="num">4 — strong</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Scoping</strong></td><td>Started designing immediately</td><td>Asked a few questions, no priorities set</td><td>Requirements and out-of-scope stated, agreed with interviewer</td><td>Also surfaced the constraint that reshaped the design</td></tr>
+        <tr><td><strong>Estimation</strong></td><td>No numbers at all</td><td>Numbers, but nothing depended on them</td><td>Numbers drove at least two decisions</td><td>Sized components and explained what changes at 10×</td></tr>
+        <tr><td><strong>Architecture</strong></td><td>Boxes without data flow</td><td>Works, but generic — could be any system</td><td>Complete, with an async path and clear responsibilities</td><td>Design is specific to <em>this</em> problem's hard part</td></tr>
+        <tr><td><strong>Depth</strong></td><td>Stayed at the box level</td><td>One dive, one level down</td><td>Deep dive with a real data structure and failure analysis</td><td>Two dives; anticipated the follow-up before it was asked</td></tr>
+        <tr><td><strong>Tradeoffs</strong></td><td>Asserted choices with no alternatives</td><td>Named alternatives without reasons</td><td>Every major choice justified against a requirement</td><td>Named what would make you reverse each choice</td></tr>
+        <tr><td><strong>Communication</strong></td><td>Long silences, or unstructured rambling</td><td>Understandable, needed prompting</td><td>Drove the clock, checked in, diagram is readable alone</td><td>Interviewer barely spoke and learned something</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Reading the score:</strong> mostly 3s is a hire. Any 1 is a specific, fixable thing — the most common by far are estimation (fix: §02, out loud, daily) and depth (fix: pick your dive earlier and go two more levels than feels necessary). Track the same six numbers across all four mocks; you are looking for the trend, not the absolute.</p>
+
+  <h3>Prompt bank</h3>
+  <p>Check them off as you use them. Do not read the corresponding section first.</p>
+  <div class="grid g2 wide" style="margin-top:16px">
+    <div class="card">
+      <span class="tag t-sd">Systems</span>
+      <div style="margin-top:12px">
+        <div class="check"><input type="checkbox" id="p1"><label for="p1">Design a distributed job scheduler with retries and cron semantics</label></div>
+        <div class="check"><input type="checkbox" id="p2"><label for="p2">Design Google Docs — collaborative editing with offline support</label></div>
+        <div class="check"><input type="checkbox" id="p3"><label for="p3">Design a payment system that never double-charges</label></div>
+        <div class="check"><input type="checkbox" id="p4"><label for="p4">Design a metrics and alerting platform (10M series, 1s resolution)</label></div>
+        <div class="check"><input type="checkbox" id="p5"><label for="p5">Design a ticketing system for a concert with 10M people queuing</label></div>
+        <div class="check"><input type="checkbox" id="p6"><label for="p6">Design a web crawler for 10B pages, politely</label></div>
+        <div class="check"><input type="checkbox" id="p7"><label for="p7">Design an object storage service (S3) with 11 nines of durability</label></div>
+        <div class="check"><input type="checkbox" id="p8"><label for="p8">Design a multi-region key-value store with tunable consistency</label></div>
+        <div class="check"><input type="checkbox" id="p9"><label for="p9">Design live video streaming for 50M concurrent viewers</label></div>
+        <div class="check"><input type="checkbox" id="p10"><label for="p10">Design a feature-flag service used by 5,000 services</label></div>
+      </div>
+    </div>
+    <div class="card">
+      <span class="tag t-ml">ML &amp; AI</span>
+      <div style="margin-top:12px">
+        <div class="check"><input type="checkbox" id="p11"><label for="p11">Design "people you may know" for 1B members</label></div>
+        <div class="check"><input type="checkbox" id="p12"><label for="p12">Design a real-time ad ranking and auction system</label></div>
+        <div class="check"><input type="checkbox" id="p13"><label for="p13">Design an AI code assistant with repository-wide context</label></div>
+        <div class="check"><input type="checkbox" id="p14"><label for="p14">Design semantic search over an enterprise's private documents</label></div>
+        <div class="check"><input type="checkbox" id="p15"><label for="p15">Design an ML platform: feature store, training, registry, serving</label></div>
+        <div class="check"><input type="checkbox" id="p16"><label for="p16">Design fraud detection for a payments company</label></div>
+        <div class="check"><input type="checkbox" id="p17"><label for="p17">Design an LLM gateway: routing, quotas, caching, evaluation</label></div>
+        <div class="check"><input type="checkbox" id="p18"><label for="p18">Design a support agent that can take actions on a user's account</label></div>
+        <div class="check"><input type="checkbox" id="p19"><label for="p19">Design content moderation for a platform with 1B daily uploads</label></div>
+        <div class="check"><input type="checkbox" id="p20"><label for="p20">Design an ETA prediction service for a delivery app</label></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="ct">The gap list</div>
+    <p>Keep one file for the whole month. Every mock, every blank-page exercise, every problem you couldn't finish adds one line: <em>what you missed</em>, and <em>the one sentence you'd say instead</em>. By day 25 it will be twenty or thirty lines — and that file, not this page, is your actual study material for the last week. Prep works when it converges on your specific weaknesses instead of re-reading what you already know.</p>
+  </div>
+</section>
+

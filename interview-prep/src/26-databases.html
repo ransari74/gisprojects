@@ -1,0 +1,108 @@
+
+<section id="dbfoundations">
+  <div class="sec-head">
+    <div class="eyebrow">Section 02 · Foundations</div>
+    <h2>Databases from scratch</h2>
+    <p>More design rounds are lost on database questions than on any other topic, because "which database" is really four questions: what does an index cost, what does a transaction guarantee, what happens under concurrent writes, and what happens when one machine isn't enough. Answer those and the choice makes itself.</p>
+  </div>
+
+  <h3>What an index actually is</h3>
+  <p>A table without an index is an unordered pile of rows. Finding <code>WHERE email = 'x'</code> means reading every row — a <strong>sequential scan</strong>, O(n). An index is a separate, sorted structure — almost always a <strong>B+ tree</strong> — mapping column values to row locations.</p>
+  <p>A B+ tree stores keys in fixed-size pages (typically 8 KB) with a high branching factor: an internal page holds hundreds of keys, so a tree over a billion rows is only about four levels deep. That's <strong>four page reads to find any row</strong> instead of a billion. All actual values live in the leaf pages, which are linked together — which is why a B+ tree serves both point lookups <em>and</em> range scans efficiently.</p>
+
+  <div class="diagram">
+    <div class="dflow">
+      <div class="dcol"><div class="node pri">Root page<small>1 read</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node">Internal<small>~500 keys/page</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node">Internal<small>~250k rows covered</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node store">Leaf pages<small>values + row pointers,<br>linked left→right</small></div></div>
+      <div class="arrow">→<span>range scan</span></div>
+      <div class="dcol"><div class="node store">Next leaf<small>no re-descent</small></div></div>
+    </div>
+    <div class="dcap">Depth ~4 over a billion rows. The linked leaves are why <code>BETWEEN</code> and <code>ORDER BY</code> on an indexed column are cheap.</div>
+  </div>
+
+  <h4>The rules that follow from the structure</h4>
+  <ul>
+    <li><strong>Indexes make writes slower.</strong> Every <code>INSERT</code>/<code>UPDATE</code>/<code>DELETE</code> must update every affected index. Five indexes means roughly six writes per write. "Add an index" is never free, and on a write-heavy table it can be the problem rather than the fix.</li>
+    <li><strong>Composite indexes are left-prefix only.</strong> An index on <code>(user_id, created_at)</code> serves <code>WHERE user_id = ?</code> and <code>WHERE user_id = ? AND created_at &gt; ?</code>, but <em>not</em> <code>WHERE created_at &gt; ?</code> alone — the tree is sorted by <code>user_id</code> first. Column order is a design decision, and this is the single most common index mistake.</li>
+    <li><strong>A covering index answers the query without touching the table.</strong> If the index contains every column the query needs, the database never follows the pointer to the row. Often a 10× win on read-heavy paths.</li>
+    <li><strong>Low-cardinality columns barely help.</strong> An index on a boolean over 100M rows still points at 50M of them; the planner will correctly ignore it and scan.</li>
+    <li><strong>A function on the column disables the index.</strong> <code>WHERE LOWER(email) = 'x'</code> can't use an index on <code>email</code> — you need an index on the expression itself.</li>
+    <li><strong>Clustered vs secondary.</strong> In MySQL/InnoDB the table <em>is</em> the primary-key B-tree, so secondary indexes store the primary key and every secondary lookup costs a second descent. This is why a random UUID primary key hurts InnoDB — inserts land all over the tree instead of appending.</li>
+  </ul>
+
+  <h3>How the planner joins tables</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Algorithm</th><th>How</th><th>Chosen when</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Nested loop</strong></td><td>For each row of A, look up matches in B (ideally via an index)</td><td>A is small and B is indexed on the join key. Catastrophic if B isn't indexed — that's O(n×m).</td></tr>
+        <tr><td><strong>Hash join</strong></td><td>Build a hash table on the smaller side, probe with the larger</td><td>Big unsorted inputs, equality joins. Needs memory; spills to disk when it doesn't fit.</td></tr>
+        <tr><td><strong>Merge join</strong></td><td>Sort both sides, then walk them in lockstep</td><td>Inputs already sorted (e.g. both indexed on the join key), or very large.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Read the plan, don't guess.</strong> <code>EXPLAIN ANALYZE</code> gives you the chosen algorithm, estimated vs actual row counts, and time per node. The tell for a bad plan is a large gap between estimate and actual — that means stale statistics, and the planner picked a nested loop for what turned out to be ten million rows.</p>
+  <p><strong>The N+1 problem</strong> is the application-level version of the same mistake: fetch 100 posts, then loop and fetch each author separately — 101 queries, each with a network round trip. Fix by joining, or by batching the second query with <code>WHERE id IN (…)</code>. Mention it by name; it's the most common real-world database bug in web applications.</p>
+
+  <h3>Transactions: what ACID actually promises</h3>
+  <div class="deflist">
+    <dt>Atomicity</dt><dd>All of the statements in the transaction, or none. Implemented by a write-ahead log: changes are journaled before they're applied, so a crash mid-transaction can be rolled back on restart.</dd>
+    <dt>Consistency</dt><dd>The weakest and most misunderstood letter. It only means declared constraints (foreign keys, uniqueness, checks) hold before and after. It is <em>not</em> the "C" in CAP, which is a different property entirely.</dd>
+    <dt>Isolation</dt><dd>Concurrent transactions don't see each other's partial work — to the degree the isolation level promises. This is where the real complexity lives.</dd>
+    <dt>Durability</dt><dd>Once committed, it survives a crash. Which requires an <code>fsync</code> to actually reach the disk, and that's why commit latency has a floor — and why <code>synchronous_commit = off</code> makes a database dramatically faster and slightly untruthful.</dd>
+  </div>
+
+  <h4>Isolation levels and the anomalies they permit</h4>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Level</th><th class="num">Dirty read</th><th class="num">Non-repeatable read</th><th class="num">Phantom</th><th class="num">Write skew</th></tr></thead>
+      <tbody>
+        <tr><td>Read uncommitted</td><td class="num">possible</td><td class="num">possible</td><td class="num">possible</td><td class="num">possible</td></tr>
+        <tr><td>Read committed <em>(default in Postgres)</em></td><td class="num">no</td><td class="num">possible</td><td class="num">possible</td><td class="num">possible</td></tr>
+        <tr><td>Repeatable read <em>(default in MySQL)</em></td><td class="num">no</td><td class="num">no</td><td class="num">possible*</td><td class="num">possible</td></tr>
+        <tr><td>Serializable</td><td class="num">no</td><td class="num">no</td><td class="num">no</td><td class="num">no</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>In words: a <strong>dirty read</strong> sees uncommitted data. A <strong>non-repeatable read</strong> is reading the same row twice in one transaction and getting different values. A <strong>phantom</strong> is re-running the same <code>WHERE</code> and getting new rows. <strong>Write skew</strong> is the subtle one: two transactions each read a set, each check a constraint that currently holds, and each write — and the constraint is violated by the combination. The classic case is two doctors both cancelling their on-call shift because each sees the other still on call. Only serializable prevents it, and knowing that example is worth real credit.</p>
+  <p><strong>MVCC</strong> is how modern databases give you this cheaply: instead of locking readers out, each transaction sees a consistent snapshot of the data as of its start, and writers create new row versions rather than overwriting. Readers never block writers and writers never block readers. The cost is version accumulation — Postgres needs <code>VACUUM</code> to reclaim dead tuples, and a long-running transaction holds back cleanup for the whole database. "Why did our disk fill up?" is very often this.</p>
+
+  <h3>Transactions that span services</h3>
+  <p>Once data lives in two systems, ACID stops applying and you have three options:</p>
+  <ul>
+    <li><strong>Two-phase commit.</strong> A coordinator asks everyone to prepare, then to commit. Correct, and it blocks: if the coordinator dies after prepare, every participant holds locks indefinitely. Rare in modern systems for exactly this reason.</li>
+    <li><strong>Saga.</strong> A sequence of local transactions, each with a compensating action to undo it. Book the flight, book the hotel; if the hotel fails, cancel the flight. No isolation — an intermediate state is visible — so the business has to tolerate it, which usually it does.</li>
+    <li><strong>Make it one transaction.</strong> Often the right answer is that the two things belonged in the same service and the same database, and the distribution was the mistake.</li>
+  </ul>
+
+  <h3>Choosing a store</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Family</th><th>Examples</th><th>Reach for it when</th><th>Don't when</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Relational</strong></td><td>Postgres, MySQL</td><td>You need transactions, joins, ad-hoc queries, or you don't yet know the access patterns. <em>The correct default.</em></td><td>You genuinely exceed one machine's write throughput and can't shard cleanly.</td></tr>
+        <tr><td><strong>Wide-column</strong></td><td>Cassandra, ScyllaDB, HBase</td><td>Massive write volume, time-series or event data, known query patterns, linear scale-out, multi-region writes.</td><td>You need joins, ad-hoc queries, or strong consistency by default.</td></tr>
+        <tr><td><strong>Document</strong></td><td>MongoDB, DynamoDB</td><td>Self-contained documents, schema varying per record, access always by key or a known index.</td><td>Relationships matter. Modeling a graph as documents ends badly.</td></tr>
+        <tr><td><strong>Key-value</strong></td><td>Redis, Memcached, DynamoDB</td><td>Caching, sessions, counters, rate limits, queues, leaderboards. Sub-millisecond.</td><td>It's your source of truth and you can't tolerate loss (unless configured carefully).</td></tr>
+        <tr><td><strong>Search</strong></td><td>Elasticsearch, OpenSearch</td><td>Full-text relevance, faceting, aggregations over text.</td><td>As a primary store. It's a derived index — rebuild it from the real database.</td></tr>
+        <tr><td><strong>Time-series</strong></td><td>Prometheus, InfluxDB, TimescaleDB</td><td>Metrics: timestamped numbers, written constantly, queried by range, downsampled as they age.</td><td>Anything with updates or relationships.</td></tr>
+        <tr><td><strong>Graph</strong></td><td>Neo4j, Neptune</td><td>Multi-hop traversals — fraud rings, social distance, recommendations over a graph.</td><td>One hop. A join does that fine.</td></tr>
+        <tr><td><strong>Columnar / OLAP</strong></td><td>BigQuery, Snowflake, ClickHouse</td><td>Analytics scanning billions of rows over a few columns; ML training data.</td><td>Point lookups or per-row updates.</td></tr>
+        <tr><td><strong>Vector</strong></td><td>pgvector, Pinecone, Qdrant, FAISS</td><td>Similarity over embeddings — semantic search, recommendation retrieval, RAG.</td><td>Exact-match lookups. Use a real index next to it (§14).</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout">
+    <div class="ct">The answer that scores well</div>
+    <p>"Postgres, until a specific requirement forces something else." Then name the requirement that would force it: write throughput beyond a single primary, a document shape that changes per tenant, sub-millisecond reads, full-text relevance ranking. Interviewers are testing whether you reach for complexity by default — and a modern Postgres with JSONB, full-text search, and pgvector covers a startling amount of ground, which is itself a good thing to say.</p>
+  </div>
+
+  <h3>Two operational details that show experience</h3>
+  <p><strong>Connection pooling.</strong> Every Postgres connection is a process using several megabytes; a few hundred is a lot. But 100 app servers × a 20-connection pool each is 2,000 connections, and the database falls over. The fix is an external pooler (PgBouncer) in transaction mode. Mentioning this unprompted signals you've run something.</p>
+  <p><strong>Migrations without downtime.</strong> Adding a nullable column is instant; adding a <code>NOT NULL</code> column with a default rewrites the table and locks it. The safe pattern is <strong>expand then contract</strong>: add the new column, write to both, backfill in batches, switch reads, then drop the old one — four deploys instead of one, and no outage. This is a very common senior-level follow-up.</p>
+</section>

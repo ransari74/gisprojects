@@ -1,0 +1,144 @@
+
+<section id="designs2">
+  <div class="sec-head">
+    <div class="eyebrow">Section 12 · System design</div>
+    <h2>Four harder designs</h2>
+    <p>These four are chosen because each one forces a concept the first four don't: time-based work distribution, conflict resolution without a lock, extreme write compression, and correctness where being wrong costs money.</p>
+  </div>
+
+  <h3>Design 9 — Distributed job scheduler</h3>
+  <p>Prompt: <em>schedule 100M jobs a day — one-off and recurring — with retries, at-least-once execution, and second-level precision.</em> Deceptively hard, because the naive query is a landmine.</p>
+
+  <h4>Scale</h4>
+  <p>100M jobs/day → ~1,200/s average. But scheduled work is <strong>violently non-uniform</strong>: a huge fraction of cron entries fire at the top of the hour and at midnight, so peak is easily 50–100× average. Design for the spike, not the mean — that's the first thing to say.</p>
+
+  <div class="callout warnbox">
+    <div class="ct">Why the obvious query kills you</div>
+    <p><code>SELECT * FROM jobs WHERE next_run_at &lt;= NOW() AND status = 'pending' LIMIT 100</code>, polled every second by 50 scheduler nodes, means 50 queries per second all scanning the same index range and all fighting over the same rows. You get lock contention, duplicate pickup, and an index whose hot end every node hammers. The interview is about avoiding this.</p>
+  </div>
+
+  <p><strong>The design:</strong> partition the time axis and the job space together. Jobs are hashed into N shards; each shard keeps its due jobs in a <strong>time-bucketed sorted set</strong> (Redis <code>ZSET</code> scored by <code>next_run_at</code>, or a table partitioned by minute). Each scheduler node holds a lease on a subset of shards from a consistent store, so exactly one node polls each shard — no contention, and rebalancing on node failure is a lease expiry rather than a coordination protocol.</p>
+
+  <div class="diagram">
+    <div class="dflow">
+      <div class="dcol"><div class="node">API<small>create / cancel</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node store">Job store<small>definition + state</small></div><div class="node pri">Timer index<small>ZSET per shard,<br>score = next_run_at</small></div></div>
+      <div class="arrow">→<span>lease</span></div>
+      <div class="dcol"><div class="node pri">Scheduler<small>owns shards 0-31<br>polls due window</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node">Queue<small>visibility timeout</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node">Workers<small>idempotent execution</small></div><div class="node store">DLQ<small>after N retries</small></div></div>
+    </div>
+    <div class="dcap">Two indexes on purpose: the durable job store is the source of truth, the timer index is a fast derived view that can be rebuilt.</div>
+  </div>
+
+  <h4>Deep dive: the execution guarantee</h4>
+  <p>You cannot have exactly-once. What you build is <strong>at-least-once with idempotent execution</strong>: the scheduler moves a job to <code>in_flight</code> with a lease deadline before enqueueing; the worker must finish and acknowledge before the lease expires or the job is redelivered. Every job carries an execution id, and the work it does must be safe to repeat under that id.</p>
+  <p>Retries use <strong>exponential backoff with full jitter</strong> — <code>sleep = random(0, min(cap, base · 2^attempt))</code>. Without jitter, a downstream outage produces synchronized retry waves that keep it down. After N attempts the job goes to a dead-letter queue with its failure history, because silently dropping work is worse than an alert.</p>
+  <p><strong>The midnight thundering herd:</strong> if ten million cron jobs all specify <code>0 0 * * *</code>, they all become due in the same second. Two mitigations, and you should offer both: <em>deterministic jitter</em> — spread each job by <code>hash(job_id) % 60</code> seconds, which is stable across runs so it doesn't drift — and <em>rate-limited dispatch</em> per shard so the queue absorbs the spike rather than the workers.</p>
+  <p><strong>Failure modes:</strong> clock skew between schedulers (use a single source for "now", or accept ±1 s and make it a documented guarantee) · a scheduler that pauses (GC, network) and resumes after its lease expired must not dispatch — check lease validity before every batch, a classic fencing-token problem · a job whose execution takes longer than its interval (either skip the overlap or queue it, but make it a per-job policy, and say which is the default).</p>
+
+  <hr class="rule">
+
+  <h3>Design 10 — Collaborative document editor</h3>
+  <p>Prompt: <em>Google Docs — many people typing in one document, live cursors, and it must work offline and reconcile.</em> The whole question is one problem: two people edit the same position at the same time, and there is no lock.</p>
+
+  <h4>Why a naive approach fails</h4>
+  <p>Sending "insert 'x' at index 7" is unsafe: by the time it arrives, someone else inserted three characters before index 7, so it lands in the wrong place. Sending the whole document on every keystroke is correct and unusable. You need operations that can be <strong>transformed or merged</strong> to converge regardless of arrival order.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Approach</th><th>How it works</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Operational transformation</strong> (OT)</td><td>Operations carry a version; the server transforms each incoming op against every op it missed, then broadcasts. Clients transform against their own pending ops.</td><td>Requires a <strong>central server</strong> to define the canonical order. Transform functions are notoriously easy to get subtly wrong — this is where the real complexity is. Small payloads, no metadata growth.</td></tr>
+        <tr><td><strong>CRDT</strong></td><td>Every character gets a globally unique, densely ordered identifier, so concurrent inserts have a deterministic total order with no transformation at all.</td><td>Works peer-to-peer and offline indefinitely. Costs metadata per character (mitigated by run-length encoding) and tombstones for deletions that need periodic garbage collection.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Pick one and justify it:</strong> "CRDT, because offline support is a stated requirement and CRDTs don't need a central authority to converge — I'll pay the metadata cost and compact runs." Or: "OT, because we already have a server in the path, payloads stay small, and the mature implementations are OT." Either is a good answer; having no reason is not.</p>
+
+  <div class="diagram">
+    <div class="dflow">
+      <div class="dcol"><div class="node">Clients<small>local-first, optimistic</small></div></div>
+      <div class="arrow">↔<span>WebSocket</span></div>
+      <div class="dcol"><div class="node pri">Doc session<small>one owner per doc,<br>held by lease</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node store">Op log<small>append-only,<br>ordered per doc</small></div><div class="node store">Snapshots<small>every N ops</small></div></div>
+      <div class="arrow">⇢</div>
+      <div class="dcol"><div class="node">Presence<small>cursors, ephemeral,<br>never persisted</small></div></div>
+    </div>
+    <div class="dcap">Routing every edit for one document to a single owning process turns a distributed consensus problem into a local one. That is the highest-leverage decision in this design.</div>
+  </div>
+
+  <h4>Deep dive: the pieces that make it practical</h4>
+  <ul>
+    <li><strong>Single writer per document.</strong> Route by <code>hash(doc_id)</code> to one process that holds a lease. Ordering becomes trivial, and the failure story is "the lease expires and another node loads the doc from its snapshot plus op log".</li>
+    <li><strong>Optimistic local application.</strong> Apply the keystroke locally at once, send it, and reconcile when the server's version arrives. Any round trip in the typing path feels broken.</li>
+    <li><strong>Snapshot plus log.</strong> Replaying a million ops to open a document is unacceptable; snapshot every few hundred ops and keep only the tail. This is the same read-optimization/write-optimization split as an LSM tree.</li>
+    <li><strong>Presence is not document data.</strong> Cursors and selections are high-frequency, worthless after a second, and must never enter the durable log. Ephemeral pub/sub, dropped freely under load.</li>
+    <li><strong>Undo is per-user, and it's the hard part.</strong> Undo must revert <em>your</em> last operation, not the document's, and the document has moved since — so undo is itself a new operation computed against the current state, not a rollback.</li>
+  </ul>
+
+  <hr class="rule">
+
+  <h3>Design 11 — Metrics and alerting platform</h3>
+  <p>Prompt: <em>10 million active time series at 1-second resolution, 13-month retention, alert evaluation in near real time.</em> A pure write-throughput and compression problem.</p>
+
+  <div class="codehead"><span>The arithmetic that dictates the entire storage design</span><button class="copy" type="button">Copy</button></div>
+<pre><code>ingest      = 10M series x 1 sample/s      = <span class="nu">10M samples/s</span>
+raw sample  = 8 B timestamp + 8 B float64  = 16 B
+raw rate    = 10M x 16 B                   = <span class="nu">160 MB/s</span>
+raw/year    = 160 MB/s x 30M s             ≈ <span class="nu">5 PB/year</span>   <span class="cm"># unaffordable</span>
+
+<span class="cm"># Gorilla-style compression: delta-of-delta on timestamps (regular intervals</span>
+<span class="cm"># compress to a couple of BITS), XOR on values (adjacent floats share most bits).</span>
+<span class="cm"># Reported average in production: ~1.4 bytes per sample, ~12x reduction.</span>
+compressed  = 10M x 1.4 B                  ≈ <span class="nu">14 MB/s</span>
+compressed/year                            ≈ <span class="nu">440 TB/year</span>
+
+<span class="cm"># Then tier by age -- nobody queries per-second data from 9 months ago:</span>
+<span class="cm">#   0-7 days   : full resolution        (~8 TB)</span>
+<span class="cm">#   7-90 days  : 1-minute rollups       (60x smaller)</span>
+<span class="cm">#   90-395 days: 1-hour rollups         (3600x smaller)</span>
+<span class="cm"># Total lands in the tens of TB. THAT is a buildable system.</span>
+</code></pre>
+
+  <p><strong>The architecture</strong> is a specialized LSM tree: agents push samples to an ingest tier, which appends to a write-ahead log and accumulates a <strong>head block</strong> in memory (the last couple of hours, uncompressed and queryable). Periodically the head block is compressed and written out as an immutable block to object storage, with its own index. Queries fan out across the blocks covering the time range, plus the head block, and merge. Old blocks are compacted and downsampled by a background job.</p>
+  <p>A series is identified by its <strong>label set</strong> — <code>http_requests{service="api", region="us-east", status="500"}</code> — and lookup is an inverted index: label pair → posting list of series ids, intersected across the query's matchers. This is literally the search-engine design from §14 applied to metrics, and pointing that out is a nice moment of synthesis.</p>
+
+  <h4>Deep dive: cardinality is the thing that kills these systems</h4>
+  <p>Every distinct combination of label values is a separate series with its own index entry and its own memory. Adding one label with a high-cardinality value — <code>user_id</code>, <code>request_id</code>, a raw URL with ids in it — multiplies your series count by millions and takes the cluster down. <strong>This is the number one production failure of every metrics system</strong>, and naming it unprompted is a strong signal. Defenses: enforce a per-metric series limit at ingest and reject beyond it, strip unbounded labels at the agent, expose cardinality as a first-class metric, and route genuinely high-cardinality data to a logging or tracing system instead — those are designed for it, and metrics are not.</p>
+  <p><strong>Alerting</strong> runs the query set on a schedule (say every 15 s), which means the alert evaluator is your heaviest, most predictable query client — size for it explicitly. Add a <code>for: 5m</code> duration so a single bad scrape doesn't page anyone, deduplicate and group alerts before notifying, and support silences during deploys. And keep the alerting path independent of the long-term storage path, so you can still alert when the historical tier is down.</p>
+
+  <hr class="rule">
+
+  <h3>Design 12 — Payment processing</h3>
+  <p>Prompt: <em>charge a customer's card, and never double-charge, even when the network lies to you.</em> The only design here where "eventually consistent" is not an acceptable answer, which makes it a favorite for testing rigor.</p>
+
+  <h4>The two ideas that carry the whole design</h4>
+  <p><strong>1. A double-entry ledger.</strong> Don't store a balance you mutate. Store an append-only sequence of entries where every transaction has balanced debits and credits, and derive the balance by summing (with periodic materialized checkpoints so you're not summing ten years of history on every read). This gives you a complete audit trail, makes every state reachable from the log, and makes bugs detectable — if debits and credits don't sum to zero, something is wrong and you can prove it. Every real payment system works this way, and mutable-balance designs are how money quietly disappears.</p>
+  <p><strong>2. An explicit state machine.</strong> <code>created → authorized → captured → settled</code>, with branches to <code>failed</code>, <code>refunded</code>, and the important one: <code>unknown</code>. Transitions are recorded as ledger entries. Nothing moves state except a valid transition, so an unexpected callback can't corrupt the record.</p>
+
+  <div class="diagram">
+    <div class="dflow">
+      <div class="dcol"><div class="node">Client<small>Idempotency-Key</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node pri">Payment service<small>dedupe on key,<br>write intent FIRST</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node store">Ledger<small>append-only,<br>double entry</small></div><div class="node">Outbox<small>same txn</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node">Processor call<small>same key passed<br>downstream</small></div></div>
+      <div class="arrow">⇄</div>
+      <div class="dcol"><div class="node">Reconciler<small>daily settlement file<br>vs ledger</small></div></div>
+    </div>
+    <div class="dcap">The intent is durably written <em>before</em> the external call, so a crash mid-call leaves evidence that the call may have happened.</div>
+  </div>
+
+  <h4>Deep dive: the timeout with an unknown outcome</h4>
+  <p>This is the actual hard case, and the one that separates a good answer from a generic one. You call the payment processor and the connection times out. <strong>You do not know whether the charge happened.</strong> Retrying blindly may double-charge; giving up may take money without recording it.</p>
+  <p>The resolution has three parts: <strong>(a)</strong> pass <em>your</em> idempotency key to the processor so a retry with the same key is deduplicated on their side — every serious processor supports this; <strong>(b)</strong> before retrying, <em>query</em> the processor for the status of that key rather than re-issuing the charge; <strong>(c)</strong> if the status is still unknown, leave the payment in an explicit <code>unknown</code> state with a scheduled re-check, and never let it silently resolve to success or failure. Then the <strong>daily reconciliation</strong> job compares the processor's settlement file against your ledger line by line, and every mismatch is an alert that a human looks at. Reconciliation is not a nice-to-have here; it is the mechanism that makes the system trustworthy, and candidates who mention it unprompted stand out.</p>
+  <p><strong>Consistency choice:</strong> this is the one system where you take strong consistency and pay for it. Ledger writes go through a single-leader relational database with serializable-or-close isolation; balance checks and debits happen in one transaction; cross-service flows use a saga with explicit compensation (refund) rather than two-phase commit, because holding locks across a third-party network call is untenable.</p>
+  <p><strong>Failure modes worth naming:</strong> a duplicate webhook from the processor (dedupe on their event id, and treat webhooks as at-least-once) · out-of-order webhooks (the state machine rejects invalid transitions rather than trusting arrival order) · a partial refund arriving after a chargeback (model both as ledger entries, never as edits) · currency and rounding (integer minor units only — never floating point for money, and say this out loud, because it is a real disqualifier).</p>
+</section>

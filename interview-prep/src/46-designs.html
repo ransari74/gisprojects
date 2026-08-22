@@ -1,0 +1,161 @@
+<section id="designs">
+  <div class="sec-head">
+    <div class="eyebrow">Section 04</div>
+    <h2>Four worked designs</h2>
+    <p>Read each one, then close the page and redraw it. These four cover most of the surface area: unique ID generation and redirects, fan-out and hot keys, stateful connections and ordering, and spatial indexing with high-frequency writes.</p>
+  </div>
+
+  <h3>Design 1 — URL shortener</h3>
+  <p>The warm-up question. It looks trivial, which is exactly why the bar is "did you find the interesting part". The interesting part is ID generation and the read path, not the database.</p>
+
+  <h4>Scope</h4>
+  <p><strong>In:</strong> create a short link (optional custom alias, optional TTL), redirect, click analytics. <strong>Out:</strong> user accounts, link editing, spam detection — mention that you're deferring them. <strong>Non-functional:</strong> redirect p99 under 50 ms, read-heavy, and the redirect path must survive the analytics pipeline being down.</p>
+
+  <h4>Scale</h4>
+  <p>100M new links/day → ~1,000 writes/s. Read:write of 100:1 → <strong>100k reads/s average, 300k peak</strong>. Five years of links ≈ 180B rows × ~500 B = <strong>~90 TB</strong>. So: sharded key-value store, aggressive caching, and the write path is trivially small.</p>
+
+  <h4>The short code</h4>
+  <p>Base62 (<code>a–zA–Z0–9</code>): 62<sup>7</sup> ≈ 3.5 trillion codes, so <strong>7 characters</strong> is enough for a century. Three ways to make one:</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Approach</th><th>How</th><th>Problem</th></tr></thead>
+      <tbody>
+        <tr><td>Hash the URL</td><td><code>base62(md5(url))[:7]</code></td><td>Collisions must be detected and retried; a DB read on every write. Does give free deduplication.</td></tr>
+        <tr><td>Auto-increment counter</td><td><code>base62(next_id())</code></td><td>Sequential and therefore enumerable — anyone can crawl every link. Also a single point of contention.</td></tr>
+        <tr><td><strong>Pre-allocated key ranges</strong></td><td>A key service hands each app node a block of 10k unused ids; node serves from memory</td><td>Ids are lost on restart, which does not matter. <em>This is the answer:</em> no coordination on the hot path, no collisions, and you can shuffle within a block to defeat enumeration.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>If asked for globally-unique 64-bit ids without a central service, describe <strong>Snowflake</strong>: <code>[41 bits ms-timestamp | 10 bits machine id | 12 bits sequence]</code> — time-sortable, 4096 ids per ms per machine, no coordination. The failure mode worth naming is clock skew going backwards; you stall until the clock catches up.</p>
+
+  <div class="diagram">
+    <div class="dflow">
+      <div class="dcol"><div class="node">Client</div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node pri">CDN / edge<small>301 cached</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node">Read service<small>stateless, autoscaled</small></div></div>
+      <div class="arrow">→<span>~95% hit</span></div>
+      <div class="dcol"><div class="node pri">Redis<small>code → url</small></div><div class="node store">KV store<small>sharded by code</small></div></div>
+      <div class="arrow">⇢<span>async</span></div>
+      <div class="dcol"><div class="node">Kafka<small>click events</small></div><div class="node store">Warehouse<small>analytics</small></div></div>
+    </div>
+    <div class="dcap">Redirect path. The analytics branch is fire-and-forget: it must never be able to slow or fail a redirect.</div>
+  </div>
+
+  <h4>Deep dive: the redirect</h4>
+  <p>Use <strong>302 (temporary), not 301</strong>. A 301 is cached by the browser forever, which is faster but destroys your click analytics and makes a link impossible to retire. That tradeoff sentence is the whole point of the question. Cache hit rate will be very high because link popularity is Zipfian — a Redis cache of the top few million codes serves most traffic, and the KV store barely sees load.</p>
+  <p><strong>Failure modes:</strong> a viral link creating a single hot key (fix: local in-process cache in front of Redis, since the mapping is immutable and can be cached forever) · expired links (store TTL, and let a lazy sweep delete on read rather than scanning) · analytics backpressure (bounded in-memory buffer, drop events under load and say so out loud).</p>
+
+  <hr class="rule">
+
+  <h3>Design 2 — News feed</h3>
+  <p>The canonical fan-out question. Everything hinges on one decision, and the correct answer is "both".</p>
+
+  <h4>Scale</h4>
+  <p>500M DAU, average 200 follows, 10 feed views/user/day → <strong>~50k feed reads/s average, 150k peak</strong>. 100M posts/day → ~1,000 writes/s. But each post fans out to 200 followers on average, so naive fan-out-on-write is <strong>200k timeline inserts/s</strong> — and a celebrity with 100M followers is 100M inserts from a single tap.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Strategy</th><th>On write</th><th>On read</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Fan-out on write</strong> (push)</td><td>Insert into every follower's timeline</td><td>One sequential read. ~10 ms.</td><td>Great reads, catastrophic for celebrities, wasted work for inactive users.</td></tr>
+        <tr><td><strong>Fan-out on read</strong> (pull)</td><td>Just store the post</td><td>Fetch N followees' recent posts, merge, rank</td><td>Cheap writes, slow and expensive reads at 200 followees.</td></tr>
+        <tr><td><strong>Hybrid</strong></td><td>Push for normal users; skip for accounts over ~100k followers</td><td>Read the pushed timeline, then pull the handful of celebrity posts and merge</td><td><strong>The answer.</strong> Bounded work in both directions.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="diagram">
+    <div class="dflow">
+      <div class="dcol"><div class="node">Post API</div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node store">Post store<small>id → content</small></div><div class="node">Kafka<small>post_created</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node pri">Fan-out workers<small>skip if celebrity</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node pri">Timeline cache<small>Redis list per user<br>~800 post ids</small></div></div>
+      <div class="arrow">←<span>read</span></div>
+      <div class="dcol"><div class="node">Feed API<small>merge + hydrate</small></div><div class="node ml">Ranker<small>see §06</small></div></div>
+    </div>
+    <div class="dcap">Store <em>ids</em> in the timeline, never post bodies — one edit shouldn't rewrite 200 million copies. Hydrate from the post store on read, in one batched multi-get.</div>
+  </div>
+
+  <h4>Deep dive: the timeline representation</h4>
+  <p>Each user's timeline is a Redis sorted set or list of ~800 post ids scored by time (or predicted engagement). Truncate hard — nobody scrolls past a few hundred items, and unbounded lists are how you run out of memory at 3am. Only materialize timelines for <strong>active users</strong> (seen in the last 30 days); for everyone else, build on read and start pushing again once they return. At 500M DAU × 800 ids × 8 B that's ~3 TB of Redis, sharded by user id — a number worth saying out loud, because it justifies the truncation.</p>
+  <p><strong>Pagination</strong> must be cursor-based (<code>?after=&lt;post_id&gt;&limit=20</code>), never offset-based: new posts arriving shift every offset and users see duplicates.</p>
+  <p><strong>Failure modes:</strong> fan-out lag during a spike (the queue absorbs it; the feed is a few seconds stale, which is acceptable — say so) · a user following 5,000 accounts (cap the pull-side merge, prioritize by affinity) · unfollow leaving stale entries (filter at read time rather than rewriting timelines).</p>
+
+  <hr class="rule">
+
+  <h3>Design 3 — Chat (WhatsApp / Slack)</h3>
+  <p>This one is about <em>stateful connections</em>, and about ordering guarantees you can actually deliver.</p>
+
+  <h4>Scale</h4>
+  <p>100M concurrent connections, 50B messages/day → <strong>~500k messages/s average, 1.5M peak</strong>. At ~50k WebSocket connections per node, 100M concurrent needs <strong>~2,000 gateway nodes</strong> — a good number to compute, because it immediately raises "how does node A find the user connected to node B?"</p>
+
+  <div class="diagram">
+    <div class="dflow">
+      <div class="dcol"><div class="node">Client A<small>WebSocket</small></div></div>
+      <div class="arrow">↔</div>
+      <div class="dcol"><div class="node pri">Gateway node<small>sticky, holds conn</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node">Chat service<small>persist + seq no.</small></div><div class="node store">Message store<small>partition by chat_id</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node pri">Registry<small>user → gateway</small></div><div class="node">Pub/sub<small>route to node</small></div></div>
+      <div class="arrow">→</div>
+      <div class="dcol"><div class="node">Gateway node<small>B's connection</small></div><div class="node store">Push (APNs/FCM)<small>if offline</small></div></div>
+    </div>
+    <div class="dcap">The registry is the piece candidates forget. Without it, a message has no way to find the one node in two thousand holding the recipient's socket.</div>
+  </div>
+
+  <h4>Deep dive: ordering and delivery</h4>
+  <p>Client timestamps are unusable — clocks lie and clients cheat. Assign a <strong>monotonic sequence number per conversation</strong> at the chat service, and let clients sort by it. Partition the message store by <code>chat_id</code> so a conversation's messages live together and a single-partition read serves the history; the primary key is <code>(chat_id, seq)</code>, which makes "load 50 messages before X" one range scan.</p>
+  <p>Delivery is a three-state machine: <strong>sent</strong> (server has it), <strong>delivered</strong> (recipient's device acked), <strong>read</strong> (recipient opened it). Each is a separate small event flowing back on the same channel. For offline users, hold messages in a per-user inbox and drain it on reconnect — the client sends its last-known <code>seq</code> and the server replays forward.</p>
+  <p><strong>Group chats</strong> flip the math: one message to a 500-person group is 500 deliveries. Keep groups bounded (that's why real products cap them), fan out through the same pub/sub, and for very large groups switch to a pull model — clients poll the conversation instead of receiving pushes.</p>
+  <p><strong>Failure modes:</strong> a gateway node dying takes 50k connections with it (clients reconnect with backoff and jitter — without jitter you get a thundering herd against the registry) · duplicate sends on retry (client-generated message id, deduplicated server-side) · end-to-end encryption, if it comes up, means the server stores ciphertext and cannot do search, so search moves onto the device.</p>
+
+  <hr class="rule">
+
+  <h3>Design 4 — Nearby drivers (proximity service)</h3>
+  <p>High-frequency writes against a spatial index — the opposite shape from the previous three, and a favorite because the naive answer (a SQL query with a bounding box) falls over immediately.</p>
+
+  <h4>Scale</h4>
+  <p>5M active drivers reporting every 4 s → <strong>1.25M location writes/s</strong>. 1M rider searches/minute → ~17k reads/s. The write:read ratio is inverted from every other system here, and that is the whole design: <strong>writes must be O(1) with no index rebuild</strong>.</p>
+
+  <div class="callout">
+    <div class="ct">Why the obvious answer fails</div>
+    <p><code>SELECT * FROM drivers WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?</code> requires a two-dimensional index; a B-tree can only efficiently serve one of the two predicates, so the database scans a huge intermediate set. And 1.25M updates/s against an indexed table means constant index churn. You need a structure where a location update is a hash write.</p>
+  </div>
+
+  <p><strong>The design:</strong> divide the world into cells (geohash of precision 6 ≈ 1.2 km, or H3 resolution 8). Keep <code>cell_id → {driver_id: (lat, lng, ts)}</code> in Redis, sharded by cell. A location update is: compute the cell, and if it changed, remove from the old cell and add to the new one — two hash operations, no index. A search reads the rider's cell plus its neighbors, filters by true haversine distance, and returns the top K.</p>
+
+  <div class="codehead"><span>proximity.py · the read path, including the boundary bug everyone hits</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="kw">def</span> nearby(rider_lat, rider_lng, radius_km, k=<span class="nu">10</span>):
+    <span class="cm"># 1. Precision chosen so one cell is >= the search radius; otherwise</span>
+    <span class="cm">#    "cell + 8 neighbors" is not enough coverage and you silently miss drivers.</span>
+    precision = precision_for(radius_km)
+    cells = [geohash(rider_lat, rider_lng, precision)]
+    cells += neighbors(cells[<span class="nu">0</span>])          <span class="cm"># all 8 — a driver 50 m away can be in another cell</span>
+
+    <span class="cm"># 2. One pipelined multi-get; 9 cells is a fixed, small cost.</span>
+    candidates = redis.pipeline_hgetall(cells)
+
+    <span class="cm"># 3. Exact filter. Cells are squares, the query is a circle.</span>
+    now = time.time()
+    out = []
+    <span class="kw">for</span> d <span class="kw">in</span> candidates:
+        <span class="kw">if</span> now - d.ts > <span class="nu">30</span>:            <span class="cm"># stale: driver dropped off the network</span>
+            <span class="kw">continue</span>
+        dist = haversine(rider_lat, rider_lng, d.lat, d.lng)
+        <span class="kw">if</span> dist <= radius_km:
+            out.append((dist, d))
+
+    <span class="cm"># 4. Top-K by heap, not a full sort — see the DSA top-K pattern in §08.</span>
+    <span class="kw">return</span> heapq.nsmallest(k, out)
+</code></pre>
+
+  <p><strong>Density is the deep dive.</strong> A fixed grid puts 40,000 drivers in one Manhattan cell and zero in most ocean cells. Two answers: use a <strong>quadtree</strong> so cells split on density, or use <strong>multiple fixed precisions</strong> and pick the precision per query based on how dense the area is — the second is far easier to operate because it needs no rebuild. Say both, pick the second, and explain that operability is why.</p>
+  <p><strong>Failure modes:</strong> a cell shard hot-spotting during an event (replicate hot cells read-only) · drivers oscillating across a cell boundary (hysteresis — only move cells after a real displacement) · Redis loss (the data is 4 seconds from being fully rebuilt by the drivers themselves, which makes durability a non-requirement — a genuinely nice thing to point out).</p>
+</section>
+

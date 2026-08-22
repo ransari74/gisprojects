@@ -1,0 +1,115 @@
+<section id="mldepth">
+  <div class="sec-head">
+    <div class="eyebrow">Section 07 · The AI track</div>
+    <h2>AI depth questions</h2>
+    <p>These are the follow-ups that come after your diagram is on the board — the ones that decide whether the round reads as "designed a system" or "understands the system". Answer each in two or three sentences, then stop. Open one, answer it out loud before reading, then check.</p>
+  </div>
+
+  <details class="qa"><summary>Why is self-attention O(n²), and what do people do about it?</summary><div class="body">
+    <p>Every token attends to every other token, so the attention matrix is n×n — cost and memory both grow quadratically in sequence length. That's why context length is expensive, not just a config value.</p>
+    <p>Mitigations, roughly in order of how often they come up: <strong>FlashAttention</strong> (same math, tiled to keep the n×n matrix out of HBM — makes memory linear and is a pure win), <strong>sliding-window / local attention</strong> (each token sees a fixed neighborhood), <strong>sparse or strided patterns</strong>, and <strong>linear attention</strong> variants that approximate the softmax. Note that at <em>inference</em> with a KV cache, generating each new token is O(n) against the cache, not O(n²) — the quadratic term dominates prefill, and that asymmetry is exactly why prefill and decode get disaggregated.</p>
+  </div></details>
+
+  <details class="qa"><summary>What is the KV cache actually caching, and why does it dominate memory?</summary><div class="body">
+    <p>During generation, each new token attends to all previous tokens. Their key and value projections don't change, so you compute them once and keep them — turning per-token work from O(n²) into O(n). Without it, generating 1,000 tokens means re-running the prompt 1,000 times.</p>
+    <p>The cost is <code>2 × layers × kv_dim × bytes</code> per token, per concurrent sequence — hundreds of KB per token at 70B scale, so a few thousand tokens is over a gigabyte <em>per user in flight</em>. It grows with concurrency and context, while weights are paid once. That's why the KV cache, not the model, sets your batch size. <strong>Grouped-query attention</strong> (many query heads sharing a few KV heads) is the standard fix and shrinks the cache several-fold at negligible quality cost; MQA is the extreme where all heads share one KV head.</p>
+  </div></details>
+
+  <details class="qa"><summary>RAG, fine-tuning, or a longer prompt — how do you choose?</summary><div class="body">
+    <p>They solve different problems, and saying so is the answer.</p>
+    <ul>
+      <li><strong>RAG</strong> for <em>knowledge</em>: facts that change, are too numerous to memorize, need citations, or need per-user access control. Updating means re-indexing a document, not retraining.</li>
+      <li><strong>Fine-tuning</strong> (usually LoRA) for <em>behavior</em>: format, tone, a domain's vocabulary, following a rigid schema, or compressing a big model's capability into a small one for cost. It does not reliably install new facts, and it can't do per-user permissions.</li>
+      <li><strong>Prompting / few-shot</strong> first, always — it costs an afternoon instead of a pipeline, and it establishes the baseline the other two must beat.</li>
+    </ul>
+    <p>In practice mature systems use all three: a LoRA-tuned small model, RAG for facts, and a careful prompt. <strong>LoRA</strong> itself: freeze the base weights, train two low-rank matrices per layer so the update is <code>W + BA</code> with rank ~8–64 — under 1% of the parameters, one base model in memory serving many swappable adapters.</p>
+  </div></details>
+
+  <details class="qa"><summary>Your RAG system's answers are wrong. Walk me through debugging it.</summary><div class="body">
+    <p>Split at the retrieval boundary — the fixes are unrelated.</p>
+    <ol>
+      <li><strong>Was the right chunk retrieved at all?</strong> Check recall@k against your golden set. If no → chunking strategy, embedding model, missing hybrid lexical path, or a metadata filter that emptied the results.</li>
+      <li><strong>Retrieved but not used?</strong> Check position in the context (models attend less to the middle of long contexts — put the best chunks at the edges), context crowding (8 good chunks beat 50 mediocre ones), and whether the prompt actually instructs grounding.</li>
+      <li><strong>Used but wrong?</strong> The source document is stale or contradicts another one. That's a data problem: add recency to ranking, and detect contradictions at index time.</li>
+      <li><strong>Nothing wrong retrieved, answer invented anyway?</strong> Missing refusal threshold and missing citation verification.</li>
+    </ol>
+    <p>The meta-point: you need per-stage metrics, or every failure looks identical from the outside.</p>
+  </div></details>
+
+  <details class="qa"><summary>How do you detect that a deployed model has degraded, before the business metric does?</summary><div class="body">
+    <p>Labels arrive late, so watch the things that don't need labels:</p>
+    <ul>
+      <li><strong>Feature drift</strong> — population stability index or a KS test per feature against the training distribution. PSI over ~0.2 is the usual "look at this" line.</li>
+      <li><strong>Prediction drift</strong> — the distribution of your model's own scores shifting is the earliest cheap signal.</li>
+      <li><strong>Data quality</strong> — null rates, cardinality explosions, a schema change upstream. Most "model degradation" is actually an upstream pipeline that changed a unit or started sending nulls.</li>
+      <li><strong>Delayed-label metrics</strong> — recompute AUC on a rolling window as labels land, and alert on the trend.</li>
+    </ul>
+    <p>Distinguish <strong>data drift</strong> (inputs moved, P(X) changed) from <strong>concept drift</strong> (the relationship moved, P(y|X) changed). Data drift may be harmless; concept drift always requires retraining. And keep a <strong>holdout of un-personalized traffic</strong> so you have an unbiased baseline to compare against.</p>
+  </div></details>
+
+  <details class="qa"><summary>A feature is missing at serving time. What does your system do?</summary><div class="body">
+    <p>Never crash, and never silently send a zero — a zero is a real value to the model and it will confidently produce nonsense. Decide the policy per feature <em>at training time</em>: impute with the training median, use a dedicated "missing" indicator column, or (with tree models) let the model learn the missing branch natively.</p>
+    <p>Critically, <strong>train with missingness</strong>: randomly drop features during training at roughly the rate the serving path actually fails, so the model is robust to it. And have a tiered fallback for the whole service — full model → model without real-time features → simple heuristic → a static default ranking. Being able to name that ladder is what makes this a systems answer instead of a modeling one.</p>
+  </div></details>
+
+  <details class="qa"><summary>Why gradient-boosted trees instead of a neural network?</summary><div class="body">
+    <p>On tabular data with a few hundred features and modest volume, GBDTs (XGBoost, LightGBM) usually win outright: they handle mixed types and missing values natively, need almost no feature scaling, train in minutes on a CPU, and give you feature importances that let you debug. Neural networks start to pull ahead when you have very high-cardinality categorical features that benefit from learned embeddings, multi-task heads sharing a trunk, unstructured inputs (text, image, audio) in the mix, or enough data that end-to-end representation learning pays for itself.</p>
+    <p>Most large-scale ranking systems end up with both — trees in the cheap early stage, a deep multi-task model in the expensive final stage. Starting with the tree baseline and showing the network beat it is the answer that reads as experience.</p>
+  </div></details>
+
+  <details class="qa"><summary>Your offline metric improved but the A/B test was flat or negative. Why?</summary><div class="body">
+    <p>A genuinely common situation, and the diagnosis list is the answer:</p>
+    <ul>
+      <li><strong>The offline metric is computed on logs generated by the current model</strong> — it rewards agreement with the incumbent, not quality. Correct with propensity weighting or evaluate on a random-exposure slice.</li>
+      <li><strong>Training/serving skew</strong> — the model you tested offline is not the model that ran.</li>
+      <li><strong>The offline metric doesn't proxy the online one.</strong> AUC up, watch time flat, because AUC weights all pairs equally and users only see the top 5.</li>
+      <li><strong>System effects the offline eval can't see</strong> — the better model is slower, and the added latency costs more engagement than the ranking gained. Latency <em>is</em> a ranking feature.</li>
+      <li><strong>Underpowered test</strong>, or novelty effects that mask a real long-term gain.</li>
+    </ul>
+  </div></details>
+
+  <details class="qa"><summary>How do you evaluate an LLM feature that has no single right answer?</summary><div class="body">
+    <p>Build a layered harness rather than looking for one number. <strong>Deterministic checks first</strong> — schema validity, does it compile, did it cite a real id, regex constraints. These catch most regressions and cost nothing. <strong>Then a golden set</strong> of a few hundred inputs with human-written references, scored by an LLM judge with a rubric — and calibrate that judge against human labels on a sample, reporting agreement, because an uncalibrated judge is just a vibe. <strong>Then pairwise comparison</strong> of the new version against the current one, which is far more reliable than absolute scoring. <strong>Then online</strong>: thumbs, retry rate, conversation abandonment, escalation to a human.</p>
+    <p>Two things to say that signal experience: <strong>control the temperature to 0 for eval runs</strong> so you're measuring the change and not sampling noise, and <strong>keep a regression suite of every past failure</strong> — production incidents become test cases, exactly as in normal software.</p>
+  </div></details>
+
+  <details class="qa"><summary>What is prompt injection, and how do you actually defend against it?</summary><div class="body">
+    <p>Any untrusted text that reaches the model — a retrieved document, a web page, a user's file — can carry instructions, and the model has no reliable way to distinguish data from instruction. In a RAG system the injected text is <em>inside the retrieved context by design</em>, which is what makes it structural rather than incidental.</p>
+    <p>There is no prompt that fixes it, so defend at the system level: <strong>least privilege</strong> (the model's tools have exactly the permissions of the current user, and read-only wherever possible), <strong>human confirmation for consequential actions</strong> (sending, deleting, paying), <strong>output filtering</strong> (never render model-produced links or markup unescaped; strip exfiltration vectors), <strong>separation</strong> (untrusted content clearly delimited and marked as data), and <strong>monitoring</strong> for anomalous tool-call patterns. The honest framing — "I treat model output as untrusted input to the rest of the system" — is the answer they're looking for.</p>
+  </div></details>
+
+  <details class="qa"><summary>Quantization: what breaks, and when do you accept it?</summary><div class="body">
+    <p>Weights are stored in fewer bits — fp16 → int8 → int4 — cutting memory and, because decoding is bandwidth-bound, increasing throughput roughly proportionally. <strong>Post-training quantization</strong> (GPTQ, AWQ) needs only a small calibration set and takes minutes; <strong>quantization-aware training</strong> costs a training run and recovers more quality.</p>
+    <p>What degrades first: outlier activations (which is why int8 schemes keep a few channels in higher precision), long-context coherence, and rare-token or non-English performance — averages on a benchmark can look fine while a specific slice falls apart. So the rule is: <strong>quantize, then evaluate on your own task, not on a public leaderboard.</strong> int8 is usually free; int4 is a real tradeoff you should measure. And a quantized larger model generally beats a full-precision smaller one at the same memory budget — a useful, concrete thing to assert.</p>
+  </div></details>
+
+  <details class="qa"><summary>How do you serve embeddings for 100M items that change constantly?</summary><div class="body">
+    <p>Separate the two rates of change. <strong>The model changes rarely</strong> — but when it does, every vector is invalid, so you version the index, backfill into a new one, and swap atomically. <strong>Items change constantly</strong> — so run a streaming path: on item update, re-embed and upsert into the index.</p>
+    <p>Real ANN indexes vary in how well they take incremental writes (HNSW handles inserts but degrades with heavy deletion churn), so the standard pattern is a <strong>large immutable base index rebuilt nightly plus a small in-memory delta index for recent changes</strong>, querying both and merging — the same read-optimized/write-optimized split as an LSM tree. Deletions go into a tombstone set applied as a post-filter until the next rebuild.</p>
+  </div></details>
+
+  <details class="qa"><summary>How do you handle 0.1% positive class?</summary><div class="body">
+    <p>In order of what actually helps: <strong>pick the right metric</strong> (PR-AUC, precision at a fixed recall — not accuracy, not ROC-AUC), <strong>set the threshold from the cost matrix</strong> rather than at 0.5, <strong>downsample negatives</strong> for training speed (then correct the predicted probabilities for the sampling rate, or your calibration is wrong by a large factor), and <strong>use class weights or focal loss</strong>. Synthetic oversampling like SMOTE is worth mentioning and usually worth skipping — it rarely helps on high-dimensional real data and it can leak across a validation split if applied before the split.</p>
+    <p>The framing that lands: <em>the imbalance isn't the problem — the asymmetric cost is.</em> Design around the cost, and the metric and threshold follow.</p>
+  </div></details>
+
+  <details class="qa"><summary>What's in a feature store, and why not just a database?</summary><div class="body">
+    <p>It solves three specific problems a plain database doesn't. <strong>One definition, two paths</strong>: the same feature logic compiled into a batch job for training and a low-latency lookup for serving, which is the structural fix for training/serving skew. <strong>Point-in-time correctness</strong>: joining features to labels <em>as of</em> each event's timestamp, so no future information leaks into training — doing this correctly by hand in SQL is where leakage bugs live. <strong>Reuse and discovery</strong>: features are shared across teams and models instead of re-derived slightly differently in five pipelines.</p>
+    <p>Architecturally it's an offline store (columnar, for training) plus an online store (key-value, for serving), fed by batch and streaming pipelines, with a registry of definitions and freshness SLAs. If the interviewer pushes on cost, the honest answer is that it's overhead for one model and essential at ten.</p>
+  </div></details>
+
+  <details class="qa"><summary>Model too big or too slow for the latency budget. Options?</summary><div class="body">
+    <p>Ordered by how much you give up: <strong>quantize</strong> (usually free at int8) · <strong>distill</strong> into a smaller student trained on the teacher's soft outputs, which typically keeps most of the quality at a fraction of the size · <strong>cache</strong> the predictions that repeat, and precompute anything that doesn't depend on the request · <strong>make it multi-stage</strong> so the expensive model only sees a few hundred candidates · <strong>batch on the server</strong> with a few milliseconds of queueing delay to raise GPU utilization dramatically · <strong>prune or use a smaller architecture</strong> · and finally <strong>relax the budget</strong> — sometimes the right answer is to render a fast approximate result immediately and refine it asynchronously.</p>
+  </div></details>
+
+  <details class="qa"><summary>Explain a mixture-of-experts model in the way an interviewer wants to hear it.</summary><div class="body">
+    <p>Replace the dense feed-forward block with many expert blocks plus a router that sends each token to the top-k experts (usually k=2). Total parameters grow enormously while <em>active</em> parameters per token stay small — so you get the quality of a much larger model at roughly the compute of a small one.</p>
+    <p>The systems cost is the part worth naming: <strong>all experts must be resident in memory even though most are idle</strong>, so MoE trades memory for compute, which is the opposite of what most serving setups are optimized for. Add load-balancing losses to stop the router collapsing onto a few experts, and expect expert-parallel communication overhead across GPUs. It is a throughput-and-quality win, not a memory win.</p>
+  </div></details>
+
+  <details class="qa"><summary>How do you decide between batch and real-time inference?</summary><div class="body">
+    <p>Ask what the input depends on. If a prediction depends only on things known in advance (user history, item catalog) and the set of inputs is enumerable, <strong>precompute in batch</strong> and serve it as a lookup — orders of magnitude cheaper, trivially cacheable, and it can't time out. If the prediction depends on the request itself (the query, the current session, the candidate set), it has to be real-time.</p>
+    <p>Most large systems are hybrid, and describing the split is the good answer: user and item embeddings computed nightly in batch, the interaction scored in real time. There's also <strong>near-real-time</strong> — a streaming job maintaining counters and short-window aggregates — which covers most "but it needs fresh data" objections at a fraction of the cost of per-request computation.</p>
+  </div></details>
+</section>
+

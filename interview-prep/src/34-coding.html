@@ -1,0 +1,48 @@
+<section id="coding">
+  <div class="sec-head">
+    <div class="eyebrow">Section 09</div>
+    <h2>Running the coding hour</h2>
+    <p>Two candidates produce the same working function and get different scores. The difference is the twelve minutes before the first line of code and the four minutes after the last one.</p>
+  </div>
+
+  <h3>The protocol</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th class="num">Min</th><th>Do this</th><th>Say something like</th></tr></thead>
+      <tbody>
+        <tr><td class="num">0–2</td><td><strong>Restate the problem</strong> in your own words and confirm.</td><td>"So: given an array of ints and a target, return the indices of the two that sum to it. Exactly one solution guaranteed?"</td></tr>
+        <tr><td class="num">2–4</td><td><strong>Work one small example by hand.</strong> Then ask about edge cases: empty, single element, duplicates, negatives, overflow, all-equal, already sorted.</td><td>"With [2,7,11,15] and target 9 the answer is [0,1]. Can the same element be used twice? Are there negatives?"</td></tr>
+        <tr><td class="num">4–8</td><td><strong>State the brute force, its complexity, and why you're improving on it.</strong> Then propose the real approach — <em>and wait for a nod.</em></td><td>"Nested loops is O(n²). I can trade space for time: one pass with a hash map of value → index, checking for the complement. O(n) time, O(n) space. Shall I code that?"</td></tr>
+        <tr><td class="num">8–28</td><td><strong>Code it.</strong> Meaningful names, small helpers, narrate the non-obvious lines only. Silence is fine while writing a loop body; it is not fine while you are stuck.</td><td>"I'm checking the complement before inserting, so an element can't pair with itself."</td></tr>
+        <tr><td class="num">28–36</td><td><strong>Trace your own code on the example, out loud, line by line.</strong> Find your own bug before they do — this is worth more than writing bug-free code, because it's the signal they can't get any other way.</td><td>"i=0, num=2, complement=7, not in map, store {2:0}. i=1, num=7, complement=2, found → return [0,1]. Correct."</td></tr>
+        <tr><td class="num">36–40</td><td><strong>State complexity and the edge cases you handled.</strong> Then propose one improvement, even if you don't implement it.</td><td>"O(n) time, O(n) space. If the array were sorted I'd use two pointers for O(1) space instead."</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warnbox">
+    <div class="ct">When you get stuck — a script, so you don't freeze</div>
+    <ol>
+      <li><strong>Say that you're stuck, and where.</strong> "I have the recursion but I'm not seeing how to memoize the second parameter." Interviewers can only help a stated problem.</li>
+      <li><strong>Go back to the example.</strong> Do a bigger case by hand and watch what your hand does — that's usually the algorithm.</li>
+      <li><strong>Solve a simpler version.</strong> Drop a constraint: assume sorted, assume no duplicates, assume k=1. Then add it back.</li>
+      <li><strong>Say the brute force and start coding it.</strong> A working O(n²) beats a beautiful unwritten O(n). You can optimize with time left.</li>
+      <li><strong>Take the hint.</strong> If they say "what if you sorted it first", they are not making conversation.</li>
+    </ol>
+  </div>
+
+  <h3>The bugs that actually cost points</h3>
+  <ul>
+    <li><strong>Off-by-one in binary search.</strong> Use the <code>lo &lt; hi</code> form in §08 every time and stop reinventing it.</li>
+    <li><strong>Mutating a list while iterating it.</strong> Iterate over a copy or build a new list.</li>
+    <li><strong>Appending a reference instead of a copy</strong> in backtracking — <code>res.append(path)</code> instead of <code>res.append(path[:])</code>. Every result ends up identical and empty.</li>
+    <li><strong>Marking visited on pop instead of on push</strong> in BFS — nodes enter the queue multiple times and the complexity quietly becomes exponential.</li>
+    <li><strong>Integer division and negative numbers</strong> — Python's <code>//</code> floors toward negative infinity; most other languages truncate toward zero.</li>
+    <li><strong>Default mutable arguments</strong> (<code>def f(acc=[])</code>) — shared across calls, and a classic.</li>
+    <li><strong>Forgetting the empty input.</strong> Check it first, always, in the first line of the function.</li>
+  </ul>
+
+  <h3>Pick a language and stop thinking about it</h3>
+  <p>Python unless you have a strong reason otherwise — the least syntax between your thinking and the whiteboard. Have these memorized so you never stall on mechanics: <code>collections.defaultdict / Counter / deque</code>, <code>heapq.heappush/heappop/nlargest</code>, <code>bisect.bisect_left/insort</code>, <code>sorted(x, key=lambda v: (-v[1], v[0]))</code>, <code>itertools.accumulate</code>, and <code>float('inf')</code>. Know that <code>list.pop(0)</code> is O(n) and <code>deque.popleft()</code> is O(1) — that one difference has failed real candidates.</p>
+</section>
+

@@ -1,0 +1,86 @@
+<section id="numbers">
+  <div class="sec-head">
+    <div class="eyebrow">Section 02</div>
+    <h2>Numbers &amp; capacity math</h2>
+    <p>You need maybe twenty numbers memorized and one arithmetic habit. The habit: round everything to one significant figure and use powers of ten. Nobody has ever failed a loop for saying 100k QPS when the true answer was 116,530.</p>
+  </div>
+
+  <h3>Latency, to the nearest order of magnitude</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Operation</th><th class="num">Time</th><th>What it implies</th></tr></thead>
+      <tbody>
+        <tr><td>L1 / L2 cache reference</td><td class="num">~1 ns / ~4 ns</td><td>Free. Never a design consideration.</td></tr>
+        <tr><td>Main memory reference</td><td class="num">~100 ns</td><td>~10M random reads/sec/core. In-memory beats disk by ~1000×.</td></tr>
+        <tr><td>Read 1 MB sequentially from memory</td><td class="num">~10 µs</td><td>Memory bandwidth ≈ 100 GB/s on modern hardware.</td></tr>
+        <tr><td>SSD random read (4 KB)</td><td class="num">~100 µs</td><td>~10k–100k IOPS per device. This is why LSM trees batch writes.</td></tr>
+        <tr><td>Read 1 MB sequentially from SSD</td><td class="num">~200 µs</td><td>~1–5 GB/s. Sequential beats random by ~100×. Design for sequential.</td></tr>
+        <tr><td>Round trip within a datacenter</td><td class="num">~0.5 ms</td><td>Your service-to-service tax. Ten hops = 5 ms floor.</td></tr>
+        <tr><td>Disk seek (spinning)</td><td class="num">~10 ms</td><td>Archival only. If someone says HDD, they mean cold storage.</td></tr>
+        <tr><td>Cross-country round trip (US)</td><td class="num">~70 ms</td><td>The reason CDNs and regional replicas exist. Physics, not engineering.</td></tr>
+        <tr><td>Round trip across the world</td><td class="num">~150–250 ms</td><td>Any synchronous cross-continent call is a design smell.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Capacity rules of thumb</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Quantity</th><th class="num">Use</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Seconds in a day</td><td class="num">~100,000</td><td>86,400, but 10<sup>5</sup> makes the division trivial.</td></tr>
+        <tr><td>Seconds in a month / year</td><td class="num">~2.5M / ~30M</td><td>Storage-per-year math.</td></tr>
+        <tr><td>Peak-to-average QPS</td><td class="num">2× to 5×</td><td>Use 3× unless the workload is bursty (ticketing, live sports → 10×).</td></tr>
+        <tr><td>QPS one commodity app server handles</td><td class="num">1k–10k</td><td>Depends entirely on work per request. Say "assume 5k, I'd load-test it."</td></tr>
+        <tr><td>Single-node Postgres write ceiling</td><td class="num">~10k–50k writes/s</td><td>Below this, do not shard. Above it, justify the shard key.</td></tr>
+        <tr><td>Redis ops/sec, single node</td><td class="num">~100k+</td><td>Network-bound before CPU-bound.</td></tr>
+        <tr><td>Kafka per broker</td><td class="num">~100 MB/s+</td><td>Partition count is the parallelism knob.</td></tr>
+        <tr><td>Modern server RAM / disk</td><td class="num">64–512 GB / 1–10 TB</td><td>"Does the hot set fit in RAM?" is the first caching question.</td></tr>
+        <tr><td>Char / int / UUID / timestamp</td><td class="num">1 B / 4 B / 16 B / 8 B</td><td>Row-size arithmetic. Add ~20% for index and row overhead.</td></tr>
+        <tr><td>Thumbnail / photo / min of 1080p video</td><td class="num">~10 KB / ~500 KB / ~50 MB</td><td>Media storage math.</td></tr>
+        <tr><td>float32 embedding, dim 768</td><td class="num">~3 KB</td><td>The number that decides whether your vector index fits in RAM.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>The worked example: do this out loud, in 90 seconds</h3>
+  <p>Prompt: <em>design a photo-sharing service with 500M daily active users.</em> Here is the entire estimation, at the level of detail you should actually speak.</p>
+
+  <div class="codehead"><span>Back-of-envelope · say the units every time</span><button class="copy" type="button">Copy</button></div>
+<pre><code><span class="cm"># 1. Traffic</span>
+DAU                = 500M
+posts/user/day     = 0.2          <span class="cm"># 1 post every 5 days — state the assumption</span>
+writes/day         = 100M
+write QPS (avg)    = 100M / 100k s   = <span class="nu">1,000/s</span>
+write QPS (peak)   = 3x               = <span class="nu">3,000/s</span>
+
+reads/user/day     = 50           <span class="cm"># opens the feed a few times, ~15 photos each</span>
+reads/day          = 25B
+read QPS (avg)     = 25B / 100k s    = <span class="nu">250,000/s</span>
+read QPS (peak)    = <span class="nu">750,000/s</span>          <span class="cm"># read:write = 250:1 -> CDN + cache is the design</span>
+
+<span class="cm"># 2. Storage</span>
+photo (orig+derivs)= 2 MB
+storage/day        = 100M x 2 MB     = <span class="nu">200 TB/day</span>
+storage/year       = 200 TB x 365    ≈ <span class="nu">70 PB/year</span>   <span class="cm"># -> object store + lifecycle tiering, not a DB</span>
+
+metadata/photo     = 500 B            <span class="cm"># ids, caption, geo, timestamps, counters</span>
+metadata/year      = 100M x 365 x 500 B ≈ <span class="nu">18 TB/year</span>  <span class="cm"># -> fits sharded Postgres/Cassandra fine</span>
+
+<span class="cm"># 3. Bandwidth</span>
+egress (peak)      = 750k reads/s x 200 KB (served size) ≈ <span class="nu">150 GB/s</span>
+                     <span class="cm"># no origin serves that -> CDN offload at 95%+, origin sees ~7 GB/s</span>
+
+<span class="cm"># 4. Cache sizing (the 80/20 read)</span>
+hot set            = 20% of a day's reads over distinct photos
+                   ≈ 5B reads -> ~50M distinct hot photos x 200 KB = <span class="nu">10 TB</span>
+                     <span class="cm"># -> too big for RAM; cache metadata in Redis (50M x 500 B = 25 GB, easy),</span>
+                     <span class="cm">#    cache bytes at the CDN edge.</span>
+</code></pre>
+
+  <div class="callout">
+    <div class="ct">What the estimate bought you</div>
+    <p>Four design decisions fell out of arithmetic, and you can now defend each one: <strong>object storage plus CDN</strong> (70 PB/year, 150 GB/s egress), <strong>metadata in a sharded relational store</strong> (18 TB/year is small), <strong>a Redis metadata cache but not a byte cache</strong> (25 GB fits, 10 TB doesn't), and <strong>an asynchronous write path</strong> for derivative generation (write QPS is trivial, but 2 MB × transcodes is not). That is the whole reason step 2 exists.</p>
+  </div>
+</section>
+
