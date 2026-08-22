@@ -1,0 +1,581 @@
+<title>From Pipelines to Systems</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:ital,wght@0,400..700;1,400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* ============ tokens: light is the base, both themes defined at token level ============ */
+:root{
+  --ground:#EDEFF3;
+  --paper:#FAFBFC;
+  --paper-2:#F2F4F7;
+  --sunk:#E4E8EE;
+  --ink:#101720;
+  --ink-2:#3B4654;
+  --ink-3:#6B7787;
+  --rule:#D3D9E2;
+  --rule-soft:#E2E7EE;
+  --teal:#12707A;
+  --teal-bright:#0E8A96;
+  --teal-wash:#DDEEF0;
+  --ochre:#A96C15;
+  --ochre-wash:#F5EAD6;
+  --violet:#5C41A8;
+  --violet-wash:#E9E4F6;
+  --good:#2A6B43;
+  --warn:#A05A12;
+  --crit:#9B2C2C;
+  --code-bg:#151C25;
+  --code-ink:#DCE3EC;
+  --code-dim:#7D8BA0;
+  --code-key:#7FC7C2;
+  --code-str:#D9A75F;
+  --code-num:#B0A2E8;
+  --shadow:0 1px 2px rgba(16,23,32,.06), 0 8px 24px -12px rgba(16,23,32,.18);
+  --grid-line:rgba(16,23,32,.045);
+
+  --f-display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --f-body:"Newsreader",Georgia,"Times New Roman",serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+
+  --rail:288px;
+  --measure:68ch;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0D1216;
+    --paper:#151B21;
+    --paper-2:#1B222A;
+    --sunk:#111820;
+    --ink:#E6EBF1;
+    --ink-2:#AEB9C6;
+    --ink-3:#7C8895;
+    --rule:#2A333D;
+    --rule-soft:#222A33;
+    --teal:#4FBAC2;
+    --teal-bright:#6FD2D8;
+    --teal-wash:#123037;
+    --ochre:#DBA254;
+    --ochre-wash:#33270F;
+    --violet:#A28DE8;
+    --violet-wash:#231C3C;
+    --good:#68C08A;
+    --warn:#DBA254;
+    --crit:#E28787;
+    --code-bg:#0B1015;
+    --code-ink:#D6DEE8;
+    --code-dim:#6C7A8C;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+    --grid-line:rgba(230,235,241,.04);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0D1216;
+  --paper:#151B21;
+  --paper-2:#1B222A;
+  --sunk:#111820;
+  --ink:#E6EBF1;
+  --ink-2:#AEB9C6;
+  --ink-3:#7C8895;
+  --rule:#2A333D;
+  --rule-soft:#222A33;
+  --teal:#4FBAC2;
+  --teal-bright:#6FD2D8;
+  --teal-wash:#123037;
+  --ochre:#DBA254;
+  --ochre-wash:#33270F;
+  --violet:#A28DE8;
+  --violet-wash:#231C3C;
+  --good:#68C08A;
+  --warn:#DBA254;
+  --crit:#E28787;
+  --code-bg:#0B1015;
+  --code-ink:#D6DEE8;
+  --code-dim:#6C7A8C;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+  --grid-line:rgba(230,235,241,.04);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background-color:var(--ground);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size:28px 28px;
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:17px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+@media (max-width:900px){ body{font-size:16px} }
+
+h1,h2,h3,h4,.dsp{font-family:var(--f-display);font-weight:600;line-height:1.15;text-wrap:balance;letter-spacing:-.015em;margin:0}
+code,kbd,pre,.mono{font-family:var(--f-mono)}
+a{color:var(--teal);text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{color:var(--teal-bright)}
+:focus-visible{outline:2px solid var(--teal-bright);outline-offset:3px;border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important;scroll-behavior:auto !important}}
+html{scroll-behavior:smooth}
+
+/* ============ shell ============ */
+.shell{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);gap:0;align-items:start;max-width:1500px;margin:0 auto}
+.rail{position:sticky;top:0;height:100vh;overflow-y:auto;padding:26px 20px 60px 26px;border-right:1px solid var(--rule);background:var(--ground);background:color-mix(in srgb, var(--ground) 82%, var(--paper));backdrop-filter:blur(6px)}
+.main{min-width:0;padding:0 clamp(20px,4vw,64px) 140px}
+@media (max-width:1040px){
+  .shell{grid-template-columns:1fr}
+  .rail{position:static;height:auto;border-right:none;border-bottom:1px solid var(--rule);padding:20px}
+  .rail-scroll{max-height:none}
+}
+
+.brandmark{display:flex;align-items:baseline;gap:9px;margin-bottom:4px}
+.brandmark .n{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);border:1px solid var(--teal);padding:2px 6px;border-radius:3px}
+.brandmark .t{font-family:var(--f-display);font-size:19px;font-weight:600}
+.rail p.sub{font-size:13px;color:var(--ink-3);margin:6px 0 18px;line-height:1.45}
+
+nav.toc{display:flex;flex-direction:column;gap:2px}
+nav.toc .grp{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px;display:flex;align-items:center;gap:8px}
+nav.toc .grp::after{content:"";flex:1;height:1px;background:var(--rule)}
+nav.toc a{display:flex;gap:9px;align-items:baseline;font-family:var(--f-display);font-size:14px;color:var(--ink-2);text-decoration:none;padding:5px 8px;border-radius:5px;border-left:2px solid transparent;transition:background .15s,color .15s}
+nav.toc a .num{font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3);min-width:22px;font-variant-numeric:tabular-nums}
+nav.toc a:hover{background:var(--paper-2);color:var(--ink)}
+nav.toc a.on{background:var(--teal-wash);color:var(--teal);border-left-color:var(--teal);font-weight:600}
+nav.toc a.on .num{color:var(--teal)}
+
+.railbtns{display:flex;gap:8px;margin-top:22px;flex-wrap:wrap}
+.btn{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;background:var(--paper);border:1px solid var(--rule);color:var(--ink-2);padding:7px 11px;border-radius:5px;cursor:pointer;transition:border-color .15s,color .15s}
+.btn:hover{border-color:var(--teal);color:var(--teal)}
+
+/* ============ hero ============ */
+.hero{padding:clamp(48px,8vh,96px) 0 40px;border-bottom:1px solid var(--rule);max-width:var(--measure)}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:"";width:22px;height:1px;background:var(--teal)}
+.hero h1{font-size:clamp(38px,6.4vw,68px);margin:18px 0 0;letter-spacing:-.035em;font-weight:700}
+.hero h1 em{font-style:normal;color:var(--teal)}
+.hero .lede{font-size:clamp(18px,2.1vw,21px);color:var(--ink-2);margin:22px 0 0;max-width:60ch}
+.statrow{display:flex;flex-wrap:wrap;gap:0;margin:38px 0 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.statrow div{flex:1 1 130px;padding:16px 18px 16px 0;border-right:1px solid var(--rule-soft)}
+.statrow div:last-child{border-right:none}
+.statrow .k{font-family:var(--f-mono);font-size:26px;font-variant-numeric:tabular-nums;color:var(--ink);letter-spacing:-.02em}
+.statrow .l{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin-top:4px}
+
+/* ============ sections ============ */
+section{padding:64px 0 8px;scroll-margin-top:20px}
+.sec-head{max-width:var(--measure);margin-bottom:26px}
+.sec-head h2{font-size:clamp(27px,3.4vw,38px);margin-top:12px;letter-spacing:-.028em}
+.sec-head p{color:var(--ink-2);margin:12px 0 0}
+h3{font-size:22px;margin:38px 0 10px;max-width:var(--measure)}
+h4{font-size:16.5px;margin:26px 0 8px;font-weight:600;max-width:var(--measure)}
+p,ul,ol{max-width:var(--measure)}
+p{margin:0 0 14px}
+ul,ol{padding-left:22px;margin:0 0 16px}
+li{margin:0 0 7px}
+li::marker{color:var(--ink-3)}
+strong{font-weight:600;color:var(--ink)}
+em.term{font-style:normal;font-family:var(--f-mono);font-size:.88em;background:var(--sunk);padding:1px 5px;border-radius:3px;color:var(--ink)}
+hr.rule{border:none;border-top:1px solid var(--rule);margin:44px 0;max-width:var(--measure)}
+
+/* ============ components ============ */
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:20px 22px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.wide{max-width:1080px}
+
+.tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--rule);color:var(--ink-3);background:var(--paper)}
+.tag.t-ml{color:var(--violet);border-color:var(--violet);background:var(--violet-wash)}
+.tag.t-sd{color:var(--teal);border-color:var(--teal);background:var(--teal-wash)}
+.tag.t-dsa{color:var(--ochre);border-color:var(--ochre);background:var(--ochre-wash)}
+.tag.t-beh{color:var(--ink-2);border-color:var(--rule);background:var(--paper-2)}
+
+.callout{border-left:3px solid var(--teal);background:var(--paper);padding:16px 20px;border-radius:0 7px 7px 0;margin:20px 0;max-width:var(--measure)}
+.callout .ct{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);margin-bottom:6px}
+.callout p:last-child,.callout ul:last-child{margin-bottom:0}
+.callout.warnbox{border-left-color:var(--warn)}
+.callout.warnbox .ct{color:var(--warn)}
+.callout.mlbox{border-left-color:var(--violet)}
+.callout.mlbox .ct{color:var(--violet)}
+
+pre{background:var(--code-bg);color:var(--code-ink);border-radius:8px;padding:18px 20px;overflow-x:auto;font-size:13.2px;line-height:1.62;border:1px solid var(--rule);margin:16px 0;max-width:1080px}
+pre code{color:inherit;background:none;padding:0;font-size:inherit}
+code{background:var(--sunk);padding:1.5px 5px;border-radius:3px;font-size:.87em}
+.cm{color:var(--code-dim);font-style:italic}
+.kw{color:var(--code-key)}
+.st{color:var(--code-str)}
+.nu{color:var(--code-num)}
+.codehead{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--code-bg);border:1px solid var(--rule);border-bottom:none;border-radius:8px 8px 0 0;padding:9px 16px;margin:18px 0 -16px;max-width:1080px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--code-dim)}
+.codehead + pre{border-radius:0 0 8px 8px;margin-top:0}
+.copy{background:none;border:1px solid var(--code-dim);color:var(--code-dim);font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--code-ink);border-color:var(--code-ink)}
+
+.tbl-wrap{overflow-x:auto;margin:18px 0;max-width:1080px;border:1px solid var(--rule);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:11px 14px;border-bottom:1px solid var(--rule);background:var(--paper-2);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--rule-soft);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.num,th.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td code{font-size:12.5px}
+
+/* box-and-arrow diagram */
+.diagram{overflow-x:auto;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:22px;margin:20px 0;max-width:1080px}
+.dflow{display:flex;align-items:stretch;gap:0;min-width:min-content}
+.dcol{display:flex;flex-direction:column;gap:10px;justify-content:center;min-width:132px}
+.node{border:1px solid var(--rule);background:var(--paper-2);border-radius:6px;padding:9px 12px;font-family:var(--f-mono);font-size:11.5px;line-height:1.35;text-align:center;color:var(--ink)}
+.node small{display:block;color:var(--ink-3);font-size:10px;margin-top:3px}
+.node.pri{border-color:var(--teal);background:var(--teal-wash);color:var(--teal)}
+.node.ml{border-color:var(--violet);background:var(--violet-wash);color:var(--violet)}
+.node.store{border-style:dashed}
+.arrow{display:flex;align-items:center;justify-content:center;min-width:44px;color:var(--ink-3);font-family:var(--f-mono);font-size:12px;position:relative}
+.arrow span{position:absolute;top:calc(50% - 22px);font-size:9.5px;letter-spacing:.06em;white-space:nowrap;color:var(--ink-3)}
+.dcap{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);margin-top:14px;text-align:center}
+
+/* checklist */
+.check{display:flex;gap:11px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--rule-soft)}
+.check:last-child{border-bottom:none}
+.check input{appearance:none;width:17px;height:17px;min-width:17px;margin-top:4px;border:1.5px solid var(--rule);border-radius:4px;cursor:pointer;background:var(--paper);position:relative}
+.check input:checked{background:var(--teal);border-color:var(--teal)}
+.check input:checked::after{content:"✓";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--paper);font-size:12px;font-weight:700}
+.check label{cursor:pointer;font-size:15px;line-height:1.5}
+.check input:checked + label{color:var(--ink-3);text-decoration:line-through;text-decoration-color:var(--rule)}
+
+/* day grid */
+.daygrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin:20px 0;max-width:1080px}
+@media (max-width:760px){.daygrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.day{background:var(--paper);border:1px solid var(--rule);border-radius:7px;padding:9px 10px 11px;min-height:104px;display:flex;flex-direction:column;gap:5px}
+.day .d{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.day .w{font-family:var(--f-display);font-size:12.5px;font-weight:600;line-height:1.25}
+.day .m{font-family:var(--f-mono);font-size:9.5px;color:var(--ink-3);line-height:1.4;margin-top:auto}
+.day.k-sd{border-top:3px solid var(--teal)}
+.day.k-ml{border-top:3px solid var(--violet)}
+.day.k-dsa{border-top:3px solid var(--ochre)}
+.day.k-mix{border-top:3px solid var(--ink-3)}
+.day.rest{background:var(--sunk);border-style:dashed}
+
+/* q&a */
+details.qa{border:1px solid var(--rule);border-radius:7px;background:var(--paper);margin:9px 0;max-width:1080px;overflow:hidden}
+details.qa summary{cursor:pointer;padding:13px 18px;font-family:var(--f-display);font-weight:500;font-size:15.5px;list-style:none;display:flex;gap:12px;align-items:flex-start}
+details.qa summary::-webkit-details-marker{display:none}
+details.qa summary::before{content:"+";font-family:var(--f-mono);color:var(--teal);font-size:15px;line-height:1.35}
+details.qa[open] summary::before{content:"−"}
+details.qa[open] summary{border-bottom:1px solid var(--rule-soft)}
+details.qa .body{padding:14px 18px 4px 42px}
+details.qa .body p,details.qa .body ul{max-width:64ch}
+
+.kbar{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-family:var(--f-mono);font-size:11px;color:var(--ink-3);margin:14px 0}
+.legend i{display:inline-block;width:22px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.footer{border-top:1px solid var(--rule);margin-top:70px;padding:28px 0 0;font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);max-width:var(--measure)}
+.progressbar{height:4px;background:var(--sunk);border-radius:2px;overflow:hidden;margin-top:10px}
+.progressbar i{display:block;height:100%;background:var(--teal);width:0;transition:width .3s}
+.railprog{font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3);margin-top:16px;letter-spacing:.06em}
+
+/* ---- added: numbered timeline, definition grid, part dividers ---- */
+.stepline{list-style:none;counter-reset:sl;padding:0;margin:22px 0;max-width:1080px;border-left:1px solid var(--rule)}
+.stepline li{counter-increment:sl;position:relative;padding:0 0 22px 34px;margin:0}
+.stepline li::before{content:counter(sl);position:absolute;left:-13px;top:1px;width:25px;height:25px;border-radius:50%;background:var(--paper);border:1px solid var(--rule);color:var(--ink-3);font-family:var(--f-mono);font-size:11px;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.stepline li.hot::before{background:var(--teal-wash);border-color:var(--teal);color:var(--teal)}
+.stepline li b{font-family:var(--f-display);font-size:16px;display:block;margin-bottom:4px}
+.stepline li p{margin:0 0 8px;max-width:66ch}
+.stepline li:last-child{padding-bottom:0}
+
+.deflist{display:grid;grid-template-columns:minmax(140px,190px) 1fr;gap:0;max-width:1080px;border:1px solid var(--rule);border-radius:8px;overflow:hidden;margin:20px 0;background:var(--paper)}
+.deflist dt{font-family:var(--f-mono);font-size:12px;padding:12px 14px;border-bottom:1px solid var(--rule-soft);background:var(--paper-2);color:var(--ink);display:flex;align-items:flex-start}
+.deflist dd{margin:0;padding:12px 16px;border-bottom:1px solid var(--rule-soft);font-size:14.8px;line-height:1.55}
+.deflist dt:last-of-type,.deflist dd:last-of-type{border-bottom:none}
+@media (max-width:640px){.deflist{grid-template-columns:1fr}.deflist dt{border-bottom:none;padding-bottom:2px;background:none}}
+
+.partbreak{max-width:1080px;margin:86px 0 0;padding:26px 0 0;border-top:2px solid var(--ink)}
+.partbreak .pn{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal)}
+.partbreak h2{font-size:clamp(30px,4.6vw,46px);margin:10px 0 0;letter-spacing:-.03em}
+.partbreak p{color:var(--ink-2);margin:12px 0 0;max-width:62ch;font-size:18px}
+nav.toc .part{font-family:var(--f-display);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);margin:22px 0 2px;padding-top:12px;border-top:1px solid var(--rule)}
+nav.toc .part:first-of-type{margin-top:14px}
+
+.lc{display:grid;grid-template-columns:52px 1fr auto;gap:0 12px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--rule-soft);font-size:14.5px}
+.lc:last-child{border-bottom:none}
+.lc .no{font-family:var(--f-mono);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;text-align:right}
+.lc .df{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;padding:2px 6px;border-radius:3px;border:1px solid var(--rule);color:var(--ink-3);white-space:nowrap}
+.lc .df.e{color:var(--good);border-color:var(--good)}
+.lc .df.m{color:var(--warn);border-color:var(--warn)}
+.lc .df.h{color:var(--crit);border-color:var(--crit)}
+.lc .st{font-weight:600}
+
+/* ---- book series layout ---- */
+.bookhead{max-width:var(--measure);padding:clamp(44px,7vh,80px) 0 34px;border-bottom:1px solid var(--rule)}
+.serieskicker{display:flex;align-items:center;gap:12px;font-family:var(--f-mono);font-size:11px;letter-spacing:.17em;text-transform:uppercase;color:var(--teal)}
+.serieskicker .of{color:var(--ink-3)}
+.bookhead h1{font-size:clamp(36px,6vw,62px);margin:20px 0 0;letter-spacing:-.035em;font-weight:700}
+.bookhead .lede{font-size:clamp(17.5px,2vw,20.5px);color:var(--ink-2);margin:20px 0 0;max-width:62ch}
+.readmeta{display:flex;gap:22px;flex-wrap:wrap;margin-top:26px;font-family:var(--f-mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+
+.chapnum{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.chapnum::before{content:"";width:20px;height:1px;background:var(--teal)}
+
+.booknav{display:flex;gap:14px;flex-wrap:wrap;margin:64px 0 0;padding-top:26px;border-top:2px solid var(--ink);max-width:1080px}
+.booknav a{flex:1 1 260px;text-decoration:none;border:1px solid var(--rule);border-radius:8px;padding:16px 18px;background:var(--paper);transition:border-color .15s}
+.booknav a:hover{border-color:var(--teal)}
+.booknav .dir{font-family:var(--f-mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3)}
+.booknav .nm{font-family:var(--f-display);font-size:17px;font-weight:600;color:var(--ink);margin-top:6px;display:block}
+.booknav .ds{font-size:14px;color:var(--ink-2);margin-top:5px;display:block;line-height:1.45}
+
+.translate{display:grid;grid-template-columns:1fr auto 1fr;gap:0;max-width:1080px;border:1px solid var(--rule);border-radius:8px;overflow:hidden;margin:22px 0;background:var(--paper)}
+.translate .th{font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);padding:10px 16px;background:var(--paper-2);border-bottom:1px solid var(--rule)}
+.translate .th.mid{background:var(--paper-2);border-bottom:1px solid var(--rule)}
+.translate .a,.translate .b{padding:13px 16px;border-bottom:1px solid var(--rule-soft);font-size:14.8px;line-height:1.5}
+.translate .a{background:color-mix(in srgb, var(--ochre-wash) 45%, var(--paper))}
+.translate .m{display:flex;align-items:center;justify-content:center;padding:0 12px;color:var(--teal);font-family:var(--f-mono);font-size:13px;border-bottom:1px solid var(--rule-soft)}
+.translate .a:last-of-type,.translate .b:last-of-type,.translate .m:last-of-type{border-bottom:none}
+@media (max-width:720px){.translate{grid-template-columns:1fr}.translate .m{padding:4px 0;justify-content:flex-start;padding-left:16px}.translate .th.mid{display:none}}
+
+.stage{border:1px solid var(--rule);border-radius:8px;background:var(--paper);padding:20px 22px;margin:22px 0;max-width:1080px}
+.stage .sh{display:flex;align-items:baseline;gap:12px;margin-bottom:12px}
+.stage .sn{font-family:var(--f-mono);font-size:11px;color:var(--paper);background:var(--teal);border-radius:4px;padding:3px 8px;letter-spacing:.08em}
+.stage .st{font-family:var(--f-display);font-size:19px;font-weight:600}
+.stage .why{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-top:14px;padding-top:12px;border-top:1px solid var(--rule-soft)}
+</style>
+
+<!--TITLE:From Pipelines to Systems-->
+<div class="shell">
+<aside class="rail">
+  <div class="brandmark"><span class="n">01</span><span class="t">Pipelines → Systems</span></div>
+  <p class="sub">Book one of the foundations series. What you already know from Spark and Airflow, and what it is called on the other side.</p>
+  <nav class="toc" id="toc">
+    <div class="part">This book</div>
+    <a href="#already"><span class="num">1</span>You already know this</a>
+    <a href="#difference"><span class="num">2</span>The one real difference</a>
+    <a href="#state"><span class="num">3</span>Where state lives</a>
+    <a href="#components"><span class="num">4</span>What to know about Redis</a>
+    <a href="#method"><span class="num">5</span>What designing means</a>
+    <div class="part">The series</div>
+    <a href="#"><span class="num">—</span>Reading path</a>
+    <a href="#"><span class="num">02</span>What a server is</a>
+    <a href="#"><span class="num">03</span>How data is stored</a>
+    <a href="#"><span class="num">04</span>How data moves</a>
+    <a href="#"><span class="num">05</span>Designing, step by step</a>
+    <a href="#"><span class="num">06</span>Data &amp; ML platforms</a>
+  </nav>
+  <div class="railbtns"><button class="btn" id="themebtn" type="button">Theme</button></div>
+</aside>
+<main class="main">
+
+<header class="bookhead">
+  <div class="serieskicker">Foundations · Book one <span class="of">of six</span></div>
+  <h1>From pipelines to systems.</h1>
+  <p class="lede">Every system design guide is written for people who build web APIs, so it opens by explaining caching to someone who has never had a latency problem. You have a different starting point — you have moved terabytes, debugged a skewed join at 2am, and made an Airflow task idempotent. That is not a weaker foundation than a backend engineer's. It is a <em>different</em> one, and most of it transfers directly once someone tells you what the words map to.</p>
+  <div class="readmeta"><span>~35 min read</span><span>No prerequisites</span><span>Read this one first</span></div>
+</header>
+
+<section id="already">
+  <div class="chapnum">Chapter one</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">You already know distributed systems</h2>
+  <p>Here is the claim, and I mean it literally: <strong>if you have tuned a Spark job, you have already dealt with most of the hard problems in distributed systems.</strong> You dealt with them under different names, at a different time scale, with a framework handling the ugliest parts — but you have the intuitions. What follows is a dictionary.</p>
+  <p>Read it slowly. Each row is not a loose analogy; it is the same underlying problem showing up in two places.</p>
+
+  <div class="translate">
+    <div class="th">What you already do</div><div class="th mid"></div><div class="th">What it is called in system design</div>
+
+    <div class="a"><strong>Partitioning</strong> a DataFrame by a key so each executor gets a slice</div>
+    <div class="m">≡</div>
+    <div class="b"><strong>Sharding.</strong> Identical idea: split data by a key so no single machine holds it all. And the same fear — pick the wrong key and one shard gets everything.</div>
+
+    <div class="a"><strong>Data skew</strong>: one key holds 80% of the rows, one task runs an hour while 199 finish in seconds</div>
+    <div class="m">≡</div>
+    <div class="b">A <strong>hot key</strong> or <strong>hot shard</strong>. When a design guide agonizes over "the celebrity problem" — one account with 100 million followers — that is your skewed join. The mitigations rhyme too: salt the key, or route the hot one down a separate path.</div>
+
+    <div class="a">A <strong>shuffle</strong> — the expensive step you restructure an entire job to avoid</div>
+    <div class="m">≡</div>
+    <div class="b">All-to-all <strong>network communication</strong>. Your instinct that a shuffle is the thing to design around is exactly the instinct that makes someone good at distributed systems. Network crossings are what cost.</div>
+
+    <div class="a">A <strong>broadcast join</strong> — ship the small table to every executor so you never shuffle the big one</div>
+    <div class="m">≡</div>
+    <div class="b"><strong>Replication for reads</strong>, and honestly, <strong>caching</strong>. Put a copy of the small, slowly-changing thing next to the compute so you don't cross the network to get it. That is what a cache <em>is</em>.</div>
+
+    <div class="a">An executor dies, the stage retries, the job still finishes</div>
+    <div class="m">≡</div>
+    <div class="b"><strong>Fault tolerance through retry</strong> — which works only because your tasks are <strong>idempotent</strong>, meaning re-running one produces the same result. This is the most reused single idea in all of distributed systems.</div>
+
+    <div class="a"><strong>Checkpointing</strong> a streaming job so a restart doesn't reprocess everything</div>
+    <div class="m">≡</div>
+    <div class="b">Durable <strong>state snapshots</strong> plus a replayable source. Databases do the same thing with a write-ahead log, and it is why a crashed Postgres comes back consistent.</div>
+
+    <div class="a">An <strong>Airflow DAG</strong> — tasks with dependencies, retries with backoff, a scheduler deciding what runs when</div>
+    <div class="m">≈</div>
+    <div class="b">A <strong>service dependency graph</strong> plus a <strong>distributed job scheduler</strong>. When you are asked to design a scheduler in an interview, you are designing Airflow's core, and you already know what it must handle.</div>
+
+    <div class="a"><strong>Backfilling</strong> — re-running a pipeline over three months of history after fixing a bug</div>
+    <div class="m">≡</div>
+    <div class="b"><strong>Replay from a log</strong>. It is why event logs are append-only and why Kafka retains data after consumption. Backfill is the killer feature of an immutable log, and you already depend on it.</div>
+
+    <div class="a"><strong>Late-arriving data</strong>, and the window you hold open for it</div>
+    <div class="m">≡</div>
+    <div class="b"><strong>Event time vs processing time</strong>, and <strong>watermarks</strong>. You have already made the trade every streaming system makes: wait longer and be more correct, or close early and be more timely.</div>
+
+    <div class="a">The <strong>small files problem</strong>, and the compaction job you run to fix it</div>
+    <div class="m">≡</div>
+    <div class="b"><strong>Compaction in an LSM tree</strong> — precisely what Cassandra and RocksDB do internally, for precisely your reason: many small immutable writes are fast to produce and slow to read, so something must merge them later.</div>
+
+    <div class="a"><strong>Iceberg or Delta</strong> giving you snapshot isolation and time travel over object storage</div>
+    <div class="m">≡</div>
+    <div class="b"><strong>MVCC</strong> — multi-version concurrency control — the same mechanism Postgres uses so that readers never block writers. You have been using a database technique without its name.</div>
+
+    <div class="a"><strong>Predicate pushdown</strong> and column pruning in Parquet</div>
+    <div class="m">≡</div>
+    <div class="b"><strong>Index selection</strong> and <strong>covering indexes</strong>. Same principle: never read bytes you will throw away. A query planner does automatically what you do by hand when you reorder a pipeline.</div>
+
+    <div class="a"><strong>Partitioning by date</strong>, and everything hammering today's partition</div>
+    <div class="m">≡</div>
+    <div class="b"><strong>Range partitioning</strong> and its classic failure: the newest range absorbs all the writes. Design guides call this a hotspot and treat it as an insight. You have lived it.</div>
+
+    <div class="a"><strong>Speculative execution</strong> — relaunching a straggler task on another node</div>
+    <div class="m">≡</div>
+    <div class="b"><strong>Hedged requests</strong>, the standard tail-latency trick: send a duplicate when the first is slow and take whichever returns. Same idea, milliseconds instead of minutes.</div>
+
+    <div class="a">A <strong>Kafka topic</strong> you already read from</div>
+    <div class="m">≡</div>
+    <div class="b">An <strong>append-only distributed log</strong> — the backbone of half of all modern architectures, not just a data-ingestion pipe.</div>
+  </div>
+
+  <p>If that read like a translation of your own work, good. The rest of this series leans on these anchors constantly: when we reach replication I will point back at broadcast joins, and when we reach idempotency I will point back at your Airflow retry.</p>
+
+  <div class="callout">
+    <div class="ct">The thing this should change</div>
+    <p>People from a data background often approach system design apologetically, as though missing a foundation everyone else has. You are not missing the foundation. You are missing <em>the vocabulary, and one genuine difference</em> — which is the next chapter. Read the rest of this series as filling gaps in a structure you already have, not as building one from nothing.</p>
+  </div>
+</section>
+
+<section id="difference">
+  <div class="chapnum">Chapter two</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">The one real difference: you no longer control the load</h2>
+  <p>Everything above transfers. Here is what genuinely does not — a single root cause with five branches.</p>
+  <p><strong>In batch, you decide when work happens, how much runs at once, and what to do when it fails. In an online system, users decide, continuously, and nobody asked you.</strong></p>
+  <p>Sit with that, because every unfamiliar concept in system design descends from it.</p>
+
+  <h3>Branch one — failure stops being retryable</h3>
+  <p>When a Spark task fails, the framework retries it. When it fails four times the job fails, someone gets a message, and the data lands two hours late. That is bad, but it is <em>recoverable</em>: the work still exists to be done, and time is elastic.</p>
+  <p>When a request fails, a person is watching a spinner. No retry fixes their experience after the fact — the moment is gone. So online systems obsess over things batch systems barely mention: <strong>graceful degradation</strong> (show a worse answer rather than none), <strong>timeouts</strong> (fail fast instead of hanging), <strong>circuit breakers</strong> (stop calling a dependency that is already dying), and <strong>availability targets</strong> expressed as a percentage of requests rather than a completion time.</p>
+
+  <h3>Branch two — the unit of time drops by six orders of magnitude</h3>
+  <p>Your pipelines are measured in minutes and hours. A service is measured in milliseconds and — the part that catches people — <strong>not the average</strong>. If your service takes 50 ms on average but 2 seconds at the 99th percentile, one user in a hundred has a bad time. And since one page load might make twenty calls, a much larger fraction of <em>page loads</em> hit at least one slow call. Tail latency compounds in a way averages do not.</p>
+  <p>That is why systems people talk about p99 constantly, and why the arithmetic in Book 2 matters: when your budget is 200 milliseconds, a cross-continent round trip at 70 ms is a third of it, and no amount of optimization beats the speed of light.</p>
+
+  <h3>Branch three — concurrency you did not schedule</h3>
+  <p>In Spark you set the parallelism: partitions, executors, memory each. The framework then runs your code in a controlled way, and two tasks never fight over the same variable because they are separate processes working on separate partitions.</p>
+  <p>An online service has <strong>arbitrary concurrency imposed from outside</strong>. A thousand requests can arrive in the same millisecond, all touching the same row, the same cache entry, the same counter. Nothing sets that number for you. This is where the concepts that feel most foreign live — locks, race conditions, atomic operations, connection pools — and every one of them is an answer to "several things are touching the same state at once and no scheduler is refereeing."</p>
+
+  <h3>Branch four — it is never off</h3>
+  <p>A batch job has a start and an end, and between runs the system is quiet; you deploy into that quiet. A service is running while you change it, while its database fails over, while a dependency deploys. Hence <strong>rolling deploys</strong>, <strong>backward-compatible schema changes</strong> (the expand-then-contract dance in Book 3), <strong>health checks</strong>, and the whole discipline of changing a thing without stopping it.</p>
+
+  <h3>Branch five — the queue is real, and it grows</h3>
+  <p>In batch, the queue is a file that already exists and has a known size. Online, the queue is requests arriving faster than you serve them, growing without bound until something dies. This is <strong>backpressure</strong> — and here you have a genuine head start, because if you have run a Flink or Structured Streaming job you have watched consumer lag climb and known exactly what it meant. Same phenomenon, higher stakes: an unbounded in-memory queue inside a service is how one slow database takes down every server at once.</p>
+
+  <div class="callout warnbox">
+    <div class="ct">The shift, in one sentence</div>
+    <p>Batch engineering asks <em>"how do I process all of this correctly and efficiently?"</em> Online engineering asks <em>"how does this behave when load doubles, one dependency is slow, and I cannot stop to think?"</em> Both are real engineering. The second is what a design interview tests, and it is a habit of mind more than a body of knowledge.</p>
+  </div>
+</section>
+
+<section id="state">
+  <div class="chapnum">Chapter three</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">Everything is about where state lives</h2>
+  <p>Here is the idea that makes system design click, and it deserves to come first.</p>
+  <p><strong>Stateless things are easy. Every difficulty in distributed systems comes from state — data that must survive, be found again, and be seen consistently by more than one party.</strong></p>
+  <p>Watch how much that one sentence explains:</p>
+  <ul>
+    <li><strong>Why do we scale services horizontally so casually?</strong> Because a stateless service is a pure function of its input. Run ten copies or a thousand — they cannot disagree, because they remember nothing. Adding capacity is just buying machines.</li>
+    <li><strong>Why is the database always the hard part?</strong> Because it holds the state. It cannot be casually cloned, because then two copies could disagree, and reconciling that disagreement is the entire field.</li>
+    <li><strong>Why is caching famously hard?</strong> Because a cache is a <em>second copy of state that can be wrong</em>. There is no invalidation problem if there is no second copy.</li>
+    <li><strong>Why does a WebSocket complicate a design?</strong> Because a held connection is state living on one specific machine — so now it matters <em>which</em> machine, and anything wanting to reach that user needs a registry to find it.</li>
+    <li><strong>Why is a queue such a common answer to so many problems?</strong> Because it moves state out of your process into somewhere durable, so a crash loses nothing and a slow consumer cannot stall a fast producer.</li>
+  </ul>
+  <p>So when you look at an architecture diagram, the useful question is never "what are the boxes?" It is <strong>where does state live, how many copies exist, and what happens when they disagree?</strong> Nearly every decision in this series is an answer to that, and I will keep returning to it.</p>
+  <p>You have an advantage here too. Your world is already state-heavy: source-of-truth tables, derived tables, materialized views, and the question of what to do when a downstream mart disagrees with the warehouse. A read replica is a derived table with lag. A cache is a materialized view with a TTL. A change-data-capture stream is the incremental model you already build. The instincts port directly.</p>
+</section>
+
+<section id="components">
+  <div class="chapnum">Chapter four</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">"I know what Redis is" — what you actually need to know</h2>
+  <p>You put it precisely: you know <em>what</em> Redis is. The gap is knowing what to <em>do</em> with that — and it is a real gap, but not a knowledge one. Here is the fix.</p>
+  <p>For any component, the definition is worth almost nothing. What you need is a <strong>four-part card</strong>, and once you hold it for a dozen components you can design systems.</p>
+
+  <div class="stage">
+    <div class="sh"><span class="sn">1</span><span class="st">What problem does it solve?</span></div>
+    <p>Not what it is — what it <em>fixes</em>. Redis: "reading this from Postgres costs 5 ms and we do it 50,000 times a second, which the database will not survive." The problem statement is what justifies the component's existence, and if you cannot state it, you should not add the component.</p>
+  </div>
+  <div class="stage">
+    <div class="sh"><span class="sn">2</span><span class="st">What does it cost you?</span></div>
+    <p>Every component is a trade, never a free win. Redis costs: a second copy of the data that can be stale, an extra network hop, one more thing that can be down, and a memory bill. A candidate who adds Redis and cannot name its cost tells the interviewer they have never operated one.</p>
+  </div>
+  <div class="stage">
+    <div class="sh"><span class="sn">3</span><span class="st">What does it look like when it breaks?</span></div>
+    <p>The most valuable third. Redis: a hot key expires and ten thousand requests hit the database in the same instant — a stampede. Or memory fills, the working set gets evicted, and hit rate collapses at the worst possible moment. Or it goes down entirely, and your database, which has been serving 2% of real traffic for a year, suddenly receives 100% of it and dies. <em>That last one is why "the cache is down" is often worse than "we never had a cache."</em></p>
+  </div>
+  <div class="stage">
+    <div class="sh"><span class="sn">4</span><span class="st">What is the smallest thing that would have worked instead?</span></div>
+    <p>For Redis: an in-process LRU map (no network hop, but N copies to invalidate), a read replica (no staleness weirdness, not as fast), or simply a better index so the query takes 0.2 ms and needs no cache at all. Being able to say <em>"I considered an index first"</em> is the difference between adding infrastructure and choosing it.</p>
+    <div class="why">This fourth question is the one that reads as senior — everyone can add a component; judgment is knowing what you could have not added.</div>
+  </div>
+
+  <p>Books 3 and 4 build this card for every component you need — storage engines, caches, queues, logs, load balancers, indexes — written in that shape rather than as definitions.</p>
+
+  <div class="callout">
+    <div class="ct">A drill worth doing tonight</div>
+    <p>Take three things you already use daily — Postgres, S3, Kafka, Airflow, Snowflake, whatever they are — and write the four-part card for each from memory. You will find parts 1 and 3 come easily, because you have <em>operated</em> them, and that is precisely the knowledge backend engineers often lack. Part 4 is where you will stall. That is the muscle this series trains.</p>
+  </div>
+</section>
+
+<section id="method">
+  <div class="chapnum">Chapter five</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">What "designing a system" actually means</h2>
+  <p>You asked what the steps are. Here is the honest answer up front, before Book 5 does it slowly and completely.</p>
+  <p>Designing a system is <strong>answering seven questions in order, where each answer constrains the next</strong>. It is not choosing components. Components fall out at the end, almost mechanically, if the first five answers are right.</p>
+
+  <ol class="stepline">
+    <li class="hot"><b>What must it do, and what must it not?</b>
+      <p>Three to five things the system does, three qualities it must have (how fast, how consistent, how available), and an explicit list of what you are choosing <em>not</em> to solve. Skip this and you will design something excellent and wrong.</p></li>
+    <li class="hot"><b>How big is it?</b>
+      <p>Users, requests per second, bytes per year — one significant figure. This is the step that converts opinions into arithmetic, and it is the step you will be best at, because estimating data volumes is already your job.</p></li>
+    <li><b>What are the entities, and how are they accessed?</b>
+      <p>Not "what tables" — what things exist, and what queries the product actually needs. Access patterns determine the storage choice, never the reverse. Again, your instinct from designing schemas around known queries is exactly right.</p></li>
+    <li class="hot"><b>Where does the state live?</b>
+      <p>For each entity: which store, partitioned by what key, replicated how, needing what consistency. Chapter three's question, asked concretely. <em>This is the step that separates a design from a picture of boxes.</em></p></li>
+    <li><b>What is the path of a write, and the path of a read?</b>
+      <p>Trace one of each end to end, naming every hop and what crosses it. Most design flaws become visible the moment you do this honestly.</p></li>
+    <li><b>Where does it break, and what breaks first?</b>
+      <p>Find the bottleneck deliberately — the hottest key, the biggest fan-out, the component with the least headroom — and take it apart. This is where depth gets demonstrated.</p></li>
+    <li><b>How do you know it is working?</b>
+      <p>What you measure, what you alert on, and what the degraded experience is when something is down.</p></li>
+  </ol>
+
+  <p>That is the whole method. Book 5 walks one system through all seven slowly, showing the reasoning at each step rather than the conclusion — including the wrong turns, because seeing why a design gets rejected teaches more than seeing the finished diagram.</p>
+
+  <h3>How to read the rest of this series</h3>
+  <p>In order, if you can — each book assumes the one before it.</p>
+  <div class="booknav">
+    <a href="#"><span class="dir">Next — Book two</span><span class="nm">What a server is</span><span class="ds">The machine underneath: memory, disk, network, processes and threads, and where the time actually goes. Short, and it makes everything after it concrete.</span></a>
+    <a href="#"><span class="dir">Series index</span><span class="nm">The reading path</span><span class="ds">All six books, what each covers, and which ones you can skip depending on where you're starting from.</span></a>
+  </div>
+</main>
+</div>
+<script>
+(function(){"use strict";
+ var root=document.documentElement,KEY="foundations.theme";
+ try{var v=localStorage.getItem(KEY); if(v==="light"||v==="dark") root.setAttribute("data-theme",v);}catch(e){}
+ var b=document.getElementById("themebtn");
+ if(b) b.addEventListener("click",function(){
+   var c=root.getAttribute("data-theme"), n=c==="light"?"dark":(c==="dark"?null:"light");
+   if(n){root.setAttribute("data-theme",n);} else {root.removeAttribute("data-theme");}
+   try{localStorage.setItem(KEY,n||"system");}catch(e){}
+ });
+ var links=[].slice.call(document.querySelectorAll('nav.toc a[href^="#"]'));
+ var secs=links.map(function(a){return document.querySelector(a.getAttribute("href"));}).filter(Boolean);
+ if("IntersectionObserver" in window && secs.length){
+   var o=new IntersectionObserver(function(es){es.forEach(function(e){
+     if(!e.isIntersecting) return;
+     links.forEach(function(a){a.classList.toggle("on",a.getAttribute("href")==="#"+e.target.id);});
+   });},{rootMargin:"-15% 0px -75% 0px"});
+   secs.forEach(function(s){o.observe(s);});
+ }
+})();
+</script>

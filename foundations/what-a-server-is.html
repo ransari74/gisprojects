@@ -1,0 +1,597 @@
+<title>What a Server Is</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:ital,wght@0,400..700;1,400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* ============ tokens: light is the base, both themes defined at token level ============ */
+:root{
+  --ground:#EDEFF3;
+  --paper:#FAFBFC;
+  --paper-2:#F2F4F7;
+  --sunk:#E4E8EE;
+  --ink:#101720;
+  --ink-2:#3B4654;
+  --ink-3:#6B7787;
+  --rule:#D3D9E2;
+  --rule-soft:#E2E7EE;
+  --teal:#12707A;
+  --teal-bright:#0E8A96;
+  --teal-wash:#DDEEF0;
+  --ochre:#A96C15;
+  --ochre-wash:#F5EAD6;
+  --violet:#5C41A8;
+  --violet-wash:#E9E4F6;
+  --good:#2A6B43;
+  --warn:#A05A12;
+  --crit:#9B2C2C;
+  --code-bg:#151C25;
+  --code-ink:#DCE3EC;
+  --code-dim:#7D8BA0;
+  --code-key:#7FC7C2;
+  --code-str:#D9A75F;
+  --code-num:#B0A2E8;
+  --shadow:0 1px 2px rgba(16,23,32,.06), 0 8px 24px -12px rgba(16,23,32,.18);
+  --grid-line:rgba(16,23,32,.045);
+
+  --f-display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --f-body:"Newsreader",Georgia,"Times New Roman",serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+
+  --rail:288px;
+  --measure:68ch;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0D1216;
+    --paper:#151B21;
+    --paper-2:#1B222A;
+    --sunk:#111820;
+    --ink:#E6EBF1;
+    --ink-2:#AEB9C6;
+    --ink-3:#7C8895;
+    --rule:#2A333D;
+    --rule-soft:#222A33;
+    --teal:#4FBAC2;
+    --teal-bright:#6FD2D8;
+    --teal-wash:#123037;
+    --ochre:#DBA254;
+    --ochre-wash:#33270F;
+    --violet:#A28DE8;
+    --violet-wash:#231C3C;
+    --good:#68C08A;
+    --warn:#DBA254;
+    --crit:#E28787;
+    --code-bg:#0B1015;
+    --code-ink:#D6DEE8;
+    --code-dim:#6C7A8C;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+    --grid-line:rgba(230,235,241,.04);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0D1216;
+  --paper:#151B21;
+  --paper-2:#1B222A;
+  --sunk:#111820;
+  --ink:#E6EBF1;
+  --ink-2:#AEB9C6;
+  --ink-3:#7C8895;
+  --rule:#2A333D;
+  --rule-soft:#222A33;
+  --teal:#4FBAC2;
+  --teal-bright:#6FD2D8;
+  --teal-wash:#123037;
+  --ochre:#DBA254;
+  --ochre-wash:#33270F;
+  --violet:#A28DE8;
+  --violet-wash:#231C3C;
+  --good:#68C08A;
+  --warn:#DBA254;
+  --crit:#E28787;
+  --code-bg:#0B1015;
+  --code-ink:#D6DEE8;
+  --code-dim:#6C7A8C;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+  --grid-line:rgba(230,235,241,.04);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background-color:var(--ground);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size:28px 28px;
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:17px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+@media (max-width:900px){ body{font-size:16px} }
+
+h1,h2,h3,h4,.dsp{font-family:var(--f-display);font-weight:600;line-height:1.15;text-wrap:balance;letter-spacing:-.015em;margin:0}
+code,kbd,pre,.mono{font-family:var(--f-mono)}
+a{color:var(--teal);text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{color:var(--teal-bright)}
+:focus-visible{outline:2px solid var(--teal-bright);outline-offset:3px;border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important;scroll-behavior:auto !important}}
+html{scroll-behavior:smooth}
+
+/* ============ shell ============ */
+.shell{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);gap:0;align-items:start;max-width:1500px;margin:0 auto}
+.rail{position:sticky;top:0;height:100vh;overflow-y:auto;padding:26px 20px 60px 26px;border-right:1px solid var(--rule);background:var(--ground);background:color-mix(in srgb, var(--ground) 82%, var(--paper));backdrop-filter:blur(6px)}
+.main{min-width:0;padding:0 clamp(20px,4vw,64px) 140px}
+@media (max-width:1040px){
+  .shell{grid-template-columns:1fr}
+  .rail{position:static;height:auto;border-right:none;border-bottom:1px solid var(--rule);padding:20px}
+  .rail-scroll{max-height:none}
+}
+
+.brandmark{display:flex;align-items:baseline;gap:9px;margin-bottom:4px}
+.brandmark .n{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);border:1px solid var(--teal);padding:2px 6px;border-radius:3px}
+.brandmark .t{font-family:var(--f-display);font-size:19px;font-weight:600}
+.rail p.sub{font-size:13px;color:var(--ink-3);margin:6px 0 18px;line-height:1.45}
+
+nav.toc{display:flex;flex-direction:column;gap:2px}
+nav.toc .grp{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px;display:flex;align-items:center;gap:8px}
+nav.toc .grp::after{content:"";flex:1;height:1px;background:var(--rule)}
+nav.toc a{display:flex;gap:9px;align-items:baseline;font-family:var(--f-display);font-size:14px;color:var(--ink-2);text-decoration:none;padding:5px 8px;border-radius:5px;border-left:2px solid transparent;transition:background .15s,color .15s}
+nav.toc a .num{font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3);min-width:22px;font-variant-numeric:tabular-nums}
+nav.toc a:hover{background:var(--paper-2);color:var(--ink)}
+nav.toc a.on{background:var(--teal-wash);color:var(--teal);border-left-color:var(--teal);font-weight:600}
+nav.toc a.on .num{color:var(--teal)}
+
+.railbtns{display:flex;gap:8px;margin-top:22px;flex-wrap:wrap}
+.btn{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;background:var(--paper);border:1px solid var(--rule);color:var(--ink-2);padding:7px 11px;border-radius:5px;cursor:pointer;transition:border-color .15s,color .15s}
+.btn:hover{border-color:var(--teal);color:var(--teal)}
+
+/* ============ hero ============ */
+.hero{padding:clamp(48px,8vh,96px) 0 40px;border-bottom:1px solid var(--rule);max-width:var(--measure)}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:"";width:22px;height:1px;background:var(--teal)}
+.hero h1{font-size:clamp(38px,6.4vw,68px);margin:18px 0 0;letter-spacing:-.035em;font-weight:700}
+.hero h1 em{font-style:normal;color:var(--teal)}
+.hero .lede{font-size:clamp(18px,2.1vw,21px);color:var(--ink-2);margin:22px 0 0;max-width:60ch}
+.statrow{display:flex;flex-wrap:wrap;gap:0;margin:38px 0 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.statrow div{flex:1 1 130px;padding:16px 18px 16px 0;border-right:1px solid var(--rule-soft)}
+.statrow div:last-child{border-right:none}
+.statrow .k{font-family:var(--f-mono);font-size:26px;font-variant-numeric:tabular-nums;color:var(--ink);letter-spacing:-.02em}
+.statrow .l{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin-top:4px}
+
+/* ============ sections ============ */
+section{padding:64px 0 8px;scroll-margin-top:20px}
+.sec-head{max-width:var(--measure);margin-bottom:26px}
+.sec-head h2{font-size:clamp(27px,3.4vw,38px);margin-top:12px;letter-spacing:-.028em}
+.sec-head p{color:var(--ink-2);margin:12px 0 0}
+h3{font-size:22px;margin:38px 0 10px;max-width:var(--measure)}
+h4{font-size:16.5px;margin:26px 0 8px;font-weight:600;max-width:var(--measure)}
+p,ul,ol{max-width:var(--measure)}
+p{margin:0 0 14px}
+ul,ol{padding-left:22px;margin:0 0 16px}
+li{margin:0 0 7px}
+li::marker{color:var(--ink-3)}
+strong{font-weight:600;color:var(--ink)}
+em.term{font-style:normal;font-family:var(--f-mono);font-size:.88em;background:var(--sunk);padding:1px 5px;border-radius:3px;color:var(--ink)}
+hr.rule{border:none;border-top:1px solid var(--rule);margin:44px 0;max-width:var(--measure)}
+
+/* ============ components ============ */
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:20px 22px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.wide{max-width:1080px}
+
+.tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--rule);color:var(--ink-3);background:var(--paper)}
+.tag.t-ml{color:var(--violet);border-color:var(--violet);background:var(--violet-wash)}
+.tag.t-sd{color:var(--teal);border-color:var(--teal);background:var(--teal-wash)}
+.tag.t-dsa{color:var(--ochre);border-color:var(--ochre);background:var(--ochre-wash)}
+.tag.t-beh{color:var(--ink-2);border-color:var(--rule);background:var(--paper-2)}
+
+.callout{border-left:3px solid var(--teal);background:var(--paper);padding:16px 20px;border-radius:0 7px 7px 0;margin:20px 0;max-width:var(--measure)}
+.callout .ct{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);margin-bottom:6px}
+.callout p:last-child,.callout ul:last-child{margin-bottom:0}
+.callout.warnbox{border-left-color:var(--warn)}
+.callout.warnbox .ct{color:var(--warn)}
+.callout.mlbox{border-left-color:var(--violet)}
+.callout.mlbox .ct{color:var(--violet)}
+
+pre{background:var(--code-bg);color:var(--code-ink);border-radius:8px;padding:18px 20px;overflow-x:auto;font-size:13.2px;line-height:1.62;border:1px solid var(--rule);margin:16px 0;max-width:1080px}
+pre code{color:inherit;background:none;padding:0;font-size:inherit}
+code{background:var(--sunk);padding:1.5px 5px;border-radius:3px;font-size:.87em}
+.cm{color:var(--code-dim);font-style:italic}
+.kw{color:var(--code-key)}
+.st{color:var(--code-str)}
+.nu{color:var(--code-num)}
+.codehead{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--code-bg);border:1px solid var(--rule);border-bottom:none;border-radius:8px 8px 0 0;padding:9px 16px;margin:18px 0 -16px;max-width:1080px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--code-dim)}
+.codehead + pre{border-radius:0 0 8px 8px;margin-top:0}
+.copy{background:none;border:1px solid var(--code-dim);color:var(--code-dim);font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:4px;cursor:pointer}
+.copy:hover{color:var(--code-ink);border-color:var(--code-ink)}
+
+.tbl-wrap{overflow-x:auto;margin:18px 0;max-width:1080px;border:1px solid var(--rule);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:11px 14px;border-bottom:1px solid var(--rule);background:var(--paper-2);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--rule-soft);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.num,th.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td code{font-size:12.5px}
+
+/* box-and-arrow diagram */
+.diagram{overflow-x:auto;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:22px;margin:20px 0;max-width:1080px}
+.dflow{display:flex;align-items:stretch;gap:0;min-width:min-content}
+.dcol{display:flex;flex-direction:column;gap:10px;justify-content:center;min-width:132px}
+.node{border:1px solid var(--rule);background:var(--paper-2);border-radius:6px;padding:9px 12px;font-family:var(--f-mono);font-size:11.5px;line-height:1.35;text-align:center;color:var(--ink)}
+.node small{display:block;color:var(--ink-3);font-size:10px;margin-top:3px}
+.node.pri{border-color:var(--teal);background:var(--teal-wash);color:var(--teal)}
+.node.ml{border-color:var(--violet);background:var(--violet-wash);color:var(--violet)}
+.node.store{border-style:dashed}
+.arrow{display:flex;align-items:center;justify-content:center;min-width:44px;color:var(--ink-3);font-family:var(--f-mono);font-size:12px;position:relative}
+.arrow span{position:absolute;top:calc(50% - 22px);font-size:9.5px;letter-spacing:.06em;white-space:nowrap;color:var(--ink-3)}
+.dcap{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);margin-top:14px;text-align:center}
+
+/* checklist */
+.check{display:flex;gap:11px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--rule-soft)}
+.check:last-child{border-bottom:none}
+.check input{appearance:none;width:17px;height:17px;min-width:17px;margin-top:4px;border:1.5px solid var(--rule);border-radius:4px;cursor:pointer;background:var(--paper);position:relative}
+.check input:checked{background:var(--teal);border-color:var(--teal)}
+.check input:checked::after{content:"✓";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--paper);font-size:12px;font-weight:700}
+.check label{cursor:pointer;font-size:15px;line-height:1.5}
+.check input:checked + label{color:var(--ink-3);text-decoration:line-through;text-decoration-color:var(--rule)}
+
+/* day grid */
+.daygrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin:20px 0;max-width:1080px}
+@media (max-width:760px){.daygrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.day{background:var(--paper);border:1px solid var(--rule);border-radius:7px;padding:9px 10px 11px;min-height:104px;display:flex;flex-direction:column;gap:5px}
+.day .d{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.day .w{font-family:var(--f-display);font-size:12.5px;font-weight:600;line-height:1.25}
+.day .m{font-family:var(--f-mono);font-size:9.5px;color:var(--ink-3);line-height:1.4;margin-top:auto}
+.day.k-sd{border-top:3px solid var(--teal)}
+.day.k-ml{border-top:3px solid var(--violet)}
+.day.k-dsa{border-top:3px solid var(--ochre)}
+.day.k-mix{border-top:3px solid var(--ink-3)}
+.day.rest{background:var(--sunk);border-style:dashed}
+
+/* q&a */
+details.qa{border:1px solid var(--rule);border-radius:7px;background:var(--paper);margin:9px 0;max-width:1080px;overflow:hidden}
+details.qa summary{cursor:pointer;padding:13px 18px;font-family:var(--f-display);font-weight:500;font-size:15.5px;list-style:none;display:flex;gap:12px;align-items:flex-start}
+details.qa summary::-webkit-details-marker{display:none}
+details.qa summary::before{content:"+";font-family:var(--f-mono);color:var(--teal);font-size:15px;line-height:1.35}
+details.qa[open] summary::before{content:"−"}
+details.qa[open] summary{border-bottom:1px solid var(--rule-soft)}
+details.qa .body{padding:14px 18px 4px 42px}
+details.qa .body p,details.qa .body ul{max-width:64ch}
+
+.kbar{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-family:var(--f-mono);font-size:11px;color:var(--ink-3);margin:14px 0}
+.legend i{display:inline-block;width:22px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.footer{border-top:1px solid var(--rule);margin-top:70px;padding:28px 0 0;font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);max-width:var(--measure)}
+.progressbar{height:4px;background:var(--sunk);border-radius:2px;overflow:hidden;margin-top:10px}
+.progressbar i{display:block;height:100%;background:var(--teal);width:0;transition:width .3s}
+.railprog{font-family:var(--f-mono);font-size:10.5px;color:var(--ink-3);margin-top:16px;letter-spacing:.06em}
+
+/* ---- added: numbered timeline, definition grid, part dividers ---- */
+.stepline{list-style:none;counter-reset:sl;padding:0;margin:22px 0;max-width:1080px;border-left:1px solid var(--rule)}
+.stepline li{counter-increment:sl;position:relative;padding:0 0 22px 34px;margin:0}
+.stepline li::before{content:counter(sl);position:absolute;left:-13px;top:1px;width:25px;height:25px;border-radius:50%;background:var(--paper);border:1px solid var(--rule);color:var(--ink-3);font-family:var(--f-mono);font-size:11px;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.stepline li.hot::before{background:var(--teal-wash);border-color:var(--teal);color:var(--teal)}
+.stepline li b{font-family:var(--f-display);font-size:16px;display:block;margin-bottom:4px}
+.stepline li p{margin:0 0 8px;max-width:66ch}
+.stepline li:last-child{padding-bottom:0}
+
+.deflist{display:grid;grid-template-columns:minmax(140px,190px) 1fr;gap:0;max-width:1080px;border:1px solid var(--rule);border-radius:8px;overflow:hidden;margin:20px 0;background:var(--paper)}
+.deflist dt{font-family:var(--f-mono);font-size:12px;padding:12px 14px;border-bottom:1px solid var(--rule-soft);background:var(--paper-2);color:var(--ink);display:flex;align-items:flex-start}
+.deflist dd{margin:0;padding:12px 16px;border-bottom:1px solid var(--rule-soft);font-size:14.8px;line-height:1.55}
+.deflist dt:last-of-type,.deflist dd:last-of-type{border-bottom:none}
+@media (max-width:640px){.deflist{grid-template-columns:1fr}.deflist dt{border-bottom:none;padding-bottom:2px;background:none}}
+
+.partbreak{max-width:1080px;margin:86px 0 0;padding:26px 0 0;border-top:2px solid var(--ink)}
+.partbreak .pn{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal)}
+.partbreak h2{font-size:clamp(30px,4.6vw,46px);margin:10px 0 0;letter-spacing:-.03em}
+.partbreak p{color:var(--ink-2);margin:12px 0 0;max-width:62ch;font-size:18px}
+nav.toc .part{font-family:var(--f-display);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);margin:22px 0 2px;padding-top:12px;border-top:1px solid var(--rule)}
+nav.toc .part:first-of-type{margin-top:14px}
+
+.lc{display:grid;grid-template-columns:52px 1fr auto;gap:0 12px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--rule-soft);font-size:14.5px}
+.lc:last-child{border-bottom:none}
+.lc .no{font-family:var(--f-mono);font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;text-align:right}
+.lc .df{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;padding:2px 6px;border-radius:3px;border:1px solid var(--rule);color:var(--ink-3);white-space:nowrap}
+.lc .df.e{color:var(--good);border-color:var(--good)}
+.lc .df.m{color:var(--warn);border-color:var(--warn)}
+.lc .df.h{color:var(--crit);border-color:var(--crit)}
+.lc .st{font-weight:600}
+
+/* ---- book series layout ---- */
+.bookhead{max-width:var(--measure);padding:clamp(44px,7vh,80px) 0 34px;border-bottom:1px solid var(--rule)}
+.serieskicker{display:flex;align-items:center;gap:12px;font-family:var(--f-mono);font-size:11px;letter-spacing:.17em;text-transform:uppercase;color:var(--teal)}
+.serieskicker .of{color:var(--ink-3)}
+.bookhead h1{font-size:clamp(36px,6vw,62px);margin:20px 0 0;letter-spacing:-.035em;font-weight:700}
+.bookhead .lede{font-size:clamp(17.5px,2vw,20.5px);color:var(--ink-2);margin:20px 0 0;max-width:62ch}
+.readmeta{display:flex;gap:22px;flex-wrap:wrap;margin-top:26px;font-family:var(--f-mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+
+.chapnum{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.chapnum::before{content:"";width:20px;height:1px;background:var(--teal)}
+
+.booknav{display:flex;gap:14px;flex-wrap:wrap;margin:64px 0 0;padding-top:26px;border-top:2px solid var(--ink);max-width:1080px}
+.booknav a{flex:1 1 260px;text-decoration:none;border:1px solid var(--rule);border-radius:8px;padding:16px 18px;background:var(--paper);transition:border-color .15s}
+.booknav a:hover{border-color:var(--teal)}
+.booknav .dir{font-family:var(--f-mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3)}
+.booknav .nm{font-family:var(--f-display);font-size:17px;font-weight:600;color:var(--ink);margin-top:6px;display:block}
+.booknav .ds{font-size:14px;color:var(--ink-2);margin-top:5px;display:block;line-height:1.45}
+
+.translate{display:grid;grid-template-columns:1fr auto 1fr;gap:0;max-width:1080px;border:1px solid var(--rule);border-radius:8px;overflow:hidden;margin:22px 0;background:var(--paper)}
+.translate .th{font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);padding:10px 16px;background:var(--paper-2);border-bottom:1px solid var(--rule)}
+.translate .th.mid{background:var(--paper-2);border-bottom:1px solid var(--rule)}
+.translate .a,.translate .b{padding:13px 16px;border-bottom:1px solid var(--rule-soft);font-size:14.8px;line-height:1.5}
+.translate .a{background:color-mix(in srgb, var(--ochre-wash) 45%, var(--paper))}
+.translate .m{display:flex;align-items:center;justify-content:center;padding:0 12px;color:var(--teal);font-family:var(--f-mono);font-size:13px;border-bottom:1px solid var(--rule-soft)}
+.translate .a:last-of-type,.translate .b:last-of-type,.translate .m:last-of-type{border-bottom:none}
+@media (max-width:720px){.translate{grid-template-columns:1fr}.translate .m{padding:4px 0;justify-content:flex-start;padding-left:16px}.translate .th.mid{display:none}}
+
+.stage{border:1px solid var(--rule);border-radius:8px;background:var(--paper);padding:20px 22px;margin:22px 0;max-width:1080px}
+.stage .sh{display:flex;align-items:baseline;gap:12px;margin-bottom:12px}
+.stage .sn{font-family:var(--f-mono);font-size:11px;color:var(--paper);background:var(--teal);border-radius:4px;padding:3px 8px;letter-spacing:.08em}
+.stage .st{font-family:var(--f-display);font-size:19px;font-weight:600}
+.stage .why{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-top:14px;padding-top:12px;border-top:1px solid var(--rule-soft)}
+</style>
+
+<!--TITLE:What a Server Is-->
+<div class="shell">
+<aside class="rail">
+  <div class="brandmark"><span class="n">02</span><span class="t">What a Server Is</span></div>
+  <p class="sub">Book two. The machine underneath — memory, disk, network, threads — and where a request's time actually goes.</p>
+  <nav class="toc" id="toc">
+    <div class="part">This book</div>
+    <a href="#machine"><span class="num">1</span>The machine, to scale</a>
+    <a href="#anatomy"><span class="num">2</span>Anatomy of one request</a>
+    <a href="#memory"><span class="num">3</span>Memory and the page cache</a>
+    <a href="#concurrency"><span class="num">4</span>Processes, threads, event loops</a>
+    <a href="#races"><span class="num">5</span>The genuinely new part</a>
+    <a href="#useit"><span class="num">6</span>Using this in a design</a>
+    <div class="part">The series</div>
+    <a href="#"><span class="num">—</span>Reading path</a>
+    <a href="#"><span class="num">01</span>Pipelines → systems</a>
+    <a href="#"><span class="num">03</span>How data is stored</a>
+    <a href="#"><span class="num">04</span>How data moves</a>
+    <a href="#"><span class="num">05</span>Designing, step by step</a>
+    <a href="#"><span class="num">06</span>Data &amp; ML platforms</a>
+  </nav>
+  <div class="railbtns"><button class="btn" id="themebtn" type="button">Theme</button></div>
+</aside>
+<main class="main">
+
+<header class="bookhead">
+  <div class="serieskicker">Foundations · Book two <span class="of">of six</span></div>
+  <h1>What a server actually is.</h1>
+  <p class="lede">You can design distributed systems without knowing what happens inside one machine — badly. Almost every "why is this slow" and "how many of these do I need" question bottoms out in four physical facts about hardware, and once you hold those, capacity estimation stops being guesswork and becomes arithmetic. This is the shortest book in the series and the one everything else stands on.</p>
+  <div class="readmeta"><span>~30 min read</span><span>Assumes Book 1</span><span>Mostly numbers</span></div>
+</header>
+
+<section id="machine">
+  <div class="chapnum">Chapter one</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">The machine, drawn to scale</h2>
+  <p>A server is four things: <strong>a CPU that computes, memory that holds what it is computing on, disk that remembers when the power goes out, and a network card that talks to other machines.</strong> Everything else is detail. What matters is that these four operate at wildly different speeds, and the differences are so large that they are hard to feel.</p>
+  <p>So here they are stretched into human time. Pretend one CPU cycle takes one second instead of a third of a nanosecond:</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Operation</th><th class="num">Real time</th><th class="num">If a cycle were 1 second</th></tr></thead>
+      <tbody>
+        <tr><td>One CPU cycle</td><td class="num">0.3 ns</td><td class="num">1 second</td></tr>
+        <tr><td>L1 cache hit</td><td class="num">~1 ns</td><td class="num">3 seconds</td></tr>
+        <tr><td>L2 cache hit</td><td class="num">~4 ns</td><td class="num">13 seconds</td></tr>
+        <tr><td><strong>Main memory read</strong></td><td class="num">~100 ns</td><td class="num"><strong>5 minutes</strong></td></tr>
+        <tr><td>NVMe SSD read (4 KB)</td><td class="num">~100 µs</td><td class="num">4 days</td></tr>
+        <tr><td><strong>Round trip inside a datacenter</strong></td><td class="num">~0.5 ms</td><td class="num"><strong>3 weeks</strong></td></tr>
+        <tr><td>Spinning disk seek</td><td class="num">~10 ms</td><td class="num">1 year</td></tr>
+        <tr><td><strong>Round trip across a continent</strong></td><td class="num">~70 ms</td><td class="num"><strong>7 years</strong></td></tr>
+        <tr><td>Round trip around the world</td><td class="num">~200 ms</td><td class="num">21 years</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Read the bold rows together. If reading a value from memory takes the CPU five minutes of subjective time, then <strong>asking another service for that value takes three weeks, and asking a service on another continent takes seven years.</strong> That is the entire reason distributed systems are designed the way they are. Every architectural pattern you will learn — caching, replication, denormalization, CDNs, batching, asynchronous processing — exists to avoid one of the bottom four rows.</p>
+
+  <div class="callout">
+    <div class="ct">The one you already know</div>
+    <p>This is the same insight as "avoid the shuffle." A shuffle is expensive for exactly this reason: it converts local memory access into network transfer, at the scale of an entire dataset. Your existing instinct to restructure a job so data stays local <em>is</em> the instinct that makes a good systems engineer — you have just been applying it to gigabytes rather than to milliseconds.</p>
+  </div>
+
+  <h3>The four numbers to memorize</h3>
+  <p>Not the whole table. Four:</p>
+  <ul>
+    <li><strong>Memory: 100 nanoseconds.</strong> Effectively free. If it is in RAM, stop worrying about it.</li>
+    <li><strong>SSD: 100 microseconds.</strong> A thousand times slower than memory. Still fast, and modern NVMe sustains 500,000+ operations per second when you keep many requests in flight at once — latency and throughput are different questions.</li>
+    <li><strong>Same-datacenter network: 0.5 milliseconds.</strong> Your service-to-service tax. Ten sequential hops means a 5 ms floor before anyone does any work. This is why deep call chains are a latency problem regardless of how fast each service is.</li>
+    <li><strong>Cross-country network: 70 milliseconds.</strong> Physics — light in fibre, plus routing. You cannot engineer around it; you can only avoid crossing, which is what a CDN and a regional replica are for.</li>
+  </ul>
+
+  <h3>And two more about size</h3>
+  <p>A modern server has roughly <strong>64 to 512 GB of RAM</strong> and <strong>1 to 10 TB of local SSD</strong>. Those two numbers answer more design questions than any other pair, because the first question in most designs is <em>does the working set fit in memory on one machine?</em> If yes, the design is simple. If no, everything downstream — sharding, caching tiers, cold storage — follows from that single "no."</p>
+  <p>You will also want row-size arithmetic: an integer is 4 bytes, a timestamp 8, a UUID 16, a character 1. Add about 20% for row and index overhead. A 768-dimension float32 embedding is 3 KB — a number that decides whether a vector index fits in RAM.</p>
+</section>
+
+<section id="anatomy">
+  <div class="chapnum">Chapter two</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">Where a request's 200 milliseconds go</h2>
+  <p>Abstract numbers become useful when you spend them. Here is a realistic budget for one API call that loads a user's dashboard — and note how little of it is your code.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Step</th><th class="num">Cost</th><th>What is happening</th></tr></thead>
+      <tbody>
+        <tr><td>DNS lookup</td><td class="num">0–50 ms</td><td>Usually cached to zero. Cold, it can be surprisingly expensive.</td></tr>
+        <tr><td>TCP handshake</td><td class="num">1 round trip</td><td>Free if the connection is reused. This is why connection pooling matters so much.</td></tr>
+        <tr><td>TLS handshake</td><td class="num">1 round trip</td><td>Also free on reuse. On a cold cross-country connection these two alone are ~140 ms.</td></tr>
+        <tr><td>User → edge</td><td class="num">10–70 ms</td><td>Physics. Only a CDN or a regional deployment reduces it.</td></tr>
+        <tr><td>Load balancer → service</td><td class="num">~0.5 ms</td><td>One datacenter hop.</td></tr>
+        <tr><td>Service → cache (hit)</td><td class="num">~1 ms</td><td>A network hop plus a sub-millisecond lookup.</td></tr>
+        <tr><td>Service → database (indexed read)</td><td class="num">1–10 ms</td><td>Network hop, plus index descent, plus reading pages that are hopefully in the database's memory.</td></tr>
+        <tr><td>Database read that misses memory</td><td class="num">10–100 ms</td><td>Now you are paying for disk, possibly several times. This is the cliff.</td></tr>
+        <tr><td><strong>Your actual code</strong></td><td class="num"><strong>0.1–5 ms</strong></td><td>Serialization, business logic, JSON encoding. Usually a rounding error.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warnbox">
+    <div class="ct">The lesson, and it is the whole chapter</div>
+    <p><strong>Almost all of a request's time is spent waiting on something else.</strong> Your code is rarely the bottleneck; the calls your code makes are. This is why optimizing an algorithm from O(n log n) to O(n) inside a request handler usually changes nothing measurable, while removing one database round trip changes everything. It is also why "how many network calls does this make?" is the most useful question you can ask about a proposed design.</p>
+  </div>
+
+  <h3>Two consequences worth internalizing</h3>
+  <p><strong>Sequential calls add; parallel calls take the max.</strong> If your handler makes five calls of 10 ms each in sequence, that is 50 ms. Made concurrently, it is ~10 ms. The single most common easy win in a slow service is noticing that four of its five dependencies do not depend on each other. This is your DAG instinct again — Airflow parallelizes independent tasks for exactly this reason.</p>
+  <p><strong>The N+1 problem is the same mistake at a different scale.</strong> Fetch 100 rows, then loop and fetch a related record for each one: 101 round trips instead of 2. In a pipeline you would never do this — you would join. In application code it happens constantly, because the loop looks innocent. Whenever you see a network call inside a loop, that is the bug.</p>
+</section>
+
+<section id="memory">
+  <div class="chapnum">Chapter three</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">Memory, the page cache, and why systems fall off cliffs</h2>
+  <p>You have already met this chapter's content, in the form of tuning executor memory and watching a job spill to disk. The mechanics are the same; only the words change.</p>
+
+  <h3>Virtual memory, briefly</h3>
+  <p>Every process sees its own private address space. The operating system maps those addresses to real physical memory in fixed-size <strong>pages</strong> (usually 4 KB). This is why one process cannot read another's memory, and why memory can be over-committed — the OS hands out addresses freely and only backs them with physical pages when actually touched.</p>
+
+  <h3>The page cache — the most important thing you didn't know had a name</h3>
+  <p>When a program reads a file, the OS keeps a copy of those pages in otherwise-unused RAM. The next read of the same file does not touch the disk at all. This is the <strong>page cache</strong>, and it is why "reading from disk" is frequently not reading from disk.</p>
+  <p>Two consequences that explain a great deal of production behaviour:</p>
+  <ul>
+    <li><strong>A database appears fast until its working set exceeds memory, and then it collapses.</strong> Not gradually — sharply. While the hot pages fit, nearly every read is a memory read at 100 ns. Once they do not, reads start hitting the SSD at 100 µs, a thousand times slower, and queue depth explodes. If you ever hear "it was fine for a year and then degraded over a weekend," suspect this.</li>
+    <li><strong>Free memory is not wasted memory.</strong> A server showing 2 GB free and 200 GB "used by cache" is healthy — the OS is doing its job. Alarming at that number and shrinking the machine is a classic mistake.</li>
+  </ul>
+
+  <h3>Sequential beats random, at every level</h3>
+  <p>Reading 1 MB sequentially from an SSD takes about 200 µs. Reading 256 random 4 KB blocks — the same megabyte — takes far longer, because each one pays full latency. The same asymmetry exists in memory (the CPU prefetches ahead) and in your world (a full scan of a Parquet file is dramatically faster than 10,000 point lookups).</p>
+  <p>This asymmetry <em>is</em> the reason for several designs you will meet in Book 3: why append-only structures are fast to write, why databases store rows in sorted pages, why columnar formats exist, and why a query planner will sometimes deliberately choose to scan an entire table rather than use an index — because at some point, 30% of a table read sequentially beats 30% of it read randomly.</p>
+
+  <div class="callout">
+    <div class="ct">Garbage collection, and why it shows up as p99</div>
+    <p>In a garbage-collected runtime — Java, Go, Python, whatever the service is written in — the runtime periodically pauses to reclaim memory. In Spark you have felt this as a task that inexplicably took much longer than its peers. In a service it appears as <strong>tail latency</strong>: the median request is 20 ms and the 99th percentile is 400 ms, because one request in a hundred was unlucky enough to be in flight during a pause. This is one of the most common reasons a p99 looks nothing like a p50, and knowing to suspect it makes you look experienced.</p>
+  </div>
+</section>
+
+<section id="concurrency">
+  <div class="chapnum">Chapter four</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">Processes, threads, and event loops</h2>
+  <p>A server has to handle many requests at once. There are three ways to arrange that, and the choice has architectural consequences.</p>
+
+  <h3>The distinction that governs everything: concurrency vs parallelism</h3>
+  <p><strong>Parallelism</strong> is doing several things at the same instant — which requires several CPU cores. <strong>Concurrency</strong> is having several things in progress at once, most of which are waiting. A single core can be concurrent with ten thousand things if 9,999 of them are blocked on the network.</p>
+  <p>From this falls the most useful classification in server design:</p>
+  <ul>
+    <li><strong>I/O-bound work wants concurrency.</strong> Your handler spends 95% of its time waiting on a database. You need many requests in flight, not many cores.</li>
+    <li><strong>CPU-bound work wants parallelism.</strong> Your handler is parsing, compressing, or running a model. You need cores, and no amount of concurrency helps.</li>
+  </ul>
+  <p>Confusing the two produces both classic mistakes: an async web server that pins a core doing JSON parsing and stalls every other request, and a thread pool sized to the core count that spends its entire life idle, waiting on a database.</p>
+
+  <h3>The three models</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Model</th><th>How it works</th><th>Where it wins / breaks</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Process per request</strong></td><td>Full isolation, separate memory</td><td>Bulletproof and heavy. Mostly historical for web serving, though it is exactly what a Spark executor is — and its isolation is why one failing task cannot corrupt another.</td></tr>
+        <tr><td><strong>Thread per request</strong></td><td>Threads share memory within one process; a blocking call parks the thread until it returns</td><td>Simple to write — blocking code reads sequentially. Breaks at high connection counts, because each thread costs memory and the OS spends its time context-switching between them.</td></tr>
+        <tr><td><strong>Event loop</strong></td><td>One thread asks the kernel "which of these 10,000 sockets is ready?", handles those, and goes back to waiting</td><td>Enormous numbers of mostly-idle connections on one thread. Breaks catastrophically if any handler blocks — one slow function stalls the entire process.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Modern runtimes mostly blend these: <strong>green threads or coroutines</strong> (Go's goroutines, Java's virtual threads, Python's asyncio) let you write blocking-looking code that runs on an event loop underneath. You get the readability of threads with the scaling of an event loop, and pay in harder debugging and profiling.</p>
+
+  <div class="callout">
+    <div class="ct">Why this matters for a design, concretely</div>
+    <p>"How many concurrent connections can one machine hold?" is a real design question — it decides how many machines a chat or streaming system needs. The rough answer is <strong>tens of thousands of idle connections per node</strong> on an event-loop model. So 100 million concurrent users needs on the order of 2,000 machines just to hold the sockets, before any of them do work. That number then raises the next question — how does a message find the one machine in two thousand holding a given user's connection? — which is the connection-registry problem, and it is the piece people forget.</p>
+  </div>
+
+  <h3>The context switch, and why it caps you</h3>
+  <p>Swapping one thread off a core for another costs on the order of a microsecond, plus the cache pollution afterward — which often costs more than the switch itself. A microsecond sounds like nothing until you have 10,000 threads all becoming runnable, at which point the machine spends its time switching rather than working, and throughput <em>falls</em> as you add load. That non-monotonic behaviour — more load producing less work — is one of the nastier failure modes in serving, and it is why bounded thread pools and load shedding exist.</p>
+</section>
+
+<section id="races">
+  <div class="chapnum">Chapter five</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">The genuinely new part: several things touching the same state</h2>
+  <p>This chapter contains the one topic with no equivalent in your batch experience, because a framework was protecting you from it. In Spark, two tasks never modify the same variable — they work on separate partitions in separate processes, and the framework merges results. In a service, a thousand requests can touch the same row in the same millisecond and nothing is refereeing.</p>
+
+  <h3>The race condition</h3>
+  <p>Consider incrementing a counter:</p>
+  <div class="codehead"><span>Three operations, not one</span><button class="copy" type="button">Copy</button></div>
+<pre><code>views = read(key)      <span class="cm"># thread A reads 100 ... thread B also reads 100</span>
+views = views + <span class="nu">1</span>      <span class="cm"># A computes 101   ... B computes 101</span>
+write(key, views)      <span class="cm"># A writes 101     ... B writes 101</span>
+
+<span class="cm"># Two views were recorded. The counter says 101. One update vanished,</span>
+<span class="cm"># silently, with no error anywhere. This is a LOST UPDATE, and it is the</span>
+<span class="cm"># root of most concurrency bugs.</span>
+</code></pre>
+  <p>Nothing crashed. No exception was raised. The data is simply wrong, and it will be wrong more often the more traffic you get — which means it works perfectly in testing and fails in production. That property, <em>correctness that degrades with load</em>, is what makes concurrency bugs feel qualitatively different from the bugs you are used to.</p>
+
+  <h3>The five ways out, from cheapest to most expensive</h3>
+  <div class="deflist">
+    <dt>Don't share</dt><dd>The best answer where available. If each request touches its own data, there is no race. Partitioning work by key — routing all requests for a given user to the same handler — turns a concurrency problem into a routing problem. <em>This is exactly what partitioning a DataFrame does for you.</em></dd>
+    <dt>Immutability</dt><dd>If nothing is ever modified, nothing needs coordinating. Append a row rather than update one; compute the total by summing. This is why event logs and append-only stores are so common — and it is the same reason your warehouse prefers insert-only fact tables over mutable ones.</dd>
+    <dt>Atomic operations</dt><dd>Ask the storage layer to do read-modify-write as one indivisible step: <code>INCR</code> in Redis, <code>UPDATE t SET n = n + 1</code> in SQL. Correct, fast, and the right answer for counters. The limitation is that it only covers operations the store supports natively.</dd>
+    <dt>Optimistic concurrency</dt><dd>Don't lock. Read a version number, and on write assert it hasn't changed — <code>UPDATE … WHERE version = 7</code> — retrying if the update affects zero rows. Ideal when conflicts are rare, which they usually are. Iceberg and Delta do exactly this on your tables.</dd>
+    <dt>Pessimistic locking</dt><dd><code>SELECT … FOR UPDATE</code>: take the lock first, make others wait. Correct under heavy contention, and it caps your throughput at one holder at a time, plus it introduces the possibility of <strong>deadlock</strong> — A holds lock 1 and wants 2 while B holds 2 and wants 1. The practical defence is a global lock ordering: always acquire in the same order.</dd>
+  </div>
+
+  <p>Notice the shape of that list: <strong>the good answers avoid the problem and the expensive answers manage it.</strong> That ordering is worth carrying into design work generally — when a design needs a distributed lock, the first question is whether it could be restructured so it doesn't.</p>
+</section>
+
+<section id="useit">
+  <div class="chapnum">Chapter six</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">What this buys you in a design</h2>
+  <p>Four concrete moves you can now make that you could not before this book.</p>
+
+  <div class="stage">
+    <div class="sh"><span class="sn">1</span><span class="st">Sizing a fleet</span></div>
+    <p>"One commodity app server handles roughly 1,000–10,000 requests per second, depending on how much work each does." So 300,000 requests per second at peak needs on the order of 30–300 machines, and you should say which end you expect and why — <em>"each request makes three database calls, so I'd assume the low end and load-test it"</em>. Naming a number and its uncertainty beats naming no number.</p>
+  </div>
+  <div class="stage">
+    <div class="sh"><span class="sn">2</span><span class="st">Locating a bottleneck before writing code</span></div>
+    <p>Add up the round trips in your proposed request path. If a design makes eight sequential service calls, it has a 4 ms floor before doing anything, and a p99 that will be dreadful because it inherits the tail of eight dependencies. Say so, and fan them out.</p>
+  </div>
+  <div class="stage">
+    <div class="sh"><span class="sn">3</span><span class="st">Answering "does it fit in memory?"</span></div>
+    <p>The most decisive question in most designs. 50 million cached objects at 500 bytes each is 25 GB — one machine, easily. The same 50 million objects at 200 KB each is 10 TB — an entirely different architecture. The arithmetic takes ten seconds and changes the answer completely.</p>
+  </div>
+  <div class="stage">
+    <div class="sh"><span class="sn">4</span><span class="st">Explaining a p99 that doesn't match the p50</span></div>
+    <p>The causes are a short list, and now you know all of them: garbage collection pauses, a cache miss falling through to disk, queueing behind a saturated thread pool, a retry after a timeout, or one slow dependency in a fan-out where you wait for the slowest. Being able to enumerate that list on demand is a strong signal of having actually run something.</p>
+    <div class="why">Tail latency is where the interesting engineering is, and it is where most candidates have nothing to say.</div>
+  </div>
+
+  <div class="booknav">
+    <a href="#"><span class="dir">Next — Book three</span><span class="nm">How data is stored</span><span class="ds">From a file on a disk to a replicated, sharded database. Pages, indexes, B-trees and LSM trees, transactions — and why your warehouse makes the opposite choices from your application database.</span></a>
+    <a href="#"><span class="dir">Back — Book one</span><span class="nm">Pipelines → systems</span><span class="ds">The translation table, and the one difference that doesn't transfer.</span></a>
+  </div>
+</main>
+</div>
+<script>
+(function(){"use strict";
+ var root=document.documentElement,KEY="foundations.theme";
+ try{var v=localStorage.getItem(KEY); if(v==="light"||v==="dark") root.setAttribute("data-theme",v);}catch(e){}
+ var b=document.getElementById("themebtn");
+ if(b) b.addEventListener("click",function(){
+   var c=root.getAttribute("data-theme"), n=c==="light"?"dark":(c==="dark"?null:"light");
+   if(n){root.setAttribute("data-theme",n);} else {root.removeAttribute("data-theme");}
+   try{localStorage.setItem(KEY,n||"system");}catch(e){}
+ });
+ document.querySelectorAll(".copy").forEach(function(btn){
+   btn.addEventListener("click",function(){
+     var pre=btn.closest(".codehead")&&btn.closest(".codehead").nextElementSibling;
+     if(!pre||!navigator.clipboard) return;
+     navigator.clipboard.writeText(pre.innerText).then(function(){
+       var o=btn.textContent; btn.textContent="Copied"; setTimeout(function(){btn.textContent=o;},1400);
+     },function(){});
+   });
+ });
+ var links=[].slice.call(document.querySelectorAll('nav.toc a[href^="#"]'));
+ var secs=links.map(function(a){return document.querySelector(a.getAttribute("href"));}).filter(Boolean);
+ if("IntersectionObserver" in window && secs.length){
+   var o=new IntersectionObserver(function(es){es.forEach(function(e){
+     if(!e.isIntersecting) return;
+     links.forEach(function(a){a.classList.toggle("on",a.getAttribute("href")==="#"+e.target.id);});
+   });},{rootMargin:"-15% 0px -75% 0px"});
+   secs.forEach(function(s){o.observe(s);});
+ }
+})();
+</script>

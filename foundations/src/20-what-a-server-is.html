@@ -1,0 +1,259 @@
+<!--TITLE:What a Server Is-->
+<div class="shell">
+<aside class="rail">
+  <div class="brandmark"><span class="n">02</span><span class="t">What a Server Is</span></div>
+  <p class="sub">Book two. The machine underneath — memory, disk, network, threads — and where a request's time actually goes.</p>
+  <nav class="toc" id="toc">
+    <div class="part">This book</div>
+    <a href="#machine"><span class="num">1</span>The machine, to scale</a>
+    <a href="#anatomy"><span class="num">2</span>Anatomy of one request</a>
+    <a href="#memory"><span class="num">3</span>Memory and the page cache</a>
+    <a href="#concurrency"><span class="num">4</span>Processes, threads, event loops</a>
+    <a href="#races"><span class="num">5</span>The genuinely new part</a>
+    <a href="#useit"><span class="num">6</span>Using this in a design</a>
+    <div class="part">The series</div>
+    <a href="__L0__"><span class="num">—</span>Reading path</a>
+    <a href="__L1__"><span class="num">01</span>Pipelines → systems</a>
+    <a href="__L3__"><span class="num">03</span>How data is stored</a>
+    <a href="__L4__"><span class="num">04</span>How data moves</a>
+    <a href="__L5__"><span class="num">05</span>Designing, step by step</a>
+    <a href="__L6__"><span class="num">06</span>Data &amp; ML platforms</a>
+  </nav>
+  <div class="railbtns"><button class="btn" id="themebtn" type="button">Theme</button></div>
+</aside>
+<main class="main">
+
+<header class="bookhead">
+  <div class="serieskicker">Foundations · Book two <span class="of">of six</span></div>
+  <h1>What a server actually is.</h1>
+  <p class="lede">You can design distributed systems without knowing what happens inside one machine — badly. Almost every "why is this slow" and "how many of these do I need" question bottoms out in four physical facts about hardware, and once you hold those, capacity estimation stops being guesswork and becomes arithmetic. This is the shortest book in the series and the one everything else stands on.</p>
+  <div class="readmeta"><span>~30 min read</span><span>Assumes Book 1</span><span>Mostly numbers</span></div>
+</header>
+
+<section id="machine">
+  <div class="chapnum">Chapter one</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">The machine, drawn to scale</h2>
+  <p>A server is four things: <strong>a CPU that computes, memory that holds what it is computing on, disk that remembers when the power goes out, and a network card that talks to other machines.</strong> Everything else is detail. What matters is that these four operate at wildly different speeds, and the differences are so large that they are hard to feel.</p>
+  <p>So here they are stretched into human time. Pretend one CPU cycle takes one second instead of a third of a nanosecond:</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Operation</th><th class="num">Real time</th><th class="num">If a cycle were 1 second</th></tr></thead>
+      <tbody>
+        <tr><td>One CPU cycle</td><td class="num">0.3 ns</td><td class="num">1 second</td></tr>
+        <tr><td>L1 cache hit</td><td class="num">~1 ns</td><td class="num">3 seconds</td></tr>
+        <tr><td>L2 cache hit</td><td class="num">~4 ns</td><td class="num">13 seconds</td></tr>
+        <tr><td><strong>Main memory read</strong></td><td class="num">~100 ns</td><td class="num"><strong>5 minutes</strong></td></tr>
+        <tr><td>NVMe SSD read (4 KB)</td><td class="num">~100 µs</td><td class="num">4 days</td></tr>
+        <tr><td><strong>Round trip inside a datacenter</strong></td><td class="num">~0.5 ms</td><td class="num"><strong>3 weeks</strong></td></tr>
+        <tr><td>Spinning disk seek</td><td class="num">~10 ms</td><td class="num">1 year</td></tr>
+        <tr><td><strong>Round trip across a continent</strong></td><td class="num">~70 ms</td><td class="num"><strong>7 years</strong></td></tr>
+        <tr><td>Round trip around the world</td><td class="num">~200 ms</td><td class="num">21 years</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Read the bold rows together. If reading a value from memory takes the CPU five minutes of subjective time, then <strong>asking another service for that value takes three weeks, and asking a service on another continent takes seven years.</strong> That is the entire reason distributed systems are designed the way they are. Every architectural pattern you will learn — caching, replication, denormalization, CDNs, batching, asynchronous processing — exists to avoid one of the bottom four rows.</p>
+
+  <div class="callout">
+    <div class="ct">The one you already know</div>
+    <p>This is the same insight as "avoid the shuffle." A shuffle is expensive for exactly this reason: it converts local memory access into network transfer, at the scale of an entire dataset. Your existing instinct to restructure a job so data stays local <em>is</em> the instinct that makes a good systems engineer — you have just been applying it to gigabytes rather than to milliseconds.</p>
+  </div>
+
+  <h3>The four numbers to memorize</h3>
+  <p>Not the whole table. Four:</p>
+  <ul>
+    <li><strong>Memory: 100 nanoseconds.</strong> Effectively free. If it is in RAM, stop worrying about it.</li>
+    <li><strong>SSD: 100 microseconds.</strong> A thousand times slower than memory. Still fast, and modern NVMe sustains 500,000+ operations per second when you keep many requests in flight at once — latency and throughput are different questions.</li>
+    <li><strong>Same-datacenter network: 0.5 milliseconds.</strong> Your service-to-service tax. Ten sequential hops means a 5 ms floor before anyone does any work. This is why deep call chains are a latency problem regardless of how fast each service is.</li>
+    <li><strong>Cross-country network: 70 milliseconds.</strong> Physics — light in fibre, plus routing. You cannot engineer around it; you can only avoid crossing, which is what a CDN and a regional replica are for.</li>
+  </ul>
+
+  <h3>And two more about size</h3>
+  <p>A modern server has roughly <strong>64 to 512 GB of RAM</strong> and <strong>1 to 10 TB of local SSD</strong>. Those two numbers answer more design questions than any other pair, because the first question in most designs is <em>does the working set fit in memory on one machine?</em> If yes, the design is simple. If no, everything downstream — sharding, caching tiers, cold storage — follows from that single "no."</p>
+  <p>You will also want row-size arithmetic: an integer is 4 bytes, a timestamp 8, a UUID 16, a character 1. Add about 20% for row and index overhead. A 768-dimension float32 embedding is 3 KB — a number that decides whether a vector index fits in RAM.</p>
+</section>
+
+<section id="anatomy">
+  <div class="chapnum">Chapter two</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">Where a request's 200 milliseconds go</h2>
+  <p>Abstract numbers become useful when you spend them. Here is a realistic budget for one API call that loads a user's dashboard — and note how little of it is your code.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Step</th><th class="num">Cost</th><th>What is happening</th></tr></thead>
+      <tbody>
+        <tr><td>DNS lookup</td><td class="num">0–50 ms</td><td>Usually cached to zero. Cold, it can be surprisingly expensive.</td></tr>
+        <tr><td>TCP handshake</td><td class="num">1 round trip</td><td>Free if the connection is reused. This is why connection pooling matters so much.</td></tr>
+        <tr><td>TLS handshake</td><td class="num">1 round trip</td><td>Also free on reuse. On a cold cross-country connection these two alone are ~140 ms.</td></tr>
+        <tr><td>User → edge</td><td class="num">10–70 ms</td><td>Physics. Only a CDN or a regional deployment reduces it.</td></tr>
+        <tr><td>Load balancer → service</td><td class="num">~0.5 ms</td><td>One datacenter hop.</td></tr>
+        <tr><td>Service → cache (hit)</td><td class="num">~1 ms</td><td>A network hop plus a sub-millisecond lookup.</td></tr>
+        <tr><td>Service → database (indexed read)</td><td class="num">1–10 ms</td><td>Network hop, plus index descent, plus reading pages that are hopefully in the database's memory.</td></tr>
+        <tr><td>Database read that misses memory</td><td class="num">10–100 ms</td><td>Now you are paying for disk, possibly several times. This is the cliff.</td></tr>
+        <tr><td><strong>Your actual code</strong></td><td class="num"><strong>0.1–5 ms</strong></td><td>Serialization, business logic, JSON encoding. Usually a rounding error.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warnbox">
+    <div class="ct">The lesson, and it is the whole chapter</div>
+    <p><strong>Almost all of a request's time is spent waiting on something else.</strong> Your code is rarely the bottleneck; the calls your code makes are. This is why optimizing an algorithm from O(n log n) to O(n) inside a request handler usually changes nothing measurable, while removing one database round trip changes everything. It is also why "how many network calls does this make?" is the most useful question you can ask about a proposed design.</p>
+  </div>
+
+  <h3>Two consequences worth internalizing</h3>
+  <p><strong>Sequential calls add; parallel calls take the max.</strong> If your handler makes five calls of 10 ms each in sequence, that is 50 ms. Made concurrently, it is ~10 ms. The single most common easy win in a slow service is noticing that four of its five dependencies do not depend on each other. This is your DAG instinct again — Airflow parallelizes independent tasks for exactly this reason.</p>
+  <p><strong>The N+1 problem is the same mistake at a different scale.</strong> Fetch 100 rows, then loop and fetch a related record for each one: 101 round trips instead of 2. In a pipeline you would never do this — you would join. In application code it happens constantly, because the loop looks innocent. Whenever you see a network call inside a loop, that is the bug.</p>
+</section>
+
+<section id="memory">
+  <div class="chapnum">Chapter three</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">Memory, the page cache, and why systems fall off cliffs</h2>
+  <p>You have already met this chapter's content, in the form of tuning executor memory and watching a job spill to disk. The mechanics are the same; only the words change.</p>
+
+  <h3>Virtual memory, briefly</h3>
+  <p>Every process sees its own private address space. The operating system maps those addresses to real physical memory in fixed-size <strong>pages</strong> (usually 4 KB). This is why one process cannot read another's memory, and why memory can be over-committed — the OS hands out addresses freely and only backs them with physical pages when actually touched.</p>
+
+  <h3>The page cache — the most important thing you didn't know had a name</h3>
+  <p>When a program reads a file, the OS keeps a copy of those pages in otherwise-unused RAM. The next read of the same file does not touch the disk at all. This is the <strong>page cache</strong>, and it is why "reading from disk" is frequently not reading from disk.</p>
+  <p>Two consequences that explain a great deal of production behaviour:</p>
+  <ul>
+    <li><strong>A database appears fast until its working set exceeds memory, and then it collapses.</strong> Not gradually — sharply. While the hot pages fit, nearly every read is a memory read at 100 ns. Once they do not, reads start hitting the SSD at 100 µs, a thousand times slower, and queue depth explodes. If you ever hear "it was fine for a year and then degraded over a weekend," suspect this.</li>
+    <li><strong>Free memory is not wasted memory.</strong> A server showing 2 GB free and 200 GB "used by cache" is healthy — the OS is doing its job. Alarming at that number and shrinking the machine is a classic mistake.</li>
+  </ul>
+
+  <h3>Sequential beats random, at every level</h3>
+  <p>Reading 1 MB sequentially from an SSD takes about 200 µs. Reading 256 random 4 KB blocks — the same megabyte — takes far longer, because each one pays full latency. The same asymmetry exists in memory (the CPU prefetches ahead) and in your world (a full scan of a Parquet file is dramatically faster than 10,000 point lookups).</p>
+  <p>This asymmetry <em>is</em> the reason for several designs you will meet in Book 3: why append-only structures are fast to write, why databases store rows in sorted pages, why columnar formats exist, and why a query planner will sometimes deliberately choose to scan an entire table rather than use an index — because at some point, 30% of a table read sequentially beats 30% of it read randomly.</p>
+
+  <div class="callout">
+    <div class="ct">Garbage collection, and why it shows up as p99</div>
+    <p>In a garbage-collected runtime — Java, Go, Python, whatever the service is written in — the runtime periodically pauses to reclaim memory. In Spark you have felt this as a task that inexplicably took much longer than its peers. In a service it appears as <strong>tail latency</strong>: the median request is 20 ms and the 99th percentile is 400 ms, because one request in a hundred was unlucky enough to be in flight during a pause. This is one of the most common reasons a p99 looks nothing like a p50, and knowing to suspect it makes you look experienced.</p>
+  </div>
+</section>
+
+<section id="concurrency">
+  <div class="chapnum">Chapter four</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">Processes, threads, and event loops</h2>
+  <p>A server has to handle many requests at once. There are three ways to arrange that, and the choice has architectural consequences.</p>
+
+  <h3>The distinction that governs everything: concurrency vs parallelism</h3>
+  <p><strong>Parallelism</strong> is doing several things at the same instant — which requires several CPU cores. <strong>Concurrency</strong> is having several things in progress at once, most of which are waiting. A single core can be concurrent with ten thousand things if 9,999 of them are blocked on the network.</p>
+  <p>From this falls the most useful classification in server design:</p>
+  <ul>
+    <li><strong>I/O-bound work wants concurrency.</strong> Your handler spends 95% of its time waiting on a database. You need many requests in flight, not many cores.</li>
+    <li><strong>CPU-bound work wants parallelism.</strong> Your handler is parsing, compressing, or running a model. You need cores, and no amount of concurrency helps.</li>
+  </ul>
+  <p>Confusing the two produces both classic mistakes: an async web server that pins a core doing JSON parsing and stalls every other request, and a thread pool sized to the core count that spends its entire life idle, waiting on a database.</p>
+
+  <h3>The three models</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Model</th><th>How it works</th><th>Where it wins / breaks</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Process per request</strong></td><td>Full isolation, separate memory</td><td>Bulletproof and heavy. Mostly historical for web serving, though it is exactly what a Spark executor is — and its isolation is why one failing task cannot corrupt another.</td></tr>
+        <tr><td><strong>Thread per request</strong></td><td>Threads share memory within one process; a blocking call parks the thread until it returns</td><td>Simple to write — blocking code reads sequentially. Breaks at high connection counts, because each thread costs memory and the OS spends its time context-switching between them.</td></tr>
+        <tr><td><strong>Event loop</strong></td><td>One thread asks the kernel "which of these 10,000 sockets is ready?", handles those, and goes back to waiting</td><td>Enormous numbers of mostly-idle connections on one thread. Breaks catastrophically if any handler blocks — one slow function stalls the entire process.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Modern runtimes mostly blend these: <strong>green threads or coroutines</strong> (Go's goroutines, Java's virtual threads, Python's asyncio) let you write blocking-looking code that runs on an event loop underneath. You get the readability of threads with the scaling of an event loop, and pay in harder debugging and profiling.</p>
+
+  <div class="callout">
+    <div class="ct">Why this matters for a design, concretely</div>
+    <p>"How many concurrent connections can one machine hold?" is a real design question — it decides how many machines a chat or streaming system needs. The rough answer is <strong>tens of thousands of idle connections per node</strong> on an event-loop model. So 100 million concurrent users needs on the order of 2,000 machines just to hold the sockets, before any of them do work. That number then raises the next question — how does a message find the one machine in two thousand holding a given user's connection? — which is the connection-registry problem, and it is the piece people forget.</p>
+  </div>
+
+  <h3>The context switch, and why it caps you</h3>
+  <p>Swapping one thread off a core for another costs on the order of a microsecond, plus the cache pollution afterward — which often costs more than the switch itself. A microsecond sounds like nothing until you have 10,000 threads all becoming runnable, at which point the machine spends its time switching rather than working, and throughput <em>falls</em> as you add load. That non-monotonic behaviour — more load producing less work — is one of the nastier failure modes in serving, and it is why bounded thread pools and load shedding exist.</p>
+</section>
+
+<section id="races">
+  <div class="chapnum">Chapter five</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">The genuinely new part: several things touching the same state</h2>
+  <p>This chapter contains the one topic with no equivalent in your batch experience, because a framework was protecting you from it. In Spark, two tasks never modify the same variable — they work on separate partitions in separate processes, and the framework merges results. In a service, a thousand requests can touch the same row in the same millisecond and nothing is refereeing.</p>
+
+  <h3>The race condition</h3>
+  <p>Consider incrementing a counter:</p>
+  <div class="codehead"><span>Three operations, not one</span><button class="copy" type="button">Copy</button></div>
+<pre><code>views = read(key)      <span class="cm"># thread A reads 100 ... thread B also reads 100</span>
+views = views + <span class="nu">1</span>      <span class="cm"># A computes 101   ... B computes 101</span>
+write(key, views)      <span class="cm"># A writes 101     ... B writes 101</span>
+
+<span class="cm"># Two views were recorded. The counter says 101. One update vanished,</span>
+<span class="cm"># silently, with no error anywhere. This is a LOST UPDATE, and it is the</span>
+<span class="cm"># root of most concurrency bugs.</span>
+</code></pre>
+  <p>Nothing crashed. No exception was raised. The data is simply wrong, and it will be wrong more often the more traffic you get — which means it works perfectly in testing and fails in production. That property, <em>correctness that degrades with load</em>, is what makes concurrency bugs feel qualitatively different from the bugs you are used to.</p>
+
+  <h3>The five ways out, from cheapest to most expensive</h3>
+  <div class="deflist">
+    <dt>Don't share</dt><dd>The best answer where available. If each request touches its own data, there is no race. Partitioning work by key — routing all requests for a given user to the same handler — turns a concurrency problem into a routing problem. <em>This is exactly what partitioning a DataFrame does for you.</em></dd>
+    <dt>Immutability</dt><dd>If nothing is ever modified, nothing needs coordinating. Append a row rather than update one; compute the total by summing. This is why event logs and append-only stores are so common — and it is the same reason your warehouse prefers insert-only fact tables over mutable ones.</dd>
+    <dt>Atomic operations</dt><dd>Ask the storage layer to do read-modify-write as one indivisible step: <code>INCR</code> in Redis, <code>UPDATE t SET n = n + 1</code> in SQL. Correct, fast, and the right answer for counters. The limitation is that it only covers operations the store supports natively.</dd>
+    <dt>Optimistic concurrency</dt><dd>Don't lock. Read a version number, and on write assert it hasn't changed — <code>UPDATE … WHERE version = 7</code> — retrying if the update affects zero rows. Ideal when conflicts are rare, which they usually are. Iceberg and Delta do exactly this on your tables.</dd>
+    <dt>Pessimistic locking</dt><dd><code>SELECT … FOR UPDATE</code>: take the lock first, make others wait. Correct under heavy contention, and it caps your throughput at one holder at a time, plus it introduces the possibility of <strong>deadlock</strong> — A holds lock 1 and wants 2 while B holds 2 and wants 1. The practical defence is a global lock ordering: always acquire in the same order.</dd>
+  </div>
+
+  <p>Notice the shape of that list: <strong>the good answers avoid the problem and the expensive answers manage it.</strong> That ordering is worth carrying into design work generally — when a design needs a distributed lock, the first question is whether it could be restructured so it doesn't.</p>
+</section>
+
+<section id="useit">
+  <div class="chapnum">Chapter six</div>
+  <h2 style="font-size:clamp(26px,3.3vw,36px);margin:0 0 16px">What this buys you in a design</h2>
+  <p>Four concrete moves you can now make that you could not before this book.</p>
+
+  <div class="stage">
+    <div class="sh"><span class="sn">1</span><span class="st">Sizing a fleet</span></div>
+    <p>"One commodity app server handles roughly 1,000–10,000 requests per second, depending on how much work each does." So 300,000 requests per second at peak needs on the order of 30–300 machines, and you should say which end you expect and why — <em>"each request makes three database calls, so I'd assume the low end and load-test it"</em>. Naming a number and its uncertainty beats naming no number.</p>
+  </div>
+  <div class="stage">
+    <div class="sh"><span class="sn">2</span><span class="st">Locating a bottleneck before writing code</span></div>
+    <p>Add up the round trips in your proposed request path. If a design makes eight sequential service calls, it has a 4 ms floor before doing anything, and a p99 that will be dreadful because it inherits the tail of eight dependencies. Say so, and fan them out.</p>
+  </div>
+  <div class="stage">
+    <div class="sh"><span class="sn">3</span><span class="st">Answering "does it fit in memory?"</span></div>
+    <p>The most decisive question in most designs. 50 million cached objects at 500 bytes each is 25 GB — one machine, easily. The same 50 million objects at 200 KB each is 10 TB — an entirely different architecture. The arithmetic takes ten seconds and changes the answer completely.</p>
+  </div>
+  <div class="stage">
+    <div class="sh"><span class="sn">4</span><span class="st">Explaining a p99 that doesn't match the p50</span></div>
+    <p>The causes are a short list, and now you know all of them: garbage collection pauses, a cache miss falling through to disk, queueing behind a saturated thread pool, a retry after a timeout, or one slow dependency in a fan-out where you wait for the slowest. Being able to enumerate that list on demand is a strong signal of having actually run something.</p>
+    <div class="why">Tail latency is where the interesting engineering is, and it is where most candidates have nothing to say.</div>
+  </div>
+
+  <div class="booknav">
+    <a href="__L3__"><span class="dir">Next — Book three</span><span class="nm">How data is stored</span><span class="ds">From a file on a disk to a replicated, sharded database. Pages, indexes, B-trees and LSM trees, transactions — and why your warehouse makes the opposite choices from your application database.</span></a>
+    <a href="__L1__"><span class="dir">Back — Book one</span><span class="nm">Pipelines → systems</span><span class="ds">The translation table, and the one difference that doesn't transfer.</span></a>
+  </div>
+</main>
+</div>
+<script>
+(function(){"use strict";
+ var root=document.documentElement,KEY="foundations.theme";
+ try{var v=localStorage.getItem(KEY); if(v==="light"||v==="dark") root.setAttribute("data-theme",v);}catch(e){}
+ var b=document.getElementById("themebtn");
+ if(b) b.addEventListener("click",function(){
+   var c=root.getAttribute("data-theme"), n=c==="light"?"dark":(c==="dark"?null:"light");
+   if(n){root.setAttribute("data-theme",n);} else {root.removeAttribute("data-theme");}
+   try{localStorage.setItem(KEY,n||"system");}catch(e){}
+ });
+ document.querySelectorAll(".copy").forEach(function(btn){
+   btn.addEventListener("click",function(){
+     var pre=btn.closest(".codehead")&&btn.closest(".codehead").nextElementSibling;
+     if(!pre||!navigator.clipboard) return;
+     navigator.clipboard.writeText(pre.innerText).then(function(){
+       var o=btn.textContent; btn.textContent="Copied"; setTimeout(function(){btn.textContent=o;},1400);
+     },function(){});
+   });
+ });
+ var links=[].slice.call(document.querySelectorAll('nav.toc a[href^="#"]'));
+ var secs=links.map(function(a){return document.querySelector(a.getAttribute("href"));}).filter(Boolean);
+ if("IntersectionObserver" in window && secs.length){
+   var o=new IntersectionObserver(function(es){es.forEach(function(e){
+     if(!e.isIntersecting) return;
+     links.forEach(function(a){a.classList.toggle("on",a.getAttribute("href")==="#"+e.target.id);});
+   });},{rootMargin:"-15% 0px -75% 0px"});
+   secs.forEach(function(s){o.observe(s);});
+ }
+})();
+</script>
