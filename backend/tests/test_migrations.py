@@ -21,6 +21,7 @@ os.environ.setdefault(
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
 
 from app.core.db import SessionLocal  # noqa: E402
+from app.services.layers import PROJECTS  # noqa: E402
 
 VERSIONS_DIR = Path(__file__).resolve().parents[1] / "alembic" / "versions"
 
@@ -124,7 +125,10 @@ async def test_seeded_roles_and_permissions_are_present():
         ).scalar_one()
 
     assert {"admin", "analyst", "agronomist", "planner", "viewer"} <= roles
-    assert perm_count == 15
+    # Five cross-cutting codes, plus read+write for each project. Pinned to
+    # the registry so adding a project fails here only if its permissions
+    # were never seeded -- which is the actual mistake worth catching.
+    assert perm_count == 5 + 2 * len(PROJECTS)
     # The admin role's grant is a CROSS JOIN, so it must cover every permission.
     assert admin_perms == perm_count
 

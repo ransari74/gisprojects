@@ -749,6 +749,67 @@ of truth. Keep OSM buildings as the "what open crowdsourced data gives you" comp
 
 ---
 
+## 6b. Theme 6 — REMOTE SENSING
+
+Everything here is free, requires at most a no-cost registration, and is read directly from
+cloud-optimised storage — no bulk download.
+
+### 6b.1 Sentinel-2 L2A surface reflectance ★ core dataset
+
+- **STAC API** (footprints, dates, `eo:cloud_cover` — no pixels needed for the scene catalogue):
+  `https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items`
+- **Pixels**: <https://registry.opendata.aws/sentinel-2-l2a-cogs/> — one COG per band.
+- Licence: CC-BY-SA-3.0-IGO (ESA Copernicus).
+- Indices used: NDVI `(B08−B04)/(B08+B04)`, NDWI `(B03−B08)/(B03+B08)`,
+  NDBI `(B11−B08)/(B11+B08)`, NBR `(B08−B12)/(B08+B12)`.
+- COG range requests read only the study-area window of only the bands used, so the
+  "download" is a few MB rather than a full 600 MB tile.
+
+**Expect to discard most of the archive.** Over the central Netherlands, roughly 15–20 % of
+Sentinel-2 acquisitions come in under 30 % cloud, and the clear dates cluster in summer. Plan
+for a composite, not a single date — and see 6b.4 for why the radar layers exist.
+
+### 6b.2 Landsat Collection 2 Level-2 — the thermal band
+
+- <https://registry.opendata.aws/usgs-landsat/> — public domain (US Government work).
+- Landsat rather than Sentinel-2 because **only Landsat carries a thermal sensor**. Surface
+  temperature is band `ST_B10`, already atmospherically corrected.
+- Scaling: `LST_°C = ST_B10 * 0.00341802 + 149.0 − 273.15`.
+- 30 m native, 100 m true thermal resolution resampled — fine for a neighbourhood-scale heat
+  island study, not for a single building.
+
+### 6b.3 ESA WorldCover — two epochs for change detection
+
+- <https://registry.opendata.aws/esa-worldcover-vito/> — CC-BY-4.0, 10 m, 11 classes.
+- v100 (2020) and v200 (2021) give a from/to matrix directly.
+- **Caveat worth stating in any writeup**: ESA explicitly say the two versions are not designed
+  to be differenced — the algorithms changed between them, so some apparent "change" is
+  classifier drift. A defensible study classifies both epochs itself from Sentinel-2 and uses
+  WorldCover only as a reference.
+
+### 6b.4 Sentinel-1 GRD — water and flood extent
+
+- <https://registry.opendata.aws/sentinel-1/> — CC-BY-SA-3.0-IGO, VV/VH, IW mode.
+- Open water is specular at C-band: it reflects the pulse away from the sensor, so it returns
+  very low backscatter and a threshold near **−18 dB on VV** separates it cleanly.
+- The reason to use radar at all: **it sees through cloud**, and flooding arrives with exactly
+  the weather that hides it from an optical sensor.
+
+### 6b.5 EGMS — InSAR ground motion, already processed
+
+- <https://egms.land.copernicus.eu/> — CC-BY-4.0. Tiles `32ULC` / `32UMC` cover Utrecht.
+- The Copernicus Land Monitoring Service publishes **unwrapped, calibrated** persistent-scatterer
+  velocities and time series for the whole EU, derived from Sentinel-1. This is the single
+  biggest shortcut in this theme: processing raw SLC interferograms yourself needs SNAP or
+  ISCE, a lot of disk and a lot of time, and EGMS has already done it.
+- Sign convention: **negative velocity is subsidence**. Keep it that way — flipping it to
+  "positive means sinking" for display guarantees a sign error against every published map.
+- Relevance here: drained peat oxidises and compacts, so the Dutch polder subsides at
+  5–10 mm/yr while the sand of the Utrechtse Heuvelrug barely moves. Persistent scatterers
+  need a stable reflector, so coverage is dense over towns and sparse over farmland.
+
+---
+
 ## 7. Download budget plan (target: < 1 GB)
 
 | # | Dataset | Theme | Geometry | Download | After clip/load |
@@ -867,6 +928,12 @@ Transit:                          OVapi / NDOV open data
 Land cover:                       © ESA WorldCover 2021 v200 — CC BY 4.0
 Soil:                             ISRIC — World Soil Information, SoilGrids — CC BY 4.0
 Terrain:                          Copernicus DEM GLO-30 © ESA / European Union
+Optical imagery:                  Contains modified Copernicus Sentinel-2 data — CC BY-SA 3.0 IGO
+Radar imagery:                    Contains modified Copernicus Sentinel-1 data — CC BY-SA 3.0 IGO
+Thermal / LST:                    USGS Landsat Collection 2 Level-2 — public domain
+Ground motion:                    European Ground Motion Service, Copernicus Land Monitoring
+                                  Service / EEA — CC BY 4.0
+Protected areas:                  Natura 2000 © European Environment Agency — CC BY 4.0
 Climate:                          KNMI (station 260 De Bilt); CHELSA V2.1
 Boundaries:                       © EuroGeographics / Eurostat GISCO
 Buildings (global):               Overture Maps Foundation — ODbL

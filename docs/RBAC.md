@@ -33,7 +33,8 @@ contract, since the route guards reference them by name.
 | `demographics:read` | Census tracts and population data |
 | `transport:read` | Road network, transit and isochrones |
 | `terrain:read` | 3D buildings, contours and terrain |
-| `agriculture:write` … `terrain:write` | Create/update records in that project |
+| `remote_sensing:read` | Satellite scenes, spectral indices, change detection and subsidence |
+| `agriculture:write` … `remote_sensing:write` | Create/update records in that project |
 | `data:export` | Export query results as GeoJSON/CSV |
 | `analytics:read` | Aggregate analytics endpoints (histograms, breakdowns) |
 | `admin:users` | Create, edit and deactivate users |
@@ -52,6 +53,7 @@ contract, since the route guards reference them by name.
 | transport:read | ✅ | ✅ | — | ✅ | ✅ |
 | transport:write | ✅ | — | — | ✅ | — |
 | terrain:read | ✅ | ✅ | ✅ | ✅ | ✅ |
+| remote_sensing:read | ✅ | ✅ | ✅ | ✅ | ✅ |
 | analytics:read | ✅ | ✅ | ✅ | ✅ | — |
 | data:export | ✅ | ✅ | ✅ | ✅ | — |
 | admin:* | ✅ | — | — | — | — |
@@ -142,7 +144,7 @@ All use the password `demo1234`. They are created on startup by
 
 ```
 admin@geo.dev        admin        everything + administration
-analyst@geo.dev      analyst      all five projects, analytics, export
+analyst@geo.dev      analyst      all six projects, analytics, export
 agronomist@geo.dev   agronomist   agriculture read/write; no cadastre
 planner@geo.dev      planner      cadastre + transport; no agriculture
 viewer@geo.dev       viewer       map layers only; no analytics, no export

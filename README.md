@@ -1,6 +1,6 @@
-# Geospatial Portfolio — five projects over one study area
+# Geospatial Portfolio — six projects over one study area
 
-Five geospatial analytics projects sharing a single footprint (**Utrecht, Netherlands**), so
+Six geospatial analytics projects sharing a single footprint (**Utrecht, Netherlands**), so
 every layer overlays exactly:
 
 | Project | What it answers | Polygon layer | Line layer |
@@ -10,6 +10,7 @@ every layer overlays exactly:
 | **Demographics** | What drives neighbourhood income? Who commutes where? | census tracts, population grid | commute desire lines |
 | **Transport** | Where does the network fail, and who can reach what? | accessibility isochrones | roads, transit routes |
 | **3D Terrain** | How is the city massed, and what is its solar potential? | buildings (extruded), elevation bands | contours, hydrology |
+| **Remote Sensing** | What changed, where is it hottest, and where is the ground sinking? | index grid, change areas, water extent, scene footprints | deformation profiles |
 
 Vector tiles are generated in PostGIS with `ST_AsMVT`, served by FastAPI behind role-based
 access control, and rendered with MapLibre. Analytics panels are D3 over aggregate endpoints.
@@ -32,7 +33,7 @@ Then open **http://localhost:5173** and sign in with any demo account below
 | Account | Role | Sees |
 |---|---|---|
 | `admin@geo.dev` | admin | Everything, plus user and role administration |
-| `analyst@geo.dev` | analyst | All five projects, analytics and export |
+| `analyst@geo.dev` | analyst | All six projects, analytics and export |
 | `agronomist@geo.dev` | agronomist | Agriculture read/write — **the cadastre is hidden** |
 | `planner@geo.dev` | planner | Cadastre + transport read/write — **agriculture is hidden** |
 | `viewer@geo.dev` | viewer | Map layers only: no analytics detail, no export |
@@ -66,7 +67,7 @@ WHERE t.geom && bounds.query_4326
 Transforming the geometry column instead — the obvious way to write it — makes the GiST index
 unusable and turns every tile into a sequential scan of the table.
 
-**The layer registry** (`backend/app/services/layers.py`). Sixteen layers are declared in one
+**The layer registry** (`backend/app/services/layers.py`). Twenty-three layers are declared in one
 place, each with its columns, filters, styling hint and required permission. The tile endpoint,
 the capabilities endpoint, the generic feature/histogram/export endpoints and the frontend's
 layer panel are all driven from it. Adding a layer is one entry.
@@ -99,6 +100,24 @@ is higher resolution than any global provider over Utrecht specifically. The agr
 also layers **ESA WorldCover** (10 m global land cover, 11 classes) over the satellite basemap, as
 a live WMS overlay with its official legend — see `frontend/src/components/BasemapSwitcher.tsx`.
 
+**Remote sensing without a raster tile server** (`backend/app/services/remote_sensing.py`'s
+sibling, `app/api/projects/remote_sensing.py`). Rasters are zonal-summarised onto a 500 m
+vector grid once, at load time — which is what a real workflow produces anyway — so the whole
+project rides the same MVT path as every other layer instead of needing a second serving
+stack. Three of its results are worth the click:
+
+- **The urban heat island is measured, not asserted.** LST regressed against NDVI returns
+  *r ≈ −0.70*, and against impervious cover *r ≈ +0.75*: vegetation cools by
+  evapotranspiration, sealed ground stores heat. Built-up land runs ~4.8 °C above the rest of
+  the study area.
+- **Cloud is the reason the radar layers exist.** Only about 15 % of the optical archive over
+  the Netherlands clears a 30 % cloud threshold, and the gap falls in winter. Sentinel-1 is
+  unaffected, which is why the water-extent and ground-motion layers are SAR-derived.
+- **Peat sinks; sand does not.** InSAR velocities come out at −8.5 mm/yr over the drained
+  western polder against −0.4 mm/yr on the Heuvelrug ridge. The deformation profiles rank
+  corridors by *differential* settlement rather than rate, because a structure sinking
+  uniformly is far less of a problem than one sinking unevenly.
+
 ---
 
 ## Layout
@@ -108,7 +127,7 @@ backend/          FastAPI: auth, RBAC, MVT tiles, per-project analytics
   alembic/        migration chain -- the single source of truth for the schema
   app/models/     declarative models (auth + spatial), the autogenerate target
   app/services/   layer registry, MVT builder, generic feature/aggregate queries
-  tests/          76 integration tests against live PostGIS
+  tests/          110 integration tests against live PostGIS
 etl/              open-data registry, downloaders, synthetic generator, loader
 frontend/         React + MapLibre + D3
 docs/             data sources, architecture, RBAC, deployment
@@ -121,7 +140,8 @@ scripts/          dev server helper, end-to-end screenshot smoke test
 
 The schema mirrors real open datasets — BRP crop parcels (CC0), Kadaster BRK, CBS
 neighbourhood statistics, OSM via Geofabrik, 3DBAG, Copernicus DEM, ESA WorldCover, ISRIC
-SoilGrids. Every URL, licence and load command is in **[docs/DATA_SOURCES.md](docs/DATA_SOURCES.md)**,
+SoilGrids, Sentinel-1/2, Landsat Collection 2 and the Copernicus Ground Motion Service. Every
+URL, licence and load command is in **[docs/DATA_SOURCES.md](docs/DATA_SOURCES.md)**,
 and each project surfaces its own provenance in a "data sources" panel generated from the same
 registry.
 

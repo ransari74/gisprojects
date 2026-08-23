@@ -9,6 +9,7 @@ import { LoginPage } from '@/pages/Login';
 import { AgricultureProject } from '@/projects/Agriculture';
 import { DemographicsProject } from '@/projects/Demographics';
 import { ParcelProject } from '@/projects/Parcel';
+import { RemoteSensingProject } from '@/projects/RemoteSensing';
 import { Terrain3DProject } from '@/projects/Terrain3D';
 import { TransportProject } from '@/projects/Transport';
 import '@/styles/app.css';
@@ -29,6 +30,7 @@ const NAV = [
   { to: '/demographics', label: 'Demographics', project: 'demographics' as const },
   { to: '/transport', label: 'Transport', project: 'transport' as const },
   { to: '/terrain', label: '3D Terrain', project: 'terrain' as const },
+  { to: '/remote-sensing', label: 'Remote Sensing', project: 'remote_sensing' as const },
 ];
 
 function Shell() {
@@ -108,6 +110,10 @@ function Shell() {
           />
           <Route path="/transport" element={canOpen('transport') ? <TransportProject /> : <Denied />} />
           <Route path="/terrain" element={canOpen('terrain') ? <Terrain3DProject /> : <Denied />} />
+          <Route
+            path="/remote-sensing"
+            element={canOpen('remote_sensing') ? <RemoteSensingProject /> : <Denied />}
+          />
           <Route path="/admin" element={can('admin:users') ? <AdminPage /> : <Denied />} />
           <Route path="*" element={<Navigate to="/" replace state={{ from: location }} />} />
         </Routes>

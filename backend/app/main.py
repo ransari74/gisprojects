@@ -10,7 +10,14 @@ from fastapi.responses import JSONResponse, ORJSONResponse
 from sqlalchemy import text
 
 from app.api import admin, auth, features, meta, tiles
-from app.api.projects import agriculture, demographics, parcel, terrain, transport
+from app.api.projects import (
+    agriculture,
+    demographics,
+    parcel,
+    remote_sensing,
+    terrain,
+    transport,
+)
 from app.core.bootstrap import schema_ready, seed_demo_users
 from app.core.config import settings
 from app.core.db import SessionLocal, engine
@@ -45,9 +52,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     description=(
-        "Five geospatial portfolio projects -- agriculture, cadastre, demographics, "
-        "transport and 3D terrain -- served as MVT vector tiles from PostGIS with "
-        "role-based access control."
+        "Six geospatial portfolio projects -- agriculture, cadastre, demographics, "
+        "transport, 3D terrain and remote sensing -- served as MVT vector tiles from "
+        "PostGIS with role-based access control."
     ),
     version="1.0.0",
     lifespan=lifespan,
@@ -106,5 +113,6 @@ for router in (
     demographics.router,
     transport.router,
     terrain.router,
+    remote_sensing.router,
 ):
     app.include_router(router, prefix=settings.api_prefix)

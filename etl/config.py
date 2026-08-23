@@ -189,6 +189,105 @@ DATASETS: list[Dataset] = [
         fmt="Raster-DEM tiles",
         notes="Consumed directly by MapLibre as a raster-dem source; nothing to download.",
     ),
+    # --- remote sensing -----------------------------------------------------
+    Dataset(
+        project="remote_sensing",
+        layer="rs_scenes",
+        name="Sentinel-2 MSI L2A scene catalogue",
+        provider="ESA Copernicus / Element 84 Earth Search",
+        license="CC-BY-SA-3.0-IGO",
+        url="https://earth-search.aws.element84.com/v1/collections/sentinel-2-l2a/items",
+        fmt="STAC API (GeoJSON items)",
+        notes=(
+            "A STAC search bounded by the study-area bbox returns footprints, acquisition times "
+            "and eo:cloud_cover directly -- the catalogue layer needs no pixels downloaded at all."
+        ),
+    ),
+    Dataset(
+        project="remote_sensing",
+        layer="rs_index_cells",
+        name="Sentinel-2 L2A surface reflectance",
+        provider="ESA Copernicus / AWS Open Data",
+        license="CC-BY-SA-3.0-IGO",
+        url="https://registry.opendata.aws/sentinel-2-l2a-cogs/",
+        fmt="Cloud-Optimised GeoTIFF (per band)",
+        notes=(
+            "NDVI (B08,B04), NDWI (B03,B08), NDBI (B11,B08) and NBR (B08,B12) computed per pixel, "
+            "then zonal-summarised onto the 500 m grid with rasterstats. Only the bands used are "
+            "read, and COG range requests keep it to the bbox."
+        ),
+    ),
+    Dataset(
+        project="remote_sensing",
+        layer="rs_index_cells.lst",
+        name="Landsat Collection 2 Level-2 surface temperature",
+        provider="USGS / AWS Open Data",
+        license="Public domain (US Government work)",
+        url="https://registry.opendata.aws/usgs-landsat/",
+        fmt="Cloud-Optimised GeoTIFF (ST_B10)",
+        notes=(
+            "Landsat rather than Sentinel-2 because only Landsat carries a thermal band. "
+            "ST_B10 is already atmospherically corrected: scale by 0.00341802, add 149.0, "
+            "subtract 273.15 for degrees Celsius."
+        ),
+    ),
+    Dataset(
+        project="remote_sensing",
+        layer="rs_change",
+        name="ESA WorldCover 10 m land cover, v100 (2020) and v200 (2021)",
+        provider="ESA / VITO",
+        license="CC-BY-4.0",
+        url="https://registry.opendata.aws/esa-worldcover-vito/",
+        fmt="Cloud-Optimised GeoTIFF",
+        notes=(
+            "Two epochs of the same product give the from/to transition matrix directly. "
+            "ESA warns the two versions are not designed for change detection -- a real study "
+            "would classify both epochs itself from Sentinel-2 rather than diff the products."
+        ),
+    ),
+    Dataset(
+        project="remote_sensing",
+        layer="rs_subsidence",
+        name="European Ground Motion Service, ortho (vertical) product",
+        provider="Copernicus Land Monitoring Service / EEA",
+        license="CC-BY-4.0",
+        url="https://egms.land.copernicus.eu/",
+        fmt="CSV per 100 km tile (persistent scatterers with velocity + time series)",
+        notes=(
+            "EGMS publishes InSAR ground motion for the whole EU from Sentinel-1, already "
+            "unwrapped and calibrated. Tiles 32ULC/32UMC cover Utrecht. Negative velocity is "
+            "subsidence."
+        ),
+    ),
+    Dataset(
+        project="remote_sensing",
+        layer="rs_profiles",
+        name="European Ground Motion Service, aggregated to infrastructure corridors",
+        provider="Copernicus Land Monitoring Service / EEA",
+        license="CC-BY-4.0",
+        url="https://egms.land.copernicus.eu/",
+        fmt="CSV persistent scatterers, buffered against an OSM corridor geometry",
+        notes=(
+            "Not a separate download: the EGMS scatterers are buffered against canal, dike and "
+            "rail alignments from OSM and summarised per corridor. The reported differential is "
+            "the spread of the *fitted* profile along the line, not of the raw scatterers -- "
+            "PS scatter alone is several mm and would swamp the real gradient."
+        ),
+    ),
+    Dataset(
+        project="remote_sensing",
+        layer="rs_water",
+        name="Sentinel-1 GRD backscatter",
+        provider="ESA Copernicus / AWS Open Data",
+        license="CC-BY-SA-3.0-IGO",
+        url="https://registry.opendata.aws/sentinel-1/",
+        fmt="Cloud-Optimised GeoTIFF (VV/VH, GRD IW)",
+        notes=(
+            "Open water is specular at C-band, so a threshold near -18 dB on VV separates it "
+            "cleanly. Radar sees through cloud, which is the whole reason flood mapping uses "
+            "SAR rather than an optical water index."
+        ),
+    ),
 ]
 
 

@@ -61,7 +61,7 @@ error.
 
 ## The layer registry
 
-`backend/app/services/layers.py` declares all sixteen layers in one place:
+`backend/app/services/layers.py` declares all twenty-three layers in one place:
 
 ```python
 LayerSpec(
@@ -194,6 +194,41 @@ than an `overlayIds` prop. Two things had to be got right:
   from a ref, and the project pages hoist or memoise those props so they stop generating new
   references in the first place. Both were necessary — the ref makes the effect correct
   regardless of what callers do, and the memoisation stops the churn from happening at all.
+
+### The remote-sensing project has no raster tile server
+
+Every other project stores vector geometry and serves it as MVT. Remote sensing is inherently
+raster, and the obvious design — a second serving stack for COGs or a WMTS proxy — would double
+the deployment for one project out of six.
+
+Instead the rasters are **zonal-summarised onto a 500 m vector grid once, at load time**. That is
+not a shortcut around the real workflow; it *is* the real workflow. Any analysis that ends in a
+number per area — mean NDVI per field, land surface temperature per neighbourhood, a land-cover
+transition matrix — passes through zonal statistics on the way. Doing it in the ETL rather than
+per request means the result rides the same `ST_AsMVT` path, the same permission guard and the
+same tile cache as everything else.
+
+What this cannot do is let you inspect an individual pixel or restretch a band interactively;
+those need the raster. The ESA WorldCover WMS overlay is there for the visual case, and the
+`rs_scenes` catalogue records what imagery each cell was derived from.
+
+Three details in the analytics are worth reading, because each one is a plausible way to get the
+analysis wrong:
+
+- **`/summary` aggregates water per-date before summing.** Permanent water is observed on every
+  pass, so summing the raw rows counts the same lake once per acquisition. The first version of
+  this reported several times the study area's actual water surface, from a query that returned
+  200 the whole time.
+- **Deformation profiles report the differential of the *fitted* profile, not of the samples.**
+  Persistent-scatterer scatter over peat is around 3 mm/yr, so max-minus-min of the raw samples
+  spans ~11 mm on any corridor and rates every asset "high" — measuring the noise of the
+  technique rather than the ground. The differential that matters comes from the expected profile
+  along the line, which is what answers the real question: does this structure span a soil
+  boundary?
+- **The change matrix is read off the grid, not the change polygons.** Every cell has a class in
+  both epochs, so the matrix balances and `test_change_matrix_balances_against_the_grid` can
+  assert it. The polygon layer answers a different question — where the dissolved change regions
+  are — and would not sum to the study area.
 
 ### Charts
 

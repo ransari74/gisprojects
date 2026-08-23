@@ -135,6 +135,16 @@ export const DOMAINS = {
     'industrial', 'civic', 'school', 'hospital',
   ],
   lineType: ['stream', 'river', 'ridge', 'valley'],
+  // Remote sensing. Land-cover names follow ESA WorldCover's vocabulary so the
+  // project's own classification and the WorldCover overlay agree.
+  landcoverClass: ['built_up', 'cropland', 'grassland', 'tree_cover', 'water', 'bare'],
+  changeType: [
+    'urbanisation', 'agricultural_shift', 'afforestation', 'vegetation_loss', 'water_gain',
+  ],
+  waterType: ['permanent', 'seasonal', 'flood'],
+  platform: ['Sentinel-2A', 'Sentinel-2B', 'Sentinel-1A', 'Landsat-8', 'Landsat-9'],
+  // Ordered worst-first, so the legend reads down the severity scale.
+  riskClass: ['high', 'moderate', 'low', 'stable'],
 } as const;
 
 export type DomainKey = keyof typeof DOMAINS;
@@ -177,3 +187,31 @@ export function sequentialExpression(field: string, min: number, max: number): u
 
 /** The colours a map legend should show for a continuous field. */
 export const MAP_SEQUENTIAL_RAMP = SEQUENTIAL_BLUE_ORDINAL_LIGHT;
+
+/**
+ * MapLibre interpolate expression for a signed quantity, where the sign is the
+ * point: InSAR velocity is negative when the ground is sinking and positive
+ * when it rises, and zero means stable.
+ *
+ * A sequential ramp is the wrong encoding for that. It reads the most negative
+ * value as "least" and washes it out, when the most negative value is the one
+ * that matters most; and it gives the zero crossing no visual identity at all.
+ * Diverging fixes both -- neutral at the middle, saturating toward either pole.
+ */
+export function divergingExpression(
+  field: string,
+  low: number,
+  high: number,
+  mode: Mode,
+  mid = 0,
+): unknown[] {
+  const { low: lowColor, mid: midColor, high: highColor } = DIVERGING[mode];
+  return [
+    'interpolate',
+    ['linear'],
+    ['coalesce', ['get', field], mid],
+    low, highColor,   // most negative == the strongest signal, not the palest
+    mid, midColor,
+    high, lowColor,
+  ];
+}

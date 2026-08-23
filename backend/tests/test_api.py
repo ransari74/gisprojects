@@ -28,7 +28,7 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key")
 
 from app.core.db import SessionLocal  # noqa: E402
 from app.main import app  # noqa: E402
-from app.services.layers import ALL_LAYERS, LAYER_INDEX  # noqa: E402
+from app.services.layers import ALL_LAYERS, LAYER_INDEX, PROJECTS  # noqa: E402
 
 DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "demo1234")
 
@@ -134,7 +134,8 @@ async def test_me_returns_permissions_and_projects(client, admin_token):
     assert resp.status_code == 200
     body = resp.json()
     assert body["is_superuser"] is True
-    assert len(body["projects"]) == 5
+    # Every project in the registry, since a superuser bypasses the filter.
+    assert len(body["projects"]) == len(PROJECTS)
 
 
 async def test_refresh_rotates_and_burns_the_old_token(client):
@@ -195,7 +196,7 @@ async def test_capabilities_are_filtered_by_permission(client, agronomist_token,
 
     assert "agriculture" in agro_projects
     assert "parcel" not in agro_projects       # agronomist has no parcel:read
-    assert admin_projects == {"agriculture", "parcel", "demographics", "transport", "terrain"}
+    assert admin_projects == set(PROJECTS)
 
 
 async def test_tile_permission_is_enforced(client, agronomist_token):
@@ -216,6 +217,8 @@ async def test_tile_permission_is_enforced(client, agronomist_token):
         ("demog_tracts", 11, 1053, 675),
         ("parcel_parcels", 13, 4212, 2702),
         ("terrain_buildings", 15, 16848, 10808),
+        ("rs_index_cells", 11, 1053, 675),
+        ("rs_subsidence", 12, 2106, 1352),
     ],
 )
 async def test_tiles_return_decodable_mvt(client, admin_token, layer, z, x, y):
@@ -395,6 +398,14 @@ async def test_export_csv_has_a_header_row(client, admin_token):
         "/api/terrain/hypsometry",
         "/api/terrain/profile",
         "/api/terrain/solar-ranking",
+        "/api/remote-sensing/summary",
+        "/api/remote-sensing/scene-inventory",
+        "/api/remote-sensing/index-timeseries",
+        "/api/remote-sensing/change-matrix",
+        "/api/remote-sensing/heat-island",
+        "/api/remote-sensing/subsidence",
+        "/api/remote-sensing/index-distribution",
+        "/api/remote-sensing/water-extent",
     ],
 )
 async def test_analytics_endpoints_return_data(client, admin_token, path):
@@ -492,3 +503,139 @@ async def test_user_lifecycle(client, admin_token):
     deleted = await client.delete(f"/api/admin/users/{user_id}", headers=auth(admin_token))
     assert deleted.status_code == 204
     assert (await client.get(f"/api/admin/users/{user_id}", headers=auth(admin_token))).status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Remote sensing
+#
+# These assert the *relationships* the project claims, not just that the
+# endpoints answer. A change-detection matrix that does not balance, or a heat
+# island that comes out the wrong sign, is a broken analysis returning 200.
+# ---------------------------------------------------------------------------
+async def test_heat_island_runs_the_right_way_round(client, admin_token):
+    """LST falls as NDVI rises, and rises with impervious cover."""
+    veg = (await client.get(
+        "/api/remote-sensing/heat-island?x=ndvi&limit=200", headers=auth(admin_token)
+    )).json()
+    sealed = (await client.get(
+        "/api/remote-sensing/heat-island?x=imperviousness_pct&limit=200", headers=auth(admin_token)
+    )).json()
+
+    assert veg["pearson_r"] < 0, "vegetation should cool the surface, not warm it"
+    assert sealed["pearson_r"] > 0, "sealed ground should warm the surface"
+    # Strong enough to be a finding, loose enough not to pin the generator's
+    # exact noise level.
+    assert veg["r_squared"] > 0.2
+
+
+async def test_built_up_is_the_hottest_class(client, admin_token):
+    resp = await client.get("/api/remote-sensing/heat-island", headers=auth(admin_token))
+    by_class = {r["landcover_class"]: r for r in resp.json()["byClass"]}
+    assert by_class["built_up"]["mean_lst_c"] > by_class["tree_cover"]["mean_lst_c"]
+    # The anomaly is a departure from the mean, so the classes must straddle zero.
+    assert by_class["built_up"]["mean_anomaly_c"] > 0
+    assert by_class["tree_cover"]["mean_anomaly_c"] < 0
+
+
+async def test_summary_uhi_delta_is_plausible(client, admin_token):
+    """A daytime surface UHI outside roughly 1-10 C means the model drifted."""
+    body = (await client.get("/api/remote-sensing/summary", headers=auth(admin_token))).json()
+    assert 1.0 < body["uhi_delta_c"] < 10.0
+
+
+async def test_water_summary_does_not_double_count_across_passes(client, admin_token):
+    """Permanent water is reported per observation, not summed over all of them.
+
+    Summing the raw rows counts the same lake once per acquisition, which is
+    how this silently reported several times the study area's actual water.
+    """
+    body = (await client.get("/api/remote-sensing/summary", headers=auth(admin_token))).json()
+    assert body["water_observations"] > 1, "test is meaningless with a single pass"
+    assert body["permanent_water_ha"] < body["total_area_ha"] * 0.15
+
+
+async def test_change_matrix_balances_against_the_grid(client, admin_token):
+    """Every cell appears exactly once in the transition table."""
+    summary = (await client.get("/api/remote-sensing/summary", headers=auth(admin_token))).json()
+    matrix = (await client.get("/api/remote-sensing/change-matrix", headers=auth(admin_token))).json()
+
+    assert sum(t["cells"] for t in matrix["transitions"]) == summary["cell_count"]
+    changed = sum(t["cells"] for t in matrix["transitions"] if t["from_class"] != t["to_class"])
+    assert changed == summary["changed_cells"]
+    # Gains and losses are the same land seen from either end, so the net
+    # column has to cancel out across all classes.
+    assert abs(sum(n["net_ha"] for n in matrix["net"])) < 1.0
+
+
+async def test_peat_subsides_faster_than_sand(client, admin_token):
+    """The finding the project exists to show, in the direction it actually goes."""
+    by_soil = {r["soil_type"]: r for r in (
+        await client.get("/api/remote-sensing/subsidence", headers=auth(admin_token))
+    ).json()["bySoil"]}
+
+    assert by_soil["peat"]["mean_velocity_mm_yr"] < by_soil["clay"]["mean_velocity_mm_yr"]
+    assert by_soil["clay"]["mean_velocity_mm_yr"] < by_soil["sand"]["mean_velocity_mm_yr"]
+    # Negative is downward -- a sign flip here would invert the whole layer.
+    assert by_soil["peat"]["mean_velocity_mm_yr"] < 0
+
+
+async def test_cloud_makes_most_optical_scenes_unusable(client, admin_token):
+    """The premise of the SAR layers: optical coverage over the Netherlands is
+    mostly lost to cloud, while radar is unaffected."""
+    by_platform = (await client.get(
+        "/api/remote-sensing/scene-inventory", headers=auth(admin_token)
+    )).json()["byPlatform"]
+
+    sar = [p for p in by_platform if p["sensor"] == "C-SAR"]
+    optical = [p for p in by_platform if p["sensor"] != "C-SAR"]
+    assert sar and optical
+
+    assert all(p["usable"] == p["scenes"] for p in sar), "radar does not lose scenes to cloud"
+    optical_usable = sum(p["usable"] for p in optical) / sum(p["scenes"] for p in optical)
+    assert 0.05 < optical_usable < 0.45, f"optical usable rate {optical_usable:.2f} is not realistic"
+
+
+async def test_seasonal_index_separates_crops_from_built_up(client, admin_token):
+    """Cropland's NDVI swings through the season; built-up land does not.
+
+    This is the argument for using a time series rather than one date, so a
+    generator change that flattened it would quietly remove the point.
+    """
+    rows = (await client.get(
+        "/api/remote-sensing/index-timeseries?index=ndvi", headers=auth(admin_token)
+    )).json()
+
+    def amplitude(series: str) -> float:
+        values = [r["value"] for r in rows if r["series"] == series]
+        assert values, f"no {series} series"
+        return max(values) - min(values)
+
+    assert amplitude("cropland") > 3 * amplitude("built_up")
+
+
+async def test_index_distribution_rejects_an_injected_column(client, admin_token):
+    resp = await client.get(
+        "/api/remote-sensing/index-distribution?index=ndvi;DROP TABLE rs.scenes",
+        headers=auth(admin_token),
+    )
+    assert resp.status_code == 400
+
+
+async def test_index_distribution_bins_sum_to_the_grid(client, admin_token):
+    summary = (await client.get("/api/remote-sensing/summary", headers=auth(admin_token))).json()
+    dist = (await client.get(
+        "/api/remote-sensing/index-distribution?index=ndvi&bins=20", headers=auth(admin_token)
+    )).json()
+    assert dist["column"] == "ndvi"
+    assert sum(b["count"] for b in dist["bins"]) == summary["cell_count"]
+
+
+async def test_viewer_can_read_remote_sensing(client, viewer_token):
+    """0011 grants the read permission to every role that already reads the
+    other five projects -- a role left out would find the project missing from
+    its catalogue with no error to explain why."""
+    resp = await client.get("/api/remote-sensing/summary", headers=auth(viewer_token))
+    assert resp.status_code == 200
+
+    caps = (await client.get("/api/tiles/capabilities", headers=auth(viewer_token))).json()
+    assert "remote_sensing" in {p["key"] for p in caps["projects"]}

@@ -10,7 +10,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 
 import type { LayerInfo, ProjectKey, StudyArea, TerrainTileConfig } from '@/api/types';
 import { useCapabilities, useDatasetSources, useStudyArea } from '@/hooks/useApi';
-import { CHROME, MAP_SEQUENTIAL_RAMP } from '@/styles/theme';
+import { CHROME, DIVERGING, MAP_SEQUENTIAL_RAMP } from '@/styles/theme';
 import { useInk, useMode } from './charts/chartkit';
 import { EmptyState } from './charts/Primitives';
 import { buildLegend } from './layerStyles';
@@ -206,6 +206,25 @@ export function ProjectShell({
                         </li>
                       ))}
                     </ul>
+                  ) : legend!.kind === 'diverging' ? (
+                    // The bar has to be painted from the same three poles the
+                    // map expression uses. Falling through to the sequential
+                    // ramp here would show a blue gradient beside a red-to-blue
+                    // map, which is worse than no legend at all.
+                    <div className="seq-legend inline">
+                      <div
+                        className="seq-legend-bar"
+                        style={{
+                          background: `linear-gradient(to right, ${DIVERGING[mode].high}, ${DIVERGING[mode].mid}, ${DIVERGING[mode].low})`,
+                          borderColor: ink.border,
+                        }}
+                      />
+                      <div className="seq-legend-scale diverging" style={{ color: ink.textMuted }}>
+                        {legend!.entries.map((e) => (
+                          <span key={e.label}>{e.label}</span>
+                        ))}
+                      </div>
+                    </div>
                   ) : (
                     <div className="seq-legend inline">
                       <div

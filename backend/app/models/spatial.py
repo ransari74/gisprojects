@@ -1,4 +1,4 @@
-"""Declarative models for the five project schemas.
+"""Declarative models for the six project schemas.
 
 The API still queries these tables through hand-written SQL -- ST_AsMVT and the
 aggregate endpoints express far better that way than through the ORM. The
@@ -540,3 +540,196 @@ class ElevationProfile(Base):
     #: Terrain plus whatever building the transect passes through.
     surface_elev_m: Mapped[float | None] = mapped_column(Float)
     geom: Mapped[object] = mapped_column(_point(), nullable=False)
+
+
+# ===========================================================================
+# PROJECT 6 -- remote sensing
+# ===========================================================================
+class Scene(Base):
+    """Acquisition catalogue -- the STAC-shaped index every EO workflow starts
+    from. The footprint is what makes it a map layer rather than a table."""
+
+    __tablename__ = "scenes"
+    __table_args__ = (
+        UniqueConstraint("scene_id", name="uq_rs_scenes_scene_id"),
+        {"schema": "rs"},
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    scene_id: Mapped[str] = mapped_column(Text, nullable=False)
+    platform: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    sensor: Mapped[str] = mapped_column(Text, nullable=False)
+    acquired_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    cloud_pct: Mapped[float] = mapped_column(Float, nullable=False)
+    sun_elevation_deg: Mapped[float | None] = mapped_column(Float)
+    orbit_direction: Mapped[str | None] = mapped_column(Text)
+    processing_level: Mapped[str | None] = mapped_column(Text)
+    resolution_m: Mapped[float | None] = mapped_column(Float)
+    #: Cloud cover past the usability threshold, or a SAR scene whose
+    #: incidence angle puts the study area in layover.
+    usable: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    geom: Mapped[object] = mapped_column(_multipolygon(), nullable=False)
+
+
+class IndexCell(Base):
+    """The analysis grid: one row per cell, carrying the zonal summary of every
+    raster band the project uses.
+
+    Rasters are summarised onto this grid once, at load time, rather than
+    served as raster tiles. That is what a real zonal-statistics step produces
+    anyway, and it lets the layer ride the same MVT path as everything else.
+    """
+
+    __tablename__ = "index_cells"
+    __table_args__ = (
+        UniqueConstraint("cell_code", name="uq_rs_index_cells_cell_code"),
+        {"schema": "rs"},
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    cell_code: Mapped[str] = mapped_column(Text, nullable=False)
+    ndvi: Mapped[float] = mapped_column(Float, nullable=False, index=True)
+    ndwi: Mapped[float] = mapped_column(Float, nullable=False)
+    ndbi: Mapped[float] = mapped_column(Float, nullable=False)
+    nbr: Mapped[float | None] = mapped_column(Float)
+    lst_c: Mapped[float] = mapped_column(Float, nullable=False, index=True)
+    #: LST minus the study-area mean. The absolute temperature depends on the
+    #: acquisition; the anomaly is what the heat-island read is actually about.
+    lst_anomaly_c: Mapped[float] = mapped_column(Float, nullable=False)
+    albedo: Mapped[float | None] = mapped_column(Float)
+    landcover_class: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    landcover_prev: Mapped[str] = mapped_column(Text, nullable=False)
+    changed: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false", index=True
+    )
+    imperviousness_pct: Mapped[float | None] = mapped_column(Float)
+    tree_cover_pct: Mapped[float | None] = mapped_column(Float)
+    ndvi_delta: Mapped[float | None] = mapped_column(Float)
+    area_ha: Mapped[float | None] = mapped_column(Float)
+    geom: Mapped[object] = mapped_column(_multipolygon(), nullable=False)
+
+
+class ChangePolygon(Base):
+    """Contiguous areas where the classification moved between the two epochs.
+
+    Distinct from `IndexCell.changed`: that flags a single grid cell, this is
+    the dissolved region a change-detection product actually reports.
+    """
+
+    __tablename__ = "change_polygons"
+    __table_args__ = {"schema": "rs"}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    change_code: Mapped[str] = mapped_column(Text, nullable=False)
+    from_class: Mapped[str] = mapped_column(Text, nullable=False)
+    to_class: Mapped[str] = mapped_column(Text, nullable=False)
+    change_type: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    detected_year: Mapped[int] = mapped_column(SmallInteger, nullable=False, index=True)
+    baseline_year: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    area_ha: Mapped[float] = mapped_column(Float, nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    ndvi_delta: Mapped[float | None] = mapped_column(Float)
+    geom: Mapped[object] = mapped_column(_multipolygon(), nullable=False)
+
+
+class SubsidencePoint(Base):
+    """InSAR persistent scatterers.
+
+    Peat oxidation under the Utrecht polder is a live national problem, which
+    makes this the one analysis here with a genuinely local answer.
+    """
+
+    __tablename__ = "subsidence_points"
+    __table_args__ = (
+        UniqueConstraint("ps_id", name="uq_rs_subsidence_points_ps_id"),
+        {"schema": "rs"},
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ps_id: Mapped[str] = mapped_column(Text, nullable=False)
+    #: Negative is downward, the convention InSAR products ship with.
+    velocity_mm_yr: Mapped[float] = mapped_column(Float, nullable=False, index=True)
+    cumulative_mm: Mapped[float] = mapped_column(Float, nullable=False)
+    coherence: Mapped[float] = mapped_column(Float, nullable=False)
+    std_mm_yr: Mapped[float | None] = mapped_column(Float)
+    height_m: Mapped[float | None] = mapped_column(Float)
+    soil_type: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    land_use: Mapped[str | None] = mapped_column(Text)
+    risk_class: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    geom: Mapped[object] = mapped_column(_point(), nullable=False)
+
+
+class DeformationProfile(Base):
+    """Ground motion sampled along an infrastructure corridor.
+
+    The point cloud says where the ground is moving; a profile says what that
+    movement is doing to something built on it. Published InSAR subsidence work
+    is usually presented exactly this way -- along a canal, a dike or a rail
+    alignment -- because that is the unit an asset manager owns.
+    """
+
+    __tablename__ = "deformation_profiles"
+    __table_args__ = (
+        UniqueConstraint("profile_code", name="uq_rs_deformation_profiles_code"),
+        {"schema": "rs"},
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_code: Mapped[str] = mapped_column(Text, nullable=False)
+    name: Mapped[str | None] = mapped_column(Text)
+    asset_type: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    length_m: Mapped[float] = mapped_column(Float, nullable=False)
+    mean_velocity_mm_yr: Mapped[float] = mapped_column(Float, nullable=False)
+    min_velocity_mm_yr: Mapped[float] = mapped_column(Float, nullable=False)
+    #: Spread along the line. Uniform settlement is tolerable; it is the
+    #: differential that cracks a structure.
+    differential_mm_yr: Mapped[float] = mapped_column(Float, nullable=False)
+    ps_count: Mapped[int | None] = mapped_column(Integer)
+    dominant_soil: Mapped[str | None] = mapped_column(Text)
+    risk_class: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    geom: Mapped[object] = mapped_column(_multiline(), nullable=False)
+
+
+class WaterExtent(Base):
+    """SAR-derived open-water extent.
+
+    Sentinel-1 rather than an optical index because flooding arrives with the
+    weather that hides it from optical sensors -- the standard argument for
+    using SAR for inundation mapping at all.
+    """
+
+    __tablename__ = "water_extent"
+    __table_args__ = {"schema": "rs"}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    observed_on: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    source: Mapped[str] = mapped_column(Text, nullable=False)
+    water_type: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    area_ha: Mapped[float] = mapped_column(Float, nullable=False)
+    backscatter_db: Mapped[float | None] = mapped_column(Float)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    geom: Mapped[object] = mapped_column(_multipolygon(), nullable=False)
+
+
+class IndexTimeseries(Base):
+    """Seasonal index curves, aggregated per land-cover class."""
+
+    __tablename__ = "index_timeseries"
+    __table_args__ = (
+        UniqueConstraint(
+            "observed_on", "landcover_class", "index_name", name="uq_rs_index_timeseries_obs"
+        ),
+        {"schema": "rs"},
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    observed_on: Mapped[date] = mapped_column(Date, nullable=False)
+    landcover_class: Mapped[str] = mapped_column(Text, nullable=False)
+    index_name: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    value: Mapped[float] = mapped_column(Float, nullable=False)
+    p10: Mapped[float | None] = mapped_column(Float)
+    p90: Mapped[float | None] = mapped_column(Float)
+    sample_n: Mapped[int | None] = mapped_column(Integer)
+    cloud_pct: Mapped[float | None] = mapped_column(Float)

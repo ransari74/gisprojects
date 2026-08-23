@@ -46,6 +46,13 @@ LOAD_ORDER = [
     "terrain.drainage_lines",
     "terrain.elevation_bands",
     "terrain.elevation_profile",
+    "rs.scenes",
+    "rs.index_cells",
+    "rs.change_polygons",
+    "rs.subsidence_points",
+    "rs.deformation_profiles",
+    "rs.water_extent",
+    "rs.index_timeseries",
 ]
 
 # Truncate in reverse dependency order.

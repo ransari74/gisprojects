@@ -378,12 +378,133 @@ TERRAIN_LAYERS = [
     ),
 ]
 
+# ---------------------------------------------------------------------------
+# PROJECT 6 -- REMOTE SENSING
+# ---------------------------------------------------------------------------
+REMOTE_SENSING_LAYERS = [
+    LayerSpec(
+        name="rs_index_cells",
+        project="remote_sensing",
+        title="Spectral index grid",
+        schema="rs",
+        table="index_cells",
+        geom_kind="polygon",
+        permission="remote_sensing:read",
+        columns=(
+            "cell_code", "ndvi", "ndwi", "ndbi", "nbr", "lst_c", "lst_anomaly_c",
+            "albedo", "landcover_class", "landcover_prev", "changed",
+            "imperviousness_pct", "tree_cover_pct", "ndvi_delta", "area_ha",
+        ),
+        filterable=("landcover_class", "landcover_prev", "changed"),
+        range_filterable=("ndvi", "ndwi", "ndbi", "lst_c", "lst_anomaly_c", "imperviousness_pct"),
+        min_zoom=9,
+        # A regular grid is already the generalisation. Simplifying square
+        # cells only rounds their corners off, for no vertex saving worth
+        # having.
+        simplify_below_zoom=0,
+        style_hint={"type": "fill", "colorBy": "ndvi", "scheme": "sequential-green"},
+        description="Zonal summary of the raster stack: NDVI, NDWI, NDBI, NBR and land surface temperature.",
+    ),
+    LayerSpec(
+        name="rs_change",
+        project="remote_sensing",
+        title="Detected change",
+        schema="rs",
+        table="change_polygons",
+        geom_kind="polygon",
+        permission="remote_sensing:read",
+        columns=(
+            "change_code", "from_class", "to_class", "change_type", "detected_year",
+            "baseline_year", "area_ha", "confidence", "ndvi_delta",
+        ),
+        filterable=("change_type", "from_class", "to_class", "detected_year"),
+        range_filterable=("area_ha", "confidence", "ndvi_delta"),
+        min_zoom=9,
+        style_hint={"type": "fill", "colorBy": "change_type", "scheme": "categorical-change"},
+        description="Land-cover transitions between the baseline and comparison epochs.",
+    ),
+    LayerSpec(
+        name="rs_water",
+        project="remote_sensing",
+        title="Water & flood extent",
+        schema="rs",
+        table="water_extent",
+        geom_kind="polygon",
+        permission="remote_sensing:read",
+        columns=("observed_on", "source", "water_type", "area_ha", "backscatter_db", "confidence"),
+        filterable=("water_type", "source"),
+        range_filterable=("area_ha", "confidence"),
+        min_zoom=9,
+        style_hint={"type": "fill", "colorBy": "water_type", "scheme": "categorical-water"},
+        description="Open water delineated from Sentinel-1 backscatter, which sees through the cloud a flood arrives with.",
+    ),
+    LayerSpec(
+        name="rs_subsidence",
+        project="remote_sensing",
+        title="InSAR subsidence",
+        schema="rs",
+        table="subsidence_points",
+        geom_kind="point",
+        permission="remote_sensing:read",
+        columns=(
+            "ps_id", "velocity_mm_yr", "cumulative_mm", "coherence", "std_mm_yr",
+            "height_m", "soil_type", "land_use", "risk_class",
+        ),
+        filterable=("soil_type", "risk_class", "land_use"),
+        range_filterable=("velocity_mm_yr", "cumulative_mm", "coherence"),
+        min_zoom=11,
+        style_hint={"type": "circle", "colorBy": "velocity_mm_yr", "scheme": "diverging-velocity"},
+        description="Persistent-scatterer ground velocities; negative is subsidence.",
+    ),
+    LayerSpec(
+        name="rs_profiles",
+        project="remote_sensing",
+        title="Deformation profiles",
+        schema="rs",
+        table="deformation_profiles",
+        geom_kind="line",
+        permission="remote_sensing:read",
+        columns=(
+            "profile_code", "name", "asset_type", "length_m", "mean_velocity_mm_yr",
+            "min_velocity_mm_yr", "differential_mm_yr", "ps_count", "dominant_soil",
+            "risk_class",
+        ),
+        filterable=("asset_type", "risk_class", "dominant_soil"),
+        range_filterable=("mean_velocity_mm_yr", "differential_mm_yr", "length_m"),
+        min_zoom=10,
+        style_hint={
+            "type": "line", "colorBy": "risk_class", "widthBy": "differential_mm_yr",
+        },
+        description="Ground motion sampled along canals, dikes and rail; differential settlement is what damages a structure.",
+    ),
+    LayerSpec(
+        name="rs_scenes",
+        project="remote_sensing",
+        title="Scene footprints",
+        schema="rs",
+        table="scenes",
+        geom_kind="polygon",
+        permission="remote_sensing:read",
+        columns=(
+            "scene_id", "platform", "sensor", "acquired_at", "cloud_pct",
+            "sun_elevation_deg", "orbit_direction", "processing_level",
+            "resolution_m", "usable",
+        ),
+        filterable=("platform", "sensor", "usable", "orbit_direction"),
+        range_filterable=("cloud_pct", "resolution_m"),
+        min_zoom=7,
+        style_hint={"type": "fill", "colorBy": "platform", "scheme": "categorical-platform"},
+        description="Acquisition catalogue with cloud cover and orbit metadata.",
+    ),
+]
+
 ALL_LAYERS: list[LayerSpec] = [
     *AGRICULTURE_LAYERS,
     *PARCEL_LAYERS,
     *DEMOGRAPHIC_LAYERS,
     *TRANSPORT_LAYERS,
     *TERRAIN_LAYERS,
+    *REMOTE_SENSING_LAYERS,
 ]
 
 LAYER_INDEX: dict[str, LayerSpec] = {layer.name: layer for layer in ALL_LAYERS}
@@ -423,6 +544,13 @@ PROJECTS: dict[str, dict] = {
         "permission": "terrain:read",
         "accent": "#475569",
         "icon": "mountain",
+    },
+    "remote_sensing": {
+        "title": "Remote Sensing & Change Detection",
+        "tagline": "Spectral indices, land-cover change, urban heat and InSAR subsidence",
+        "permission": "remote_sensing:read",
+        "accent": "#be123c",
+        "icon": "satellite",
     },
 }
 

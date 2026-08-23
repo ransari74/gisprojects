@@ -10,6 +10,7 @@ const ROUTE_FOR: Record<string, string> = {
   demographics: '/demographics',
   transport: '/transport',
   terrain: '/terrain',
+  remote_sensing: '/remote-sensing',
 };
 
 export function LandingPage() {
@@ -26,7 +27,7 @@ export function LandingPage() {
   return (
     <div className="landing">
       <header className="landing-header">
-        <h1 style={{ color: ink.textPrimary }}>Five geospatial projects, one study area</h1>
+        <h1 style={{ color: ink.textPrimary }}>Six geospatial projects, one study area</h1>
         <p style={{ color: ink.textSecondary }}>
           Everything below covers {studyArea?.name ?? 'the study area'} — the same footprint, so the
           layers overlay exactly. Vector tiles come from PostGIS via <code>ST_AsMVT</code>, rendered
@@ -108,14 +109,16 @@ export function LandingPage() {
             <dt>Geometry</dt>
             <dd>
               Every project carries both polygon and linestring layers — fields and canals, parcels
-              and boundaries, tracts and commute flows, isochrones and roads, buildings and contours.
+              and boundaries, tracts and commute flows, isochrones and roads, buildings and contours —
+              and the remote-sensing project adds a point layer of InSAR scatterers.
             </dd>
           </div>
           <div>
             <dt>Data</dt>
             <dd>
               The schema mirrors real open datasets — BRP crop parcels, Kadaster BRK, CBS
-              neighbourhood statistics, OSM via Geofabrik, 3DBAG and Copernicus DEM. The running
+              neighbourhood statistics, OSM via Geofabrik, 3DBAG, Copernicus DEM, Sentinel-1/2,
+              Landsat and the Copernicus Ground Motion Service. The running
               instance is loaded with a synthetic stand-in that reproduces their distributions, so
               the stack works with no downloads; each project's "data sources" panel lists the real
               URLs and licences.

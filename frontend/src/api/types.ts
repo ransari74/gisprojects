@@ -18,7 +18,13 @@ export interface Me {
   projects: ProjectKey[];
 }
 
-export type ProjectKey = 'agriculture' | 'parcel' | 'demographics' | 'transport' | 'terrain';
+export type ProjectKey =
+  | 'agriculture'
+  | 'parcel'
+  | 'demographics'
+  | 'transport'
+  | 'terrain'
+  | 'remote_sensing';
 
 export type GeomKind = 'polygon' | 'line' | 'point';
 

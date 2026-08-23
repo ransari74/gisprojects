@@ -10,6 +10,8 @@ import type { LayerInfo } from '@/api/types';
 import {
   CATEGORICAL,
   CHROME,
+  DIVERGING,
+  divergingExpression,
   DOMAINS,
   type DomainKey,
   matchExpression,
@@ -36,6 +38,30 @@ const COLUMN_DOMAIN: Record<string, DomainKey> = {
   highway_class: 'highwayClass',
   building_type: 'buildingType',
   line_type: 'lineType',
+  landcover_class: 'landcoverClass',
+  landcover_prev: 'landcoverClass',
+  from_class: 'landcoverClass',
+  to_class: 'landcoverClass',
+  change_type: 'changeType',
+  water_type: 'waterType',
+  platform: 'platform',
+  risk_class: 'riskClass',
+  soil_type: 'soilTexture',
+};
+
+/**
+ * Signed columns that get the diverging ramp instead of the sequential one,
+ * with the value that means "no change" at the neutral midpoint.
+ */
+const DIVERGING_RANGE: Record<string, [number, number, number]> = {
+  // Negative is subsidence. Zero is stable ground, and it is a real boundary
+  // rather than just the bottom of the scale.
+  velocity_mm_yr: [-18, 4, 0],
+  cumulative_mm: [-110, 24, 0],
+  // Temperature relative to the study-area mean: the sign is the heat island.
+  lst_anomaly_c: [-6, 6, 0],
+  // How far an index moved between the two epochs.
+  ndvi_delta: [-0.8, 0.8, 0],
 };
 
 /**
@@ -80,7 +106,44 @@ const NUMERIC_RANGE: Record<string, [number, number]> = {
   capacity_m3s: [0, 26],
   daily_boardings: [0, 12_000],
   population_reached: [0, 40_000],
+  // Remote sensing. Spectral indices are bounded to their physically possible
+  // range rather than the observed one, so the ramp means the same thing on
+  // every scene instead of restretching itself when the data changes.
+  ndvi: [-0.2, 0.95],
+  ndwi: [-0.6, 0.8],
+  ndbi: [-0.6, 0.5],
+  nbr: [-0.5, 0.95],
+  lst_c: [14, 30],
+  albedo: [0, 0.45],
+  imperviousness_pct: [0, 100],
+  tree_cover_pct: [0, 100],
+  cloud_pct: [0, 100],
+  coherence: [0.3, 1],
+  confidence: [0.4, 1],
+  resolution_m: [10, 30],
+  // Spread of settlement along a corridor -- the line-width channel on the
+  // deformation profiles.
+  differential_mm_yr: [0, 12],
 };
+
+/**
+ * Per-layer numeric overrides, the numeric counterpart to
+ * `LAYER_COLUMN_DOMAIN`. `area_ha` is a farm field of a few hectares in the
+ * agriculture project but a flood footprint of a hundred-plus here, and one
+ * shared range would flatten whichever layer it was not chosen for.
+ */
+const LAYER_NUMERIC_RANGE: Record<string, [number, number]> = {
+  'rs_change.area_ha': [0, 50],
+  'rs_water.area_ha': [0, 260],
+  'rs_index_cells.area_ha': [0, 30],
+  // On a building this is how tall it stands; on a persistent scatterer it is
+  // the ground elevation the reflector sits at.
+  'rs_subsidence.height_m': [-3, 50],
+};
+
+function numericRangeFor(layerName: string, column: string): [number, number] | undefined {
+  return LAYER_NUMERIC_RANGE[`${layerName}.${column}`] ?? NUMERIC_RANGE[column];
+}
 
 function colorExpression(layerName: string, column: string | undefined, mode: Mode): unknown {
   if (!column) return CATEGORICAL[mode][0];
@@ -88,7 +151,10 @@ function colorExpression(layerName: string, column: string | undefined, mode: Mo
   const domainKey = domainFor(layerName, column);
   if (domainKey) return matchExpression(column, domainKey, mode);
 
-  const range = NUMERIC_RANGE[column];
+  const diverging = DIVERGING_RANGE[column];
+  if (diverging) return divergingExpression(column, diverging[0], diverging[1], mode, diverging[2]);
+
+  const range = numericRangeFor(layerName, column);
   if (range) return sequentialExpression(column, range[0], range[1]);
 
   // Unknown column: fall back to slot 1 rather than inventing a scale.
@@ -272,7 +338,12 @@ export function buildLegend(
   info: LayerInfo,
   mode: Mode,
   colorByOverride?: string,
-): { title: string; kind: 'categorical' | 'sequential'; entries: LegendEntry[]; range?: [number, number] } | null {
+): {
+  title: string;
+  kind: 'categorical' | 'sequential' | 'diverging';
+  entries: LegendEntry[];
+  range?: [number, number];
+} | null {
   const colorBy = colorByOverride ?? info.styleHint?.colorBy;
   if (!colorBy) return null;
 
@@ -289,7 +360,25 @@ export function buildLegend(
     };
   }
 
-  const range = NUMERIC_RANGE[colorBy];
+  const diverging = DIVERGING_RANGE[colorBy];
+  if (diverging) {
+    // A diverging scale has no class list, but it does have three points worth
+    // naming -- the two poles and what the neutral middle means. Spelling those
+    // out is what stops the map reading as "some colours".
+    const poles = DIVERGING[mode];
+    return {
+      title: colorBy.replace(/_/g, ' '),
+      kind: 'diverging',
+      entries: [
+        { label: String(diverging[0]), color: poles.high },
+        { label: String(diverging[2]), color: poles.mid },
+        { label: `+${diverging[1]}`, color: poles.low },
+      ],
+      range: [diverging[0], diverging[1]],
+    };
+  }
+
+  const range = numericRangeFor(info.name, colorBy);
   if (!range) return null;
   return {
     title: colorBy.replace(/_/g, ' '),

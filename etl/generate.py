@@ -18,7 +18,7 @@ Everything is seeded, so two runs produce byte-identical output.
 from __future__ import annotations
 
 import math
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import numpy as np
 from shapely.geometry import LineString, Polygon, box
@@ -35,6 +35,7 @@ from etl.geoutil import (
     multi_wkt,
     point_wkt,
     rect_polygon,
+    sample_point,
     sample_rural_point,
     urbanity,
     wiggly_line,
@@ -1609,4 +1610,580 @@ def generate_all() -> dict[str, list[dict]]:
     out["terrain.elevation_bands"] = gen_elevation_bands(r)
     out["terrain.elevation_profile"] = gen_elevation_profiles(r, buildings)
 
+    # --- remote sensing -----------------------------------------------------
+    out["rs.scenes"] = gen_scenes(r)
+    cells = gen_index_cells(r)
+    out["rs.index_cells"] = cells
+    out["rs.change_polygons"] = gen_change_polygons(r, cells)
+    out["rs.subsidence_points"] = gen_subsidence_points(r)
+    out["rs.deformation_profiles"] = gen_deformation_profiles(r)
+    out["rs.water_extent"] = gen_water_extent(r)
+    out["rs.index_timeseries"] = gen_index_timeseries(r)
+
     return out
+
+
+# ===========================================================================
+# PROJECT 6 -- REMOTE SENSING
+# ===========================================================================
+# Class names follow ESA WorldCover's vocabulary so the project's own
+# classification and the WorldCover WMS overlay describe the same ground in
+# the same words.
+LANDCOVER_CLASSES = ("built_up", "cropland", "grassland", "tree_cover", "water", "bare")
+
+#: (platform, sensor, resolution_m, revisit_days, level, optical?)
+PLATFORMS = [
+    ("Sentinel-2A", "MSI", 10.0, 10, "L2A", True),
+    ("Sentinel-2B", "MSI", 10.0, 10, "L2A", True),
+    ("Landsat-8", "OLI-TIRS", 30.0, 16, "L2SP", True),
+    ("Landsat-9", "OLI-TIRS", 30.0, 16, "L2SP", True),
+    ("Sentinel-1A", "C-SAR", 10.0, 12, "GRD-IW", False),
+]
+
+#: Monthly mean cloud fraction over the central Netherlands. High and
+#: seasonal -- this is the number that makes an all-optical study of this
+#: region unworkable and puts the SAR layers in the project.
+CLOUD_BY_MONTH = [0.78, 0.72, 0.66, 0.58, 0.52, 0.50, 0.51, 0.52, 0.58, 0.68, 0.78, 0.81]
+
+#: Beta concentration for the per-scene cloud draw. Deliberately below 2, which
+#: makes the distribution U-shaped rather than peaked: skies are usually either
+#: broken-clear or solidly overcast, and rarely sit at the monthly mean. That
+#: shape is what puts the usable-scene rate at the ~18 % Sentinel-2 actually
+#: achieves over the Netherlands; a peaked draw with the same mean yields under
+#: 10 %, because it almost never produces a genuinely clear day.
+CLOUD_BETA_K = 1.8
+#: The threshold an optical analyst screens on. Over the Netherlands this
+#: rejects most of the archive, which is the argument for the SAR layers.
+USABLE_CLOUD_PCT = 30.0
+
+
+# Thresholds on the shared `urbanity` surface. That surface decays slowly --
+# it is still ~0.37 at the far corner of the bbox -- so "rural" sits well above
+# 0.5 on it, the same calibration `sample_rural_point` already assumes. Picking
+# these off the 0..1 range naively lands two thirds of the study area in
+# built_up, which is not what the province looks like.
+URBAN_CORE_U = 0.88
+URBAN_FRINGE_U = 0.74
+
+#: Height above which the eastern Heuvelrug reads as woodland rather than farm.
+WOODED_RIDGE_M = 8.0
+
+
+def _landcover_for(lon: float, lat: float, u: float, elev: float, r: np.random.Generator) -> str:
+    """Assign a class from the same urbanity and elevation surfaces the other
+    projects use, so the six datasets describe one coherent landscape.
+
+    The mix these thresholds produce -- roughly a quarter built, a third
+    grassland, a fifth arable, an eighth woodland -- is what ESA WorldCover
+    actually reports for a Utrecht-sized window centred on the city.
+    """
+    if u > URBAN_CORE_U:
+        return "built_up"
+    if u > URBAN_FRINGE_U:
+        # The fringe is mostly the parks, allotments and sports grounds that
+        # separate Utrecht's neighbourhoods, not solid building.
+        return "built_up" if r.random() < 0.25 else "grassland"
+    # The Heuvelrug ridge in the east is the wooded part of the study area;
+    # the western polder is grass and arable on drained peat.
+    if elev > WOODED_RIDGE_M:
+        return "tree_cover" if r.random() < 0.70 else "grassland"
+    if elev < -0.5 and r.random() < 0.22:
+        return "water"
+    if r.random() < 0.03:
+        return "bare"
+    return "cropland" if r.random() < 0.48 else "grassland"
+
+
+#: (ndvi, ndwi, ndbi, albedo) means per class, and the standard deviation used
+#: for all four. Values are the ranges these indices actually occupy for
+#: temperate European cover types.
+CLASS_SPECTRA = {
+    "built_up":   (0.19, -0.28,  0.14, 0.16),
+    "cropland":   (0.66, -0.24, -0.19, 0.19),
+    "grassland":  (0.71, -0.21, -0.22, 0.18),
+    "tree_cover": (0.82, -0.18, -0.30, 0.11),
+    "water":      (-0.06, 0.42, -0.12, 0.06),
+    "bare":       (0.14, -0.30,  0.05, 0.24),
+}
+
+#: Land surface temperature offset per class, relative to the study-area mean.
+#: Built-up runs hot, water and woodland run cool -- the urban heat island in
+#: its simplest form, and the effect /heat-island regresses against NDVI.
+CLASS_LST_OFFSET = {
+    "built_up": 1.0, "bare": 2.1, "cropland": -0.4,
+    "grassland": -0.8, "tree_cover": -2.4, "water": -3.6,
+}
+
+# Clear-sky summer daytime land surface temperature, the condition a Landsat
+# thermal scene over the Netherlands is usable in. Calibrated so built-up land
+# lands near 25 °C against roughly 19-20 °C over grass: a ~6 °C daytime surface
+# UHI, which is the middle of the range published for mid-sized European
+# cities. Note this is *surface* temperature from the thermal band, which runs
+# several degrees above the 2 m air temperature a weather station reports.
+LST_BASELINE_C = 22.0
+#: Impervious cover stores heat; vegetation sheds it through evapotranspiration.
+LST_PER_IMPERVIOUS_PCT = 0.030
+LST_PER_NDVI = -2.6
+#: Residual scatter. Without it the NDVI/LST correlation comes out near -0.95,
+#: which no real scene produces -- published studies land around -0.5 to -0.75.
+LST_NOISE_C = 1.35
+
+#: Transitions the change detector is allowed to find, and how likely each is.
+#: Every one is a process actually visible around Utrecht over a three-year
+#: window. Weights are relative *within a destination class*, so what comes out
+#: is dominated by grass/arable rotation rather than by urbanisation -- which
+#: is the honest result: rotation is the largest gross signal any two-epoch
+#: land-cover diff picks up, even though urbanisation is the larger *net* one.
+#: Separating those two is exactly what the from/to matrix is for.
+TRANSITIONS: list[tuple[str, str, str, float]] = [
+    ("cropland", "built_up", "urbanisation", 0.34),
+    ("grassland", "built_up", "urbanisation", 0.22),
+    ("cropland", "grassland", "agricultural_shift", 0.13),
+    ("grassland", "cropland", "agricultural_shift", 0.11),
+    ("grassland", "tree_cover", "afforestation", 0.08),
+    ("tree_cover", "grassland", "vegetation_loss", 0.05),
+    ("bare", "built_up", "urbanisation", 0.04),
+    ("grassland", "water", "water_gain", 0.03),
+]
+
+BASELINE_YEAR, DETECTED_YEAR = 2021, 2024
+
+#: Share of cells whose class differs between the two epochs. Around 6 % over
+#: three years is brisk but not absurd for a fast-growing urban region; the
+#: point is to leave the transition matrix and the change layer enough to say
+#: something with.
+CHANGE_RATE = 0.06
+
+#: Transitions indexed by destination class. Built this way rather than drawn
+#: flat and rejected: a cell's present class is already fixed by the time the
+#: change is assigned, so only transitions that *end* at that class are
+#: coherent, and rejection sampling on the full table throws away ~90 % of
+#: draws -- which quietly starves the change layer.
+TRANSITIONS_BY_TO: dict[str, list[tuple[str, str, float]]] = {}
+for _from, _to, _kind, _weight in TRANSITIONS:
+    TRANSITIONS_BY_TO.setdefault(_to, []).append((_from, _kind, _weight))
+
+
+def gen_index_cells(r: np.random.Generator, cell_m: int = 500) -> list[dict]:
+    """The analysis grid: one row per cell carrying the zonal summary of every
+    band the project uses.
+
+    Deriving LST from imperviousness and NDVI rather than drawing it
+    independently is the whole point -- it is what gives /heat-island a real
+    correlation to find instead of noise.
+    """
+    rows: list[dict] = []
+    lon_step, lat_step = m_to_lon(cell_m), m_to_lat(cell_m)
+    n_lon = int((MAX_LON - MIN_LON) / lon_step)
+    n_lat = int((MAX_LAT - MIN_LAT) / lat_step)
+    cell_ha = (cell_m / 100.0) ** 2
+
+    for i in range(n_lon):
+        for j in range(n_lat):
+            lon = MIN_LON + i * lon_step
+            lat = MIN_LAT + j * lat_step
+            clon, clat = lon + lon_step / 2, lat + lat_step / 2
+            u = urbanity(clon, clat)
+            elev = elevation_scalar(clon, clat)
+
+            cls = _landcover_for(clon, clat, u, elev, r)
+            ndvi_mu, ndwi_mu, ndbi_mu, albedo_mu = CLASS_SPECTRA[cls]
+
+            ndvi = float(np.clip(r.normal(ndvi_mu, 0.07), -0.2, 0.95))
+            ndwi = float(np.clip(r.normal(ndwi_mu, 0.06), -0.6, 0.8))
+            ndbi = float(np.clip(r.normal(ndbi_mu, 0.06), -0.6, 0.5))
+            # NBR separates healthy vegetation from bare and burnt ground; with
+            # no fire history here it tracks NDVI with a wider spread.
+            nbr = float(np.clip(ndvi * 0.82 + r.normal(0, 0.09), -0.5, 0.95))
+            albedo = float(np.clip(r.normal(albedo_mu, 0.03), 0.02, 0.45))
+
+            impervious = float(np.clip(100 * (0.93 * u**1.35 + r.normal(0, 0.05)), 0, 100))
+            tree_cover = float(np.clip(
+                100 * (0.85 if cls == "tree_cover" else 0.22 * max(0.0, ndvi)) + r.normal(0, 4),
+                0, 100,
+            ))
+
+            lst = (
+                LST_BASELINE_C
+                + CLASS_LST_OFFSET[cls]
+                + LST_PER_IMPERVIOUS_PCT * impervious
+                + LST_PER_NDVI * ndvi
+                + float(r.normal(0, LST_NOISE_C))
+            )
+
+            # Most ground does not change. Where it does, pick a transition
+            # that ends at this cell's present class, so both epochs stay
+            # coherent with the classification already assigned.
+            prev, changed, ndvi_delta = cls, False, float(r.normal(0.0, 0.02))
+            inbound = TRANSITIONS_BY_TO.get(cls)
+            if inbound and r.random() < CHANGE_RATE:
+                weights = np.array([w for _, _, w in inbound], dtype=float)
+                pick = inbound[int(r.choice(len(inbound), p=weights / weights.sum()))]
+                prev, changed = pick[0], True
+                ndvi_delta = round(ndvi - CLASS_SPECTRA[prev][0], 3)
+
+            rows.append({
+                "cell_code": f"C{i:03d}{j:03d}",
+                "ndvi": round(ndvi, 4),
+                "ndwi": round(ndwi, 4),
+                "ndbi": round(ndbi, 4),
+                "nbr": round(nbr, 4),
+                "lst_c": round(lst, 2),
+                "lst_anomaly_c": 0.0,  # filled in below, once the mean is known
+                "albedo": round(albedo, 4),
+                "landcover_class": cls,
+                "landcover_prev": prev,
+                "changed": changed,
+                "imperviousness_pct": round(impervious, 1),
+                "tree_cover_pct": round(tree_cover, 1),
+                "ndvi_delta": round(ndvi_delta, 4),
+                "area_ha": round(cell_ha, 2),
+                "geom": multi_wkt(Polygon([
+                    (lon, lat), (lon + lon_step, lat),
+                    (lon + lon_step, lat + lat_step), (lon, lat + lat_step), (lon, lat),
+                ]), "polygon"),
+            })
+
+    # The anomaly is what the heat-island map actually reads, and it can only
+    # be computed once every cell exists.
+    mean_lst = sum(row["lst_c"] for row in rows) / max(1, len(rows))
+    for row in rows:
+        row["lst_anomaly_c"] = round(row["lst_c"] - mean_lst, 2)
+    return rows
+
+
+def gen_change_polygons(r: np.random.Generator, cells: list[dict], n: int = 140) -> list[dict]:
+    """Dissolved change regions, the form a change-detection product reports.
+
+    Seeded on cells the grid already flagged as changed, so the polygon layer
+    and the transition matrix tell the same story rather than two unrelated
+    ones.
+    """
+    changed = [c for c in cells if c["changed"]]
+    if not changed:
+        return []
+
+    rows = []
+    picks = r.choice(len(changed), size=min(n, len(changed)), replace=False)
+    for k, pick in enumerate(picks, start=1):
+        cell = changed[int(pick)]
+        lon, lat = _centroid_of_multipolygon_wkt(cell["geom"])
+        change_type = next(
+            (t[2] for t in TRANSITIONS
+             if t[0] == cell["landcover_prev"] and t[1] == cell["landcover_class"]),
+            "other",
+        )
+        poly = irregular_polygon(r, lon, lat, float(r.uniform(180, 620)), jitter=0.3)
+        area_ha = float(r.uniform(2.5, 46.0))
+        rows.append({
+            "change_code": f"CH{k:04d}",
+            "from_class": cell["landcover_prev"],
+            "to_class": cell["landcover_class"],
+            "change_type": change_type,
+            "detected_year": DETECTED_YEAR,
+            "baseline_year": BASELINE_YEAR,
+            "area_ha": round(area_ha, 2),
+            # A bigger, more spectrally distinct patch is easier to call, so
+            # confidence rises with area rather than being drawn flat.
+            "confidence": round(float(np.clip(0.58 + area_ha / 130 + r.normal(0, 0.06), 0.4, 0.99)), 3),
+            "ndvi_delta": cell["ndvi_delta"],
+            "geom": multi_wkt(poly, "polygon"),
+        })
+    return rows
+
+
+def gen_subsidence_points(r: np.random.Generator, n: int = 2400) -> list[dict]:
+    """InSAR persistent scatterers.
+
+    Soil follows elevation, which is what makes the by-soil chart meaningful:
+    the western polder is drained peat, the Heuvelrug ridge in the east is
+    glacial sand, and peat subsides roughly an order of magnitude faster
+    because draining it lets the organic matter oxidise away.
+    """
+    rows = []
+    for k in range(1, n + 1):
+        lon, lat = sample_point(r)
+        elev = elevation_scalar(lon, lat)
+        u = urbanity(lon, lat)
+
+        # Cut-offs chosen against the elevation surface so the mix lands near
+        # the province's real soil map -- roughly a third peat in the western
+        # polder, a third sand on the Heuvelrug, clay in between. Taking peat
+        # as "everything below 1.5 m" instead puts 59 % of the study area on
+        # peat, which would overstate the headline subsidence badly.
+        if elev > 8:
+            soil, vel_mu, vel_sd = "sand", -0.4, 0.5
+        elif elev > 0.5:
+            soil, vel_mu, vel_sd = "clay", -3.1, 1.4
+        else:
+            soil, vel_mu, vel_sd = "peat", -8.4, 2.9
+
+        velocity = float(r.normal(vel_mu, vel_sd))
+        # Persistent scatterers need a stable reflector, so coherence is high
+        # on buildings and poor over vegetation and open water -- which is why
+        # a PS dataset is dense over towns and sparse over farmland.
+        coherence = float(np.clip(r.normal(0.55 + 0.34 * u, 0.11), 0.30, 0.99))
+
+        if velocity <= -8:
+            risk = "high"
+        elif velocity <= -4:
+            risk = "moderate"
+        elif velocity <= -1.5:
+            risk = "low"
+        else:
+            risk = "stable"
+
+        rows.append({
+            "ps_id": f"PS{k:05d}",
+            "velocity_mm_yr": round(velocity, 2),
+            # Six years of Sentinel-1, with a little non-linearity so the
+            # cumulative figure is not just velocity times a constant.
+            "cumulative_mm": round(velocity * 6.0 * float(r.uniform(0.92, 1.08)), 1),
+            "coherence": round(coherence, 3),
+            "std_mm_yr": round(float(np.clip(r.normal(0.9, 0.35), 0.15, 2.6)), 2),
+            "height_m": round(elev + float(r.normal(0, 1.2)), 1),
+            "soil_type": soil,
+            "land_use": "urban" if u > 0.55 else ("suburban" if u > 0.28 else "rural"),
+            "risk_class": risk,
+            "geom": point_wkt(lon, lat),
+        })
+    return rows
+
+
+def gen_water_extent(r: np.random.Generator, n_dates: int = 8) -> list[dict]:
+    """SAR-delineated open water on eight dates through the year.
+
+    Permanent water is the same footprint every pass; the seasonal and flood
+    classes are the departure from it. February carries a real inundation
+    event, which is when the Dutch river system actually peaks.
+    """
+    rows = []
+    dates = [date(2024, 1, 18), date(2024, 2, 11), date(2024, 3, 16), date(2024, 5, 9),
+             date(2024, 7, 2), date(2024, 9, 14), date(2024, 11, 8), date(2024, 12, 20)][:n_dates]
+
+    for observed in dates:
+        flood_event = observed.month == 2
+        for kind, count in (("permanent", 14), ("seasonal", 9 if observed.month in (1, 2, 3, 11, 12) else 4),
+                            ("flood", 11 if flood_event else 0)):
+            for _ in range(count):
+                if kind == "permanent":
+                    lon, lat = sample_point(r)
+                else:
+                    # Seasonal and flood water sits in the low-lying polder,
+                    # not on the ridge.
+                    lon, lat = sample_rural_point(r, max_urbanity=0.5)
+                    if elevation_scalar(lon, lat) > 4:
+                        continue
+                radius = float(r.uniform(150, 900)) * (1.6 if kind == "flood" else 1.0)
+                poly = irregular_polygon(r, lon, lat, radius, jitter=0.4)
+                rows.append({
+                    "observed_on": observed,
+                    "source": "Sentinel-1 GRD",
+                    "water_type": kind,
+                    "area_ha": round(float(r.uniform(4, 120)) * (2.2 if kind == "flood" else 1.0), 2),
+                    # Open water is a specular reflector: it scatters the radar
+                    # pulse away from the sensor, so it returns a very low
+                    # backscatter, which is exactly how SAR finds it.
+                    "backscatter_db": round(float(r.normal(-19.5, 1.8)), 1),
+                    "confidence": round(float(np.clip(r.normal(0.86 if kind == "permanent" else 0.72, 0.08), 0.4, 0.99)), 3),
+                    "geom": multi_wkt(poly, "polygon"),
+                })
+    return rows
+
+
+def gen_scenes(r: np.random.Generator) -> list[dict]:
+    """A year of acquisitions over the study area.
+
+    Cloud is drawn from the real monthly climatology, and `usable` applies the
+    30 % threshold an optical analyst would. Over the Netherlands that throws
+    away most of the optical archive, which is the case for the SAR half of
+    this project stated in data.
+    """
+    rows = []
+    start = date(2024, 1, 1)
+    k = 0
+    for platform, sensor, res_m, revisit, level, optical in PLATFORMS:
+        # Stagger the constellations so two satellites in a pair do not land
+        # on the same day.
+        offset = int(r.integers(0, revisit))
+        day = offset
+        while day < 365:
+            acquired = start + timedelta(days=day)
+            month = acquired.month
+            if optical:
+                # Beta shaped to the month's mean cloud fraction rather than
+                # scaled off a symmetric draw: the tail matters more than the
+                # mean here, because "how often is it clear enough to use" is
+                # the question, and a symmetric draw answers it far too
+                # optimistically.
+                p = CLOUD_BY_MONTH[month - 1]
+                cloud = float(np.clip(r.beta(CLOUD_BETA_K * p, CLOUD_BETA_K * (1 - p)) * 100, 0, 100))
+                usable = cloud < USABLE_CLOUD_PCT
+                orbit = "descending"
+                sun_elev = round(14 + 44 * math.sin(math.pi * (day - 80) / 365) ** 2, 1)
+            else:
+                # SAR does not care about cloud; the column stays 0 rather than
+                # NULL so "mean cloud by platform" is still answerable.
+                cloud, usable, sun_elev = 0.0, True, None
+                orbit = "ascending" if (day // revisit) % 2 == 0 else "descending"
+
+            k += 1
+            # Footprints are wider than the study area and drift with the
+            # orbit track, the way a real tile grid overlaps its neighbours.
+            pad_lon, pad_lat = m_to_lon(9000), m_to_lat(9000)
+            drift = m_to_lon(float(r.normal(0, 2600)))
+            poly = box(
+                MIN_LON - pad_lon + drift, MIN_LAT - pad_lat,
+                MAX_LON + pad_lon + drift, MAX_LAT + pad_lat,
+            )
+            rows.append({
+                "scene_id": f"{platform.replace('-', '')}_{acquired:%Y%m%d}_{k:04d}",
+                "platform": platform,
+                "sensor": sensor,
+                "acquired_at": datetime(acquired.year, acquired.month, acquired.day, 10, 42, tzinfo=UTC),
+                "cloud_pct": round(cloud, 1),
+                "sun_elevation_deg": sun_elev,
+                "orbit_direction": orbit,
+                "processing_level": level,
+                "resolution_m": res_m,
+                "usable": usable,
+                "geom": multi_wkt(poly, "polygon"),
+            })
+            day += revisit
+    return rows
+
+
+def gen_index_timeseries(r: np.random.Generator) -> list[dict]:
+    """Ten-day composites of NDVI, NDWI and NDBI per land-cover class.
+
+    The phenology is the signal worth showing: cropland swings from bare soil
+    to closed canopy and back inside one season, woodland barely moves, and
+    built-up land is flat all year. That contrast is what makes a single-date
+    classification unreliable and a time series worth building.
+    """
+    rows = []
+    for step in range(37):
+        observed = date(2024, 1, 5) + timedelta(days=10 * step)
+        doy = observed.timetuple().tm_yday
+        # Peaks near day 190 (early July) for the northern hemisphere.
+        season = math.sin(math.pi * max(0.0, min(1.0, (doy - 40) / 250)))
+
+        for cls in LANDCOVER_CLASSES:
+            base_ndvi, base_ndwi, base_ndbi, _ = CLASS_SPECTRA[cls]
+            amplitude = {
+                "cropland": 0.46, "grassland": 0.24, "tree_cover": 0.20,
+                "built_up": 0.05, "bare": 0.06, "water": 0.02,
+            }[cls]
+            winter_floor = base_ndvi - amplitude * 0.65
+
+            for index_name, value in (
+                ("ndvi", winter_floor + amplitude * season + float(r.normal(0, 0.015))),
+                # Wetter in winter, drier at the peak of the growing season.
+                ("ndwi", base_ndwi + 0.07 * (1 - season) + float(r.normal(0, 0.012))),
+                # Built-up land is a fixed surface; NDBI barely moves.
+                ("ndbi", base_ndbi - 0.04 * season + float(r.normal(0, 0.010))),
+            ):
+                spread = 0.05 + 0.06 * amplitude
+                rows.append({
+                    "observed_on": observed,
+                    "landcover_class": cls,
+                    "index_name": index_name,
+                    "value": round(float(np.clip(value, -0.6, 0.95)), 4),
+                    "p10": round(float(np.clip(value - spread, -0.7, 0.95)), 4),
+                    "p90": round(float(np.clip(value + spread, -0.6, 0.99)), 4),
+                    "sample_n": int(r.integers(120, 620)),
+                    "cloud_pct": round(CLOUD_BY_MONTH[observed.month - 1] * 100, 1),
+                })
+    return rows
+
+
+#: Corridors the deformation profiles run along. Chosen to cross the soil
+#: gradient rather than sit inside one band: a line wholly on sand says nothing,
+#: and the interesting engineering case is the asset that spans a boundary.
+PROFILE_ASSETS: list[tuple[str, str, tuple[float, float], tuple[float, float]]] = [
+    ("canal", "Amsterdam-Rijnkanaal", (5.075, 52.170), (5.115, 51.995)),
+    ("canal", "Merwedekanaal", (5.100, 52.115), (5.085, 52.010)),
+    ("canal", "Vecht corridor", (5.010, 52.175), (5.045, 52.070)),
+    ("dike", "Lekdijk west", (4.975, 52.005), (5.180, 51.990)),
+    ("dike", "Kromme Rijn embankment", (5.140, 52.055), (5.290, 52.020)),
+    ("rail", "Utrecht - Amsterdam line", (5.110, 52.090), (5.060, 52.178)),
+    ("rail", "Utrecht - Arnhem line", (5.115, 52.089), (5.298, 52.055)),
+    ("road", "A2 corridor", (5.055, 52.175), (5.090, 51.985)),
+    ("road", "A12 corridor", (4.960, 52.070), (5.298, 52.048)),
+    ("road", "N230 north ring", (5.040, 52.140), (5.200, 52.135)),
+    # Short corridors that stay inside one soil band. Without these every
+    # profile spans the gradient and the low/stable risk classes never appear,
+    # which would make the risk breakdown look like a threshold problem rather
+    # than the real distribution.
+    ("dike", "Heuvelrug ridge road", (5.252, 52.105), (5.288, 52.092)),
+    ("rail", "Zeist branch", (5.238, 52.088), (5.272, 52.070)),
+    ("canal", "Polder drainage main", (4.966, 52.108), (4.998, 52.132)),
+    ("dike", "Westbroek polder dike", (4.972, 52.145), (5.006, 52.160)),
+]
+
+
+def gen_deformation_profiles(r: np.random.Generator) -> list[dict]:
+    """Ground motion aggregated along each corridor.
+
+    Velocities are sampled from the same elevation-driven soil model the
+    persistent scatterers use, so a profile crossing the polder reports the
+    peat signal the point cloud shows underneath it -- the two layers cannot
+    disagree.
+    """
+    rows = []
+    for idx, (asset_type, name, start, end) in enumerate(PROFILE_ASSETS, start=1):
+        line = wiggly_line(r, start, end, segments=14, amplitude_m=260)
+
+        # Two quantities per sample, and keeping them apart is the whole point.
+        # `expected` is the soil-driven settlement rate at that spot; `measured`
+        # adds the scatter a real PS solution carries.
+        expected, measured, soils = [], [], []
+        for t in np.linspace(0, 1, 24):
+            pt = line.interpolate(float(t), normalized=True)
+            elev = elevation_scalar(pt.x, pt.y)
+            if elev > 8:
+                soil, mu, sd = "sand", -0.4, 0.5
+            elif elev > 0.5:
+                soil, mu, sd = "clay", -3.1, 1.4
+            else:
+                soil, mu, sd = "peat", -8.4, 2.9
+            # A little within-band variation, so a corridor sitting wholly on
+            # one soil still differs slightly end to end, as ground does.
+            mu_here = mu + float(r.normal(0, 0.35))
+            expected.append(mu_here)
+            measured.append(mu_here + float(r.normal(0, sd)))
+            soils.append(soil)
+
+        mean_v = float(np.mean(measured))
+        min_v = float(np.min(measured))
+        # Differential comes off the expected profile, not the measured one.
+        # Taking max-minus-min of the noisy samples measures the scatter of the
+        # InSAR solution -- with peat's sigma near 3 mm that alone spans ~11 mm
+        # and rates every corridor "high", burying the real signal. The
+        # engineering question is whether the asset crosses a soil boundary,
+        # and that lives in the expected profile.
+        differential = float(np.max(expected) - np.min(expected))
+
+        if differential >= 7:
+            risk = "high"
+        elif differential >= 4:
+            risk = "moderate"
+        elif differential >= 1.5:
+            risk = "low"
+        else:
+            risk = "stable"
+
+        rows.append({
+            "profile_code": f"DP{idx:03d}",
+            "name": name,
+            "asset_type": asset_type,
+            "length_m": round(_line_length_m(line), 1),
+            "mean_velocity_mm_yr": round(mean_v, 2),
+            "min_velocity_mm_yr": round(min_v, 2),
+            "differential_mm_yr": round(differential, 2),
+            "ps_count": int(r.integers(120, 900)),
+            "dominant_soil": max(set(soils), key=soils.count),
+            "risk_class": risk,
+            "geom": multi_wkt(line, "line"),
+        })
+    return rows

@@ -15,6 +15,32 @@ import {
 } from './chartkit';
 import { Figure, Tooltip, type LegendItem } from './Primitives';
 
+/** Bars at least this long carry their value label inside rather than past
+ * the end -- roughly the width of a formatted number plus its unit. */
+const LABEL_INSIDE_PX = 62;
+
+/**
+ * Text colour for a label drawn on top of a bar.
+ *
+ * The categorical palette spans a wide luminance range -- white reads well on
+ * the blue and the purple and badly on the yellow and the pink, where it falls
+ * under 3:1. Picking per fill rather than fixing on white is what keeps an
+ * inside label legible on every category.
+ */
+function labelOn(fill: string): string {
+  const hex = fill.replace('#', '');
+  const full = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex;
+  const channel = (i: number) => {
+    const v = parseInt(full.slice(i * 2, i * 2 + 2), 16) / 255;
+    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  // WCAG relative luminance.
+  const L = 0.2126 * channel(0) + 0.7152 * channel(1) + 0.0722 * channel(2);
+  // Contrast against white is (1.05)/(L+0.05); 0.18 is where that drops below
+  // about 4.5:1, so anything lighter takes dark text instead.
+  return L > 0.18 ? '#101010' : '#ffffff';
+}
+
 export interface BarDatum {
   category: string;
   value: number;
@@ -69,20 +95,32 @@ export function BarChart({
   const innerH = Math.max(0, height - margin.top - margin.bottom);
 
   const maxValue = d3.max(data, (d) => d.value) ?? 0;
+  const minValue = d3.min(data, (d) => d.value) ?? 0;
+  // A signed measure -- a temperature anomaly, a subsidence rate -- needs the
+  // baseline inside the domain rather than pinned at the bottom. Anchoring at
+  // zero regardless would clip every negative bar to nothing, and for an
+  // all-negative series it inverts the axis outright.
+  const signed = minValue < 0;
 
   const scales = useMemo(() => {
     const categories = data.map((d) => d.category);
+    const lo = signed ? minValue * 1.05 : 0;
+    const hi = maxValue > 0 ? maxValue * 1.05 : 0;
+    const domain: [number, number] = lo === hi ? [lo, lo + 1] : [lo, hi];
     if (horizontal) {
       return {
         band: d3.scaleBand<string>().domain(categories).range([0, innerH]).padding(0.28),
-        linear: d3.scaleLinear().domain([0, maxValue * 1.05 || 1]).range([0, innerW]).nice(),
+        linear: d3.scaleLinear().domain(domain).range([0, innerW]).nice(),
       };
     }
     return {
       band: d3.scaleBand<string>().domain(categories).range([0, innerW]).padding(0.28),
-      linear: d3.scaleLinear().domain([0, maxValue * 1.05 || 1]).range([innerH, 0]).nice(),
+      linear: d3.scaleLinear().domain(domain).range([innerH, 0]).nice(),
     };
-  }, [data, horizontal, innerH, innerW, maxValue]);
+  }, [data, horizontal, innerH, innerW, maxValue, minValue, signed]);
+
+  //: Where zero sits on the value axis -- the baseline bars grow away from.
+  const zero = scales.linear(0);
 
   const barColor = (category: string) =>
     monochrome || !colorDomain ? CATEGORICAL[mode][0] : categoricalFor(colorDomain, category, mode);
@@ -127,6 +165,16 @@ export function BarChart({
                 }}
               />
 
+              {/* Zero has to be drawn when the domain crosses it: on a signed
+                  chart the baseline is the reference the bars are read against,
+                  and a gridline of the same weight does not read as one. */}
+              {signed &&
+                (horizontal ? (
+                  <line x1={zero} x2={zero} y1={0} y2={innerH} stroke={ink.textMuted} strokeWidth={1} />
+                ) : (
+                  <line x1={0} x2={innerW} y1={zero} y2={zero} stroke={ink.textMuted} strokeWidth={1} />
+                ))}
+
               {data.map((d, i) => {
                 const color = barColor(d.category);
                 const bandPos = scales.band(d.category) ?? 0;
@@ -134,11 +182,19 @@ export function BarChart({
                 // 4px rounded data-end, square against the baseline.
                 const radius = 4;
                 if (horizontal) {
-                  const w = Math.max(0, scales.linear(d.value));
+                  // Bars run from the zero line, in whichever direction the
+                  // value takes them.
+                  const v = scales.linear(d.value);
+                  const x0 = Math.min(zero, v);
+                  const w = Math.abs(v - zero);
                   return (
                     <path
                       key={`${d.category}-${i}`}
-                      d={roundedRightBar(0, bandPos, w, bandWidth, radius)}
+                      d={
+                        d.value < 0
+                          ? roundedLeftBar(x0, bandPos, w, bandWidth, radius)
+                          : roundedRightBar(x0, bandPos, w, bandWidth, radius)
+                      }
                       fill={color}
                       onMouseEnter={(e) =>
                         setTip({
@@ -156,12 +212,17 @@ export function BarChart({
                     />
                   );
                 }
-                const y = scales.linear(d.value);
-                const h = Math.max(0, innerH - y);
+                const v = scales.linear(d.value);
+                const y = Math.min(zero, v);
+                const h = Math.abs(v - zero);
                 return (
                   <path
                     key={`${d.category}-${i}`}
-                    d={roundedTopBar(bandPos, y, bandWidth, h, radius)}
+                    d={
+                      d.value < 0
+                        ? roundedBottomBar(bandPos, y, bandWidth, h, radius)
+                        : roundedTopBar(bandPos, y, bandWidth, h, radius)
+                    }
                     fill={color}
                     onMouseEnter={(e) =>
                       setTip({
@@ -184,14 +245,27 @@ export function BarChart({
               {data.length <= 12 &&
                 data.map((d, i) => {
                   const bandPos = (scales.band(d.category) ?? 0) + scales.band.bandwidth() / 2;
+                  const color = barColor(d.category);
+                  // The label sits past the data end of the bar -- which for a
+                  // negative value is on the other side of the baseline. When
+                  // the bar is long enough to hold the label it goes inside
+                  // instead: a full-width bar leaves no room outside, and the
+                  // label would land on top of the category axis.
+                  const end = scales.linear(d.value);
+                  const negative = d.value < 0;
+                  const barPx = Math.abs(end - zero);
+                  const inside = barPx > LABEL_INSIDE_PX;
+                  const away = negative ? -1 : 1; // direction pointing away from zero
+
                   return horizontal ? (
                     <text
                       key={`${d.category}-${i}`}
-                      x={scales.linear(d.value) + 6}
+                      x={end + (inside ? -away * 6 : away * 6)}
                       y={bandPos}
                       dy="0.35em"
+                      textAnchor={negative === inside ? 'start' : 'end'}
                       fontSize={11}
-                      fill={ink.textSecondary}
+                      fill={inside ? labelOn(color) : ink.textSecondary}
                       className="num"
                     >
                       {valueFormat(d.value)}
@@ -200,10 +274,11 @@ export function BarChart({
                     <text
                       key={`${d.category}-${i}`}
                       x={bandPos}
-                      y={scales.linear(d.value) - 6}
+                      // y grows downward, so "away from zero" flips sign here.
+                      y={end + (inside ? away * 14 : -away * 6)}
                       textAnchor="middle"
                       fontSize={11}
-                      fill={ink.textSecondary}
+                      fill={inside ? labelOn(color) : ink.textSecondary}
                       className="num"
                     >
                       {valueFormat(d.value)}
@@ -274,4 +349,17 @@ function roundedRightBar(x: number, y: number, w: number, h: number, r: number):
   const radius = Math.min(r, w, h / 2);
   if (w <= 0) return '';
   return `M${x},${y} L${x + w - radius},${y} Q${x + w},${y} ${x + w},${y + radius} L${x + w},${y + h - radius} Q${x + w},${y + h} ${x + w - radius},${y + h} L${x},${y + h} Z`;
+}
+
+/** Mirrors of the two above, for bars that grow the other way from zero. */
+function roundedBottomBar(x: number, y: number, w: number, h: number, r: number): string {
+  const radius = Math.min(r, h, w / 2);
+  if (h <= 0) return '';
+  return `M${x},${y} L${x},${y + h - radius} Q${x},${y + h} ${x + radius},${y + h} L${x + w - radius},${y + h} Q${x + w},${y + h} ${x + w},${y + h - radius} L${x + w},${y} Z`;
+}
+
+function roundedLeftBar(x: number, y: number, w: number, h: number, r: number): string {
+  const radius = Math.min(r, w, h / 2);
+  if (w <= 0) return '';
+  return `M${x + w},${y} L${x + radius},${y} Q${x},${y} ${x},${y + radius} L${x},${y + h - radius} Q${x},${y + h} ${x + radius},${y + h} L${x + w},${y + h} Z`;
 }

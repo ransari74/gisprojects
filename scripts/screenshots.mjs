@@ -89,7 +89,8 @@ const PAGES = [
   ['demographics', '05-demographics'],
   ['transport', '06-transport'],
   ['terrain', '07-terrain-3d'],
-  ['admin', '08-admin'],
+  ['remote-sensing', '08-remote-sensing'],
+  ['admin', '09-admin'],
 ];
 
 for (const [route, name] of PAGES) {
