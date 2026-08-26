@@ -28,6 +28,7 @@ LOAD_ORDER = [
     "agri.irrigation_canals",
     "agri.soil_samples",
     "agri.field_ndvi_timeseries",
+    "agri.field_embeddings",
     "parcel.zoning_districts",
     "parcel.parcels",
     "parcel.boundary_lines",
@@ -112,6 +113,7 @@ def record_sources(conn: psycopg.Connection, counts: dict[str, int], synthetic: 
     generated from the same registry the ETL used."""
     layer_to_table = {
         "agri_fields": "agri.fields",
+        "agri_field_embeddings": "agri.field_embeddings",
         "parcel_parcels": "parcel.parcels",
         "demog_tracts": "demog.census_tracts",
         "demog_popgrid": "demog.population_grid",

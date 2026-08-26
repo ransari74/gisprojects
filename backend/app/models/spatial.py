@@ -16,6 +16,7 @@ from decimal import Decimal
 
 from geoalchemy2 import Geometry
 from sqlalchemy import (
+    ARRAY,
     BigInteger,
     Boolean,
     CheckConstraint,
@@ -184,6 +185,45 @@ class FieldNdviTimeseries(Base):
     obs_date: Mapped[date] = mapped_column(Date, nullable=False)
     ndvi: Mapped[float] = mapped_column(Float, nullable=False)
     cloud_pct: Mapped[float | None] = mapped_column(Float)
+
+
+class FieldEmbedding(Base):
+    """One AlphaEarth embedding per parcel per year.
+
+    64 floats standing in for the whole multi-sensor year over that parcel.
+    Unit-length, so a dot product between two of them is their cosine
+    similarity -- which is what makes "find fields like this one" a single SQL
+    expression rather than a model invocation.
+
+    Stored as a plain float array. pgvector would be the right call at scale,
+    but it is absent from several free-tier Postgres offerings and this table
+    is small enough that an index would buy nothing.
+    """
+
+    __tablename__ = "field_embeddings"
+    __table_args__ = (
+        UniqueConstraint("field_id", "year", name="uq_agri_field_embeddings_field_year"),
+        CheckConstraint("array_length(embedding, 1) = 64", name="ck_agri_field_embeddings_dim"),
+        CheckConstraint(
+            "abs(agri.embedding_similarity(embedding, embedding) - 1.0) < 1e-6",
+            name="ck_agri_field_embeddings_unit_length",
+        ),
+        {"schema": "agri"},
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    field_id: Mapped[int] = mapped_column(
+        ForeignKey("agri.fields.id", ondelete="CASCADE"), nullable=False
+    )
+    year: Mapped[int] = mapped_column(SmallInteger, nullable=False, index=True)
+    embedding: Mapped[list[float]] = mapped_column(ARRAY(Float, dimensions=1), nullable=False)
+    #: The crop declared for this parcel in this year. BRP publishes annually,
+    #: so the label travels with the embedding rather than with the parcel.
+    declared_crop: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    pixel_count: Mapped[int | None] = mapped_column(Integer)
+    source: Mapped[str] = mapped_column(
+        Text, nullable=False, server_default="AlphaEarth Foundations V1"
+    )
 
 
 # ===========================================================================

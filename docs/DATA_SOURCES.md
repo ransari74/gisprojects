@@ -767,7 +767,7 @@ cloud-optimised storage — no bulk download.
 
 **Expect to discard most of the archive.** Over the central Netherlands, roughly 15–20 % of
 Sentinel-2 acquisitions come in under 30 % cloud, and the clear dates cluster in summer. Plan
-for a composite, not a single date — and see 6b.4 for why the radar layers exist.
+for a composite, not a single date — and see 6b.4 for why the radar layers exist. Section 6b.5 is the one worth reading twice.
 
 ### 6b.2 Landsat Collection 2 Level-2 — the thermal band
 
@@ -795,7 +795,40 @@ for a composite, not a single date — and see 6b.4 for why the radar layers exi
 - The reason to use radar at all: **it sees through cloud**, and flooding arrives with exactly
   the weather that hides it from an optical sensor.
 
-### 6b.5 EGMS — InSAR ground motion, already processed
+### 6b.5 AlphaEarth Foundations satellite embeddings ★ the interesting one
+
+- **Earth Engine**: `GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL` — free for noncommercial use, but needs
+  a Google account and a registered project.
+- **Without Earth Engine** (what this project uses), CC-BY 4.0:
+  - Source Cooperative: <https://source.coop/tge-labs/aef>
+  - AWS Open Data: <https://registry.opendata.aws/aef-source/>
+  - GCS: `gs://alphaearth_foundations`
+  COGs of 8192x8192 pixels x 64 channels, split by year and UTM zone.
+- Attribution required: "The AlphaEarth Foundations Satellite Embedding dataset is produced by
+  Google and Google DeepMind."
+
+**What it is.** 64 floats per 10 m pixel per year, 2017 to present, distilled from a year of
+Sentinel-1, Sentinel-2 and Landsat. **The vectors are unit length**, which is the property that
+makes them useful: `dot(a, b)` is directly the cosine similarity, so "find everywhere that looks
+like here" needs no model, no inference and no normalisation.
+
+**How to use it on parcels.** Zonal-mean the pixels inside each parcel, then re-normalise — the mean
+of unit vectors is not itself unit length. That reduces the whole study area to 64 floats per parcel
+per year, a few MB, which fits in Postgres and needs no raster serving.
+
+Two caveats worth stating in any writeup:
+
+- A parcel-mean embedding assumes the parcel is reasonably homogeneous. That is fine for crop
+  identification and comparison; it is wrong for within-field zoning, which needs the pixels.
+- Averaging discards the within-parcel variance the model encoded. If the question is about
+  variability rather than identity, keep the pixel-level vectors.
+
+**Pairs with BRP.** The Dutch crop-parcel register (§2) publishes a declared crop per parcel per
+year under CC0. That is a labelled training set sitting directly on top of an embedding dataset,
+which is what makes few-shot classification and declaration checking possible without labelling
+anything by hand.
+
+### 6b.6 EGMS — InSAR ground motion, already processed
 
 - <https://egms.land.copernicus.eu/> — CC-BY-4.0. Tiles `32ULC` / `32UMC` cover Utrecht.
 - The Copernicus Land Monitoring Service publishes **unwrapped, calibrated** persistent-scatterer
@@ -931,6 +964,8 @@ Terrain:                          Copernicus DEM GLO-30 © ESA / European Union
 Optical imagery:                  Contains modified Copernicus Sentinel-2 data — CC BY-SA 3.0 IGO
 Radar imagery:                    Contains modified Copernicus Sentinel-1 data — CC BY-SA 3.0 IGO
 Thermal / LST:                    USGS Landsat Collection 2 Level-2 — public domain
+Satellite embeddings:             AlphaEarth Foundations Satellite Embedding dataset, produced
+                                  by Google and Google DeepMind — CC BY 4.0
 Ground motion:                    European Ground Motion Service, Copernicus Land Monitoring
                                   Service / EEA — CC BY 4.0
 Protected areas:                  Natura 2000 © European Environment Agency — CC BY 4.0

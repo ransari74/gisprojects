@@ -5,7 +5,7 @@ every layer overlays exactly:
 
 | Project | What it answers | Polygon layer | Line layer |
 |---|---|---|---|
-| **Agriculture** | Does soil chemistry actually predict yield? | crop fields | irrigation network |
+| **Agriculture** | Does soil chemistry predict yield? Which fields look alike from orbit? | crop fields | irrigation network |
 | **Cadastre** | Where is land value, and where is unused capacity? | parcels, zoning | boundaries & easements |
 | **Demographics** | What drives neighbourhood income? Who commutes where? | census tracts, population grid | commute desire lines |
 | **Transport** | Where does the network fail, and who can reach what? | accessibility isochrones | roads, transit routes |
@@ -100,6 +100,34 @@ is higher resolution than any global provider over Utrecht specifically. The agr
 also layers **ESA WorldCover** (10 m global land cover, 11 classes) over the satellite basemap, as
 a live WMS overlay with its official legend — see `frontend/src/components/BasemapSwitcher.tsx`.
 
+**Satellite embeddings, without Earth Engine in the serving path**
+(`agri.field_embeddings`). Google's [AlphaEarth Foundations](https://deepmind.google/blog/alphaearth-foundations-helps-map-our-planet-in-unprecedented-detail/)
+reduces a year of Sentinel-1, Sentinel-2 and Landsat over a 10 m pixel to 64 numbers on the unit
+sphere. Since November 2025 the embeddings are public COGs under CC-BY 4.0, so the expensive step —
+reducing millions of pixels to one vector per parcel — happens once in the ETL, and **similarity
+becomes a dot product in plain SQL**. No API key, no compute quota, no credentialed service between
+the user and the map.
+
+Because the vectors are unit length, `sum(a[i] * b[i])` *is* the cosine similarity. That single
+fact carries three features:
+
+- **"Find fields like this one."** Click a parcel; the twelve nearest by cosine are outlined on the
+  map. They are scattered across the study area rather than clustered around the query, because the
+  embedding encodes what the land does through a season, not where it sits.
+- **Few-shot crop classification.** Seven labelled parcels — one per crop — already classify **53 %**
+  of the remaining 1,593 correctly against a 14 % random baseline, rising to ~80 % and flattening
+  once the rarest crop runs out of labels. Accuracy is measured on held-out parcels only; scoring
+  the training examples too would report how well a centroid remembers its own inputs.
+- **Rotation detection.** Year-over-year embedding similarity separates a rotated parcel from an
+  unrotated one with **AUC 0.93**, from imagery alone. The *means* sit close together (0.72 against
+  0.91) because a parcel keeps its soil, drainage and shape through a rotation — which is why the
+  distributions, not the averages, are what the chart shows.
+
+The classifier is nearest-centroid, in SQL, deliberately: it is the standard strong baseline for
+well-formed embeddings, it needs no new dependency, and it degrades gracefully as labels are
+removed, which is the whole point of the learning curve. It is ~5 seconds of Postgres and identical
+on every request, so it is cached in-process (`app/services/analysis_cache.py`).
+
 **Remote sensing without a raster tile server** (`backend/app/services/remote_sensing.py`'s
 sibling, `app/api/projects/remote_sensing.py`). Rasters are zonal-summarised onto a 500 m
 vector grid once, at load time — which is what a real workflow produces anyway — so the whole
@@ -127,7 +155,7 @@ backend/          FastAPI: auth, RBAC, MVT tiles, per-project analytics
   alembic/        migration chain -- the single source of truth for the schema
   app/models/     declarative models (auth + spatial), the autogenerate target
   app/services/   layer registry, MVT builder, generic feature/aggregate queries
-  tests/          110 integration tests against live PostGIS
+  tests/          118 integration tests against live PostGIS
 etl/              open-data registry, downloaders, synthetic generator, loader
 frontend/         React + MapLibre + D3
 docs/             data sources, architecture, RBAC, deployment

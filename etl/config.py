@@ -189,6 +189,23 @@ DATASETS: list[Dataset] = [
         fmt="Raster-DEM tiles",
         notes="Consumed directly by MapLibre as a raster-dem source; nothing to download.",
     ),
+    Dataset(
+        project="agriculture",
+        layer="agri_field_embeddings",
+        name="AlphaEarth Foundations Satellite Embedding V1",
+        provider="Google / Google DeepMind",
+        license="CC-BY-4.0",
+        url="https://source.coop/tge-labs/aef",
+        fmt="Cloud-Optimised GeoTIFF, 64 bands, 10 m, annual",
+        notes=(
+            "64 floats per 10 m pixel per year distilled from Sentinel-1/2 and Landsat. Published "
+            "in Earth Engine as GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL, and since Nov 2025 as public "
+            "COGs on Source Cooperative, AWS Open Data and gs://alphaearth_foundations -- which is "
+            "what this project reads, so nothing credentialed sits in the serving path. Zonal-mean "
+            "the pixels per parcel and re-normalise: the vectors are unit length, so a dot product "
+            "is the cosine similarity. Attribution required."
+        ),
+    ),
     # --- remote sensing -----------------------------------------------------
     Dataset(
         project="remote_sensing",

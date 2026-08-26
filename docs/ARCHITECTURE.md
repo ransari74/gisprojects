@@ -195,6 +195,41 @@ than an `overlayIds` prop. Two things had to be got right:
   references in the first place. Both were necessary — the ref makes the effect correct
   regardless of what callers do, and the memoisation stops the churn from happening at all.
 
+### Satellite embeddings are a table of floats, not a service call
+
+`agri.field_embeddings` holds one 64-dimensional unit vector per parcel per year, zonal-averaged
+from AlphaEarth Foundations and re-normalised. Three choices are worth defending.
+
+**No Earth Engine at request time.** Earth Engine is free for noncommercial use, but it is a
+compute service behind a Google account and a project registration — the same class of dependency
+this project rejected for basemap tiles. The embeddings are also published as public COGs on Source
+Cooperative, AWS Open Data and GCS under CC-BY 4.0, so the ETL reads those once and the serving path
+has no credentialed service in it at all.
+
+**`double precision[]`, not pgvector.** pgvector is the right answer at scale, but it is absent from
+several free-tier Postgres offerings, and at 1,600 parcels an ANN index would be theatre — the full
+scan is about 100k multiply-adds and measures 32 ms, which is under the round-trip it rides on.
+A check constraint calling `agri.embedding_similarity(embedding, embedding)` enforces unit length at
+write time, because every similarity the API returns is a bare dot product and is only a *cosine* if
+that holds.
+
+**The classifier is nearest-centroid, in SQL.** Not a gradient-boosted tree: nearest-centroid is the
+standard strong baseline for well-formed embeddings, it introduces no new dependency, and it
+degrades gracefully as labels are removed — which is exactly what the learning curve exists to show.
+Two details in that query matter more than the algorithm:
+
+- **Centroids are re-normalised after averaging.** The mean of unit vectors is not itself unit
+  length, and an unnormalised centroid biases classification toward whichever class happens to be
+  most internally consistent.
+- **Evaluation is on held-out parcels only** (`WHERE rn > k`). Scoring the training examples as well
+  reports how accurately a centroid reproduces its own inputs. That inflated the headline number by
+  about two points here, and it is the standard way a few-shot result gets quietly overstated.
+
+The whole thing is ~5 seconds of Postgres and returns the same answer until the next ETL run, so it
+goes through `app/services/analysis_cache.py` — the same one-instance, process-local argument as the
+tile cache. A set-based rewrite (exploding both sides to one row per dimension and hash-aggregating)
+was tried and was three times *slower* than the 112k function calls, so the function stayed.
+
 ### The remote-sensing project has no raster tile server
 
 Every other project stores vector geometry and serves it as MVT. Remote sensing is inherently

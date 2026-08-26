@@ -8,6 +8,8 @@
 
 import { useMemo, useState, type ReactNode } from 'react';
 
+import type { MapGeoJSONFeature } from 'maplibre-gl';
+
 import type { LayerInfo, ProjectKey, StudyArea, TerrainTileConfig } from '@/api/types';
 import { useCapabilities, useDatasetSources, useStudyArea } from '@/hooks/useApi';
 import { CHROME, DIVERGING, MAP_SEQUENTIAL_RAMP } from '@/styles/theme';
@@ -32,6 +34,10 @@ interface ProjectShellProps {
   initialView?: { center?: [number, number]; zoom: number } | null;
   /** Raster overlays to offer on this project's map (e.g. ESA WorldCover). */
   overlayIds?: string[];
+  /** Called with the clicked map feature, or null when the click hit nothing. */
+  onFeatureClick?: (feature: MapGeoJSONFeature | null) => void;
+  /** Outline these features of `layer` on top of the normal styling. */
+  highlight?: { layer: string; ids: number[] } | null;
   /** Controls rendered above the chart rail. */
   controls?: ReactNode;
   children: ReactNode;
@@ -49,6 +55,8 @@ export function ProjectShell({
   pitch = 0,
   initialView = null,
   overlayIds,
+  onFeatureClick,
+  highlight = null,
   controls,
   children,
 }: ProjectShellProps) {
@@ -171,6 +179,8 @@ export function ProjectShell({
             pitch={pitch}
             initialView={initialView}
             overlayIds={overlayIds}
+            onFeatureClick={onFeatureClick}
+            highlight={highlight}
           />
 
           <div className="layer-panel" style={{ background: ink.surface, borderColor: ink.border }}>

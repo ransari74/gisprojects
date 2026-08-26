@@ -30,6 +30,8 @@ interface MapViewProps {
   pitch?: number;
   bearing?: number;
   onFeatureClick?: (feature: MapGeoJSONFeature | null) => void;
+  /** Outline these features of `layer` on top of the normal styling. */
+  highlight?: { layer: string; ids: number[] } | null;
   className?: string;
   /**
    * Where to open the camera. Layers declare a minZoom, so a project whose
@@ -64,6 +66,7 @@ export function MapView({
   pitch = 0,
   bearing = 0,
   onFeatureClick,
+  highlight = null,
   className,
   initialView = null,
   overlayIds = [],
@@ -514,6 +517,48 @@ export function MapView({
       }
     }
   }, [ready, layerSignature, mode]);
+
+  // --- selection highlight ---------------------------------------------------
+  // Drawn as an extra line layer over the *existing* vector source, filtered by
+  // feature id, rather than as a second GeoJSON source. The tile already
+  // carries every matched parcel, so re-fetching their geometry over HTTP to
+  // draw an outline on top of shapes already on screen would be wasted work.
+  const highlightSignature = highlight
+    ? `${highlight.layer}:${highlight.ids.join(',')}`
+    : '';
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const HIGHLIGHT_ID = '__selection-highlight';
+
+    if (map.getLayer(HIGHLIGHT_ID)) map.removeLayer(HIGHLIGHT_ID);
+    if (!highlight || highlight.ids.length === 0) return;
+    // The source only exists while its layer is switched on; a highlight for a
+    // hidden layer is a no-op rather than an error.
+    if (!map.getSource(highlight.layer)) return;
+
+    map.addLayer({
+      id: HIGHLIGHT_ID,
+      type: 'line',
+      source: highlight.layer,
+      'source-layer': highlight.layer,
+      // Matches on the MVT feature id, which is where ST_AsMVT puts the id
+      // column -- `['get', 'feature_id']` would be null for every feature.
+      filter: ['in', ['id'], ['literal', highlight.ids]],
+      paint: {
+        'line-color': chrome.textPrimary,
+        'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1.6, 16, 3.4],
+        'line-opacity': 0.95,
+      },
+    } as never);
+
+    return () => {
+      if (map.getLayer(HIGHLIGHT_ID)) map.removeLayer(HIGHLIGHT_ID);
+    };
+    // `layerSignature` is a dependency because a data-layer resync removes and
+    // re-adds the source's layers, which drops the highlight with them.
+  }, [ready, highlightSignature, layerSignature, mode]);
 
   // --- click popups ---------------------------------------------------------
   const handleClick = useCallback(

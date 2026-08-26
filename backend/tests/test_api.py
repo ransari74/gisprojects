@@ -639,3 +639,150 @@ async def test_viewer_can_read_remote_sensing(client, viewer_token):
 
     caps = (await client.get("/api/tiles/capabilities", headers=auth(viewer_token))).json()
     assert "remote_sensing" in {p["key"] for p in caps["projects"]}
+
+
+# ---------------------------------------------------------------------------
+# AlphaEarth satellite embeddings
+#
+# These assert that similarity *means* something. An embedding search that
+# returns confident-looking numbers for unrelated parcels is the failure mode
+# worth guarding against, and it is invisible from a 200 response.
+# ---------------------------------------------------------------------------
+async def test_embeddings_are_unit_length(client, admin_token):
+    """Every similarity in the API is a dot product, which is only the cosine
+    if both vectors are normalised. The schema enforces it; this proves the
+    loaded data actually satisfies it."""
+    from sqlalchemy import text
+
+    async with SessionLocal() as db:
+        worst = (
+            await db.execute(
+                text(
+                    """
+                    SELECT max(abs(agri.embedding_similarity(embedding, embedding) - 1.0))
+                    FROM agri.field_embeddings
+                    """
+                )
+            )
+        ).scalar_one()
+    assert worst < 1e-9, f"largest deviation from unit length was {worst}"
+
+
+async def test_similar_fields_returns_agronomically_similar_parcels(client, admin_token):
+    """The top matches should mostly share the query parcel's crop.
+
+    Chance agreement is well under 50% -- the crop mix is seven classes with
+    grassland at ~43% -- so a threshold of 0.5 fails loudly if the ranking ever
+    degrades to noise, without pinning the exact quality of the embedding.
+    """
+    resp = await client.get(
+        "/api/agriculture/similar-fields?field_id=1&limit=12", headers=auth(admin_token)
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+
+    assert len(body["matches"]) == 12
+    assert body["query"]["id"] == 1
+    # Ranked descending, and a cosine is bounded.
+    sims = [m["similarity"] for m in body["matches"]]
+    assert sims == sorted(sims, reverse=True)
+    assert all(-1.0 <= s <= 1.0 for s in sims)
+    assert body["cropAgreement"] >= 0.5
+
+
+async def test_similar_fields_never_returns_the_query_parcel(client, admin_token):
+    body = (
+        await client.get(
+            "/api/agriculture/similar-fields?field_id=7&limit=20", headers=auth(admin_token)
+        )
+    ).json()
+    assert 7 not in {m["id"] for m in body["matches"]}
+
+
+async def test_similar_fields_404s_for_a_parcel_with_no_embedding(client, admin_token):
+    resp = await client.get(
+        "/api/agriculture/similar-fields?field_id=999999", headers=auth(admin_token)
+    )
+    assert resp.status_code == 404
+
+
+async def test_few_shot_accuracy_rises_with_labels(client, admin_token):
+    """The learning curve is the whole claim: an embedding needs very few
+    labels. If it ever came out flat, the feature would be pointless and this
+    is the test that would say so."""
+    body = (
+        await client.get(
+            "/api/agriculture/crop-classification?labels_per_class=20", headers=auth(admin_token)
+        )
+    ).json()
+    curve = body["curve"]
+    assert len(curve) >= 5
+
+    first, last = curve[0], curve[-1]
+    assert first["labelsPerClass"] < last["labelsPerClass"]
+    assert last["accuracy"] > first["accuracy"] + 10
+
+    # One label per class already has to beat random guessing by a wide margin.
+    random_baseline = 100 / body["classCount"]
+    assert first["accuracy"] > 2 * random_baseline
+
+    # Accuracy is measured on held-out parcels, so the evaluation set has to
+    # shrink as the training budget grows. If it did not, the classifier would
+    # be scoring its own training examples.
+    assert last["evaluatedOn"] < first["evaluatedOn"]
+
+
+async def test_classification_confusions_stay_inside_agronomic_groups(client, admin_token):
+    """Errors should be between crops that genuinely look alike from orbit.
+
+    A classifier confusing potatoes with grassland would mean the embedding
+    space is not organised the way the project claims it is.
+    """
+    body = (
+        await client.get(
+            "/api/agriculture/crop-classification?labels_per_class=20", headers=auth(admin_token)
+        )
+    ).json()
+    groups = {
+        "grassland": "fodder", "maize": "fodder",
+        "wheat": "cereal", "barley": "cereal", "rapeseed": "cereal",
+        "potato": "root", "sugarbeet": "root",
+    }
+    top = body["confusion"][:5]
+    assert top, "expected at least one confusion at this label budget"
+    within = sum(
+        1 for c in top if groups.get(c["actual"]) == groups.get(c["predicted"])
+    )
+    assert within >= 3, f"only {within}/5 top confusions were within-group: {top}"
+
+
+async def test_rotation_is_detectable_from_the_imagery_alone(client, admin_token):
+    body = (await client.get("/api/agriculture/rotation", headers=auth(admin_token))).json()
+
+    assert body["changedCount"] > 0 and body["unchangedCount"] > 0
+    # A rotated parcel must look less like its previous year than an unrotated
+    # one. The gap in means is small -- soil and shape persist through a
+    # rotation -- so separability is the number that carries the claim.
+    assert body["meanChanged"] < body["meanUnchanged"]
+    assert body["separability"] > 0.75
+
+    # Dutch dairy pasture is semi-permanent while root crops rotate hard; if
+    # that ordering ever inverted, the generator would have drifted.
+    by_crop = {r["from_crop"]: r["rotated_pct"] for r in body["byCrop"]}
+    assert by_crop["grassland"] < by_crop["potato"]
+
+
+async def test_classification_result_is_cached(client, admin_token):
+    """The query is ~5s of Postgres and identical on every request. The cache
+    is what makes the panel usable, so a regression that bypassed it should
+    fail here rather than just feeling slow."""
+    from app.services.analysis_cache import analysis_cache
+
+    analysis_cache.clear()
+    path = "/api/agriculture/crop-classification?labels_per_class=20"
+    first = (await client.get(path, headers=auth(admin_token))).json()
+    hits_before = analysis_cache.hits
+    second = (await client.get(path, headers=auth(admin_token))).json()
+
+    assert analysis_cache.hits == hits_before + 1
+    assert first["accuracy"] == second["accuracy"]

@@ -1577,6 +1577,7 @@ def generate_all() -> dict[str, list[dict]]:
     out["agri.irrigation_canals"] = gen_canals(r)
     out["agri.soil_samples"] = gen_soil_samples(r, fields)
     out["agri.field_ndvi_timeseries"] = gen_ndvi_series(r, len(fields))
+    out["agri.field_embeddings"] = gen_field_embeddings(r, fields)
 
     # --- parcel -------------------------------------------------------------
     zoning = gen_zoning(r)
@@ -2186,4 +2187,198 @@ def gen_deformation_profiles(r: np.random.Generator) -> list[dict]:
             "risk_class": risk,
             "geom": multi_wkt(line, "line"),
         })
+    return rows
+
+
+# ===========================================================================
+# ALPHAEARTH SATELLITE EMBEDDINGS (agriculture)
+# ===========================================================================
+# Google's AlphaEarth Foundations model reduces a year of Sentinel-1,
+# Sentinel-2 and Landsat observations over a 10 m pixel to 64 numbers on the
+# unit sphere. The real pipeline reads the published COGs and takes a
+# per-parcel mean; this stands in for that step.
+#
+# The whole point of an embedding is that *distance means something*, so
+# drawing 64 random numbers per parcel would be worse than useless -- it would
+# produce a similarity search that returns noise while looking like it works.
+# Instead each parcel's vector is built as a weighted sum of latent "concept"
+# directions, then normalised. Two parcels growing the same crop on the same
+# soil therefore end up genuinely close, and every downstream result -- the
+# similarity ranking, the few-shot classifier, the rotation detector -- is
+# measuring structure that is really in the data.
+
+EMBEDDING_DIM = 64
+
+#: How much each attribute contributes before normalisation. Crop dominates,
+#: because an annual embedding is mostly a phenology curve and phenology is
+#: mostly what crop is growing. Soil is next -- it drives the whole season's
+#: vigour. Management is a smaller, real signal.
+CONCEPT_WEIGHTS = {
+    "crop": 1.00,
+    "soil": 0.55,
+    "wetness": 0.30,
+    "vigour": 0.28,
+    "irrigated": 0.18,
+    "organic": 0.16,
+    "parcel_size": 0.10,
+}
+
+# Residual variation splits in two, and keeping them apart is what makes both
+# the similarity search and the rotation detector behave like the real thing.
+#
+#: Persistent: drainage, field history, cultivar preference, the farmer's own
+#: habits. Drawn once per parcel and reused every year, so it separates two
+#: otherwise-identical parcels without making the same parcel look different
+#: from one year to the next.
+FIELD_NOISE = 1.55
+#: Year-specific: weather, sowing date, sensor and atmospheric residue. Redrawn
+#: annually. Folding this into one undifferentiated noise term would force a
+#: choice between "fields are hard to tell apart" and "a parcel resembles
+#: itself across years", when real embeddings do both at once.
+YEAR_NOISE = 0.62
+
+#: Years the embedding dataset covers here. AlphaEarth itself runs 2017 to
+#: present; six years is enough to show rotation without inflating the table.
+EMBEDDING_YEARS = (2019, 2020, 2021, 2022, 2023, 2024)
+
+#: Crops that rotate, and how likely a parcel is to change crop year to year.
+#: Dutch grassland is semi-permanent -- dairy pasture stays put for years --
+#: while arable land rotates hard, which is exactly the contrast the rotation
+#: analysis is meant to surface.
+ROTATION_PROBABILITY = {
+    "grassland": 0.06,
+    "maize": 0.42,
+    "wheat": 0.66,
+    "potato": 0.85,
+    "sugarbeet": 0.80,
+    "barley": 0.68,
+    "rapeseed": 0.72,
+}
+
+#: Realistic Dutch arable sequences: potato and sugarbeet are demanding and are
+#: separated by cereals, which is what a rotation is for.
+ROTATION_SUCCESSORS = {
+    "grassland": ["grassland", "maize"],
+    "maize": ["maize", "grassland", "wheat"],
+    "wheat": ["potato", "sugarbeet", "barley", "maize"],
+    "potato": ["wheat", "barley", "sugarbeet"],
+    "sugarbeet": ["wheat", "barley", "potato"],
+    "barley": ["potato", "sugarbeet", "rapeseed", "wheat"],
+    "rapeseed": ["wheat", "barley"],
+}
+
+
+def _unit(v: np.ndarray) -> np.ndarray:
+    n = float(np.linalg.norm(v))
+    return v / n if n > 0 else v
+
+
+#: Crops that look alike from orbit, because they *are* alike: same sowing
+#: window, same canopy development, same harvest. A real embedding places them
+#: close together, and a real classifier confuses them -- winter cereals with
+#: each other far more often than with a root crop.
+CROP_GROUPS = {
+    "fodder": ["grassland", "maize"],
+    "winter_cereal": ["wheat", "barley", "rapeseed"],
+    "root": ["potato", "sugarbeet"],
+}
+
+#: How much of a crop's direction is its group rather than itself. Sets the
+#: within-group cosine to share^2 / (share^2 + (1-share)^2) -- about 0.6 here.
+#: Drawing every crop independently instead makes the classes mutually
+#: orthogonal, and a classifier then scores ~100 %: not a good result, just an
+#: artefact of pretending potatoes and barley are unrelated.
+CROP_GROUP_SHARE = 0.72
+
+
+def _concept_basis(r: np.random.Generator, names: list[str]) -> dict[str, np.ndarray]:
+    """One unit direction per concept.
+
+    Random directions in 64 dimensions are very nearly orthogonal -- the
+    expected cosine between two of them is 0 with a standard deviation of
+    1/sqrt(64) = 0.125 -- so unrelated concepts stay separable without the cost
+    and the false tidiness of forcing an exact orthonormal basis. Crop
+    directions are the exception and are built correlated, below.
+    """
+    return {name: _unit(r.normal(0, 1, EMBEDDING_DIM)) for name in names}
+
+
+def _crop_basis(r: np.random.Generator, crops: list[str]) -> dict[str, np.ndarray]:
+    """Crop directions that share a common component within an agronomic group."""
+    group_of = {c: g for g, members in CROP_GROUPS.items() for c in members}
+    group_dirs = {g: _unit(r.normal(0, 1, EMBEDDING_DIM)) for g in CROP_GROUPS}
+    out = {}
+    for crop in crops:
+        own = _unit(r.normal(0, 1, EMBEDDING_DIM))
+        group = group_dirs.get(group_of.get(crop, ""), own)
+        out[crop] = _unit(CROP_GROUP_SHARE * group + (1 - CROP_GROUP_SHARE) * own)
+    return out
+
+
+def gen_field_embeddings(r: np.random.Generator, fields: list[dict]) -> list[dict]:
+    """A 64-dim unit vector per parcel per year, plus that year's declared crop."""
+    crops = [c[0] for c in CROPS]
+    textures = [t[0] for t in SOIL_TEXTURES]
+    basis = _concept_basis(
+        r,
+        [f"soil:{t}" for t in textures]
+        + ["wetness", "vigour", "irrigated", "organic", "parcel_size"],
+    )
+    basis |= {f"crop:{c}": v for c, v in _crop_basis(r, crops).items()}
+
+    rows: list[dict] = []
+    for field_id, field in enumerate(fields, start=1):
+        # Walk the rotation backwards from the 2024 declaration, so the crop
+        # recorded on agri.fields stays the final year's truth.
+        crop_by_year: dict[int, str] = {EMBEDDING_YEARS[-1]: field["crop_type"]}
+        crop = field["crop_type"]
+        for year in reversed(EMBEDDING_YEARS[:-1]):
+            if r.random() < ROTATION_PROBABILITY.get(crop, 0.5):
+                crop = str(r.choice(ROTATION_SUCCESSORS.get(crop, crops)))
+            crop_by_year[year] = crop
+
+        # One draw per parcel, shared by every year.
+        field_residual = r.normal(0, FIELD_NOISE / math.sqrt(EMBEDDING_DIM), EMBEDDING_DIM)
+
+        texture = field["soil_texture"]
+        # Normalise the continuous attributes to roughly [-1, 1] so one of them
+        # cannot dominate the sum through its units alone.
+        wetness = (field["soil_clay_pct"] - 25.0) / 25.0
+        vigour = (field["ndvi_mean"] - 0.62) / 0.25
+        size = min(1.0, field["area_ha"] / 8.0) - 0.5
+
+        for year in EMBEDDING_YEARS:
+            year_crop = crop_by_year[year]
+            vec = CONCEPT_WEIGHTS["crop"] * basis[f"crop:{year_crop}"]
+            vec = vec + CONCEPT_WEIGHTS["soil"] * basis[f"soil:{texture}"]
+            vec = vec + CONCEPT_WEIGHTS["wetness"] * wetness * basis["wetness"]
+            # Season-to-season weather moves vigour around even on an
+            # unchanged parcel; without it, an unrotated field would be
+            # bit-identical across years and the rotation detector would have a
+            # perfectly separable problem, which is not the real one.
+            year_vigour = vigour + float(r.normal(0, 0.35))
+            vec = vec + CONCEPT_WEIGHTS["vigour"] * year_vigour * basis["vigour"]
+            if field["irrigated"]:
+                vec = vec + CONCEPT_WEIGHTS["irrigated"] * basis["irrigated"]
+            if field["organic"]:
+                vec = vec + CONCEPT_WEIGHTS["organic"] * basis["organic"]
+            vec = vec + CONCEPT_WEIGHTS["parcel_size"] * size * basis["parcel_size"]
+            vec = vec + field_residual
+            vec = vec + r.normal(0, YEAR_NOISE / math.sqrt(EMBEDDING_DIM), EMBEDDING_DIM)
+
+            rows.append({
+                "field_id": field_id,
+                "year": year,
+                # Stored at full precision deliberately. Rounding saves nothing
+                # -- a float8 is eight bytes whatever its decimal places -- and
+                # costs enough accuracy to trip the unit-length check
+                # constraint, since the error accumulates over all 64 terms of
+                # the self-dot-product.
+                "embedding": [float(x) for x in _unit(vec)],
+                "declared_crop": year_crop,
+                # A 10 m grid over a parcel of this size, minus the edge pixels
+                # a real zonal mean would drop for mixed-pixel contamination.
+                "pixel_count": max(4, int(field["area_ha"] * 10_000 / 100 * 0.82)),
+                "source": "AlphaEarth Foundations V1",
+            })
     return rows
