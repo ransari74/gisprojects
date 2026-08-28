@@ -57,6 +57,10 @@ const browser = await chromium.launch(
 );
 const ctx = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
 const page = await ctx.newPage();
+// The real-data projects (thousands of fields/parcels/roads/buildings, not
+// the smaller synthetic defaults) take longer than Playwright's 30s default
+// to reach networkidle.
+page.setDefaultNavigationTimeout(90000);
 
 page.on('console', (m) => {
   if (m.type() !== 'error') return;
@@ -75,7 +79,7 @@ page.on('requestfailed', (r) => {
   }
 });
 
-await page.goto(BASE, { waitUntil: 'networkidle' });
+await page.goto(BASE, { waitUntil: 'load' });
 await page.screenshot({ path: `${OUT}01-login.png` });
 
 await page.click('text=admin');
@@ -108,15 +112,27 @@ const PAGES = [
 const HIDE_ENV_NOTICES = '.map-notice { display: none !important; }';
 
 for (const [route, name] of PAGES) {
-  await page.goto(`${BASE}/${route}`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE}/${route}`, { waitUntil: 'load' });
   await page.addStyleTag({ content: HIDE_ENV_NOTICES });
   // Give MapLibre time to fetch and paint its vector tiles.
   await page.waitForTimeout(route === 'admin' ? 1500 : 5000);
+
+  // Enable every layer checkbox in the panel (each project defaults to only
+  // one or two of its layers on) so the screenshot shows the full stack --
+  // e.g. agriculture's irrigation network and soil sample points alongside
+  // the crop fields, not just the default fields-only view. A no-op on
+  // pages without a layer panel (login, landing, admin).
+  const checkboxes = await page.$$('input[type="checkbox"]');
+  for (const cb of checkboxes) {
+    if (!(await cb.isChecked())) await cb.click();
+  }
+  if (checkboxes.length > 0) await page.waitForTimeout(2500);
+
   await page.screenshot({ path: `${OUT}${name}.png` });
   const canvases = await page.evaluate(
     () => document.querySelectorAll('.maplibregl-canvas').length,
   );
-  console.log(`${route.padEnd(14)} map canvases: ${canvases}`);
+  console.log(`${route.padEnd(14)} map canvases: ${canvases}  layers enabled: ${checkboxes.length}`);
 }
 
 console.log(

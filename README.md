@@ -15,7 +15,29 @@ every layer overlays exactly:
 Vector tiles are generated in PostGIS with `ST_AsMVT`, served by FastAPI behind role-based
 access control, and rendered with MapLibre. Analytics panels are D3 over aggregate endpoints.
 
+**Agriculture** — crop fields (real BRP boundaries) colored by crop type, irrigation network and soil sample sites all on:
+
 ![The agriculture project](docs/screenshots/03-agriculture.png)
+
+**Cadastre** — parcels (real BRK boundaries), zoning districts and lot-line easements:
+
+![The cadastre project](docs/screenshots/04-parcel.png)
+
+**Demographics** — census tracts, the population grid and commute desire lines together:
+
+![The demographics project](docs/screenshots/05-demographics.png)
+
+**Transport** — the road network, transit routes and stops, and walk-time accessibility isochrones stacked:
+
+![The transport project](docs/screenshots/06-transport.png)
+
+**3D Terrain** — extruded buildings (real BGT footprints) draped over Copernicus DEM terrain, with contours, hydrology and elevation bands on:
+
+![The 3D terrain project](docs/screenshots/07-terrain-3d.png)
+
+**Remote Sensing** — the change-detection and index layers over the study area:
+
+![The remote sensing project](docs/screenshots/08-remote-sensing.png)
 
 ---
 
