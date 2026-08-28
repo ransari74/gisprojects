@@ -544,17 +544,32 @@ a { color: inherit; }
 /* Degraded-mode notice, e.g. when the third-party DEM is unreachable. */
 .map-notice {
   position: absolute;
+  /* Top-centre, clear of the layer panel (top-left), the basemap switcher
+     (top-right) and the legend (bottom-left). Kept narrow and dismissible: a
+     degraded basemap is worth saying once, not worth parking permanently
+     across the map the reader came to look at. */
   top: 12px;
   left: 50%;
   transform: translateX(-50%);
   display: grid;
   gap: 2px;
-  max-width: 380px;
-  padding: 9px 13px;
+  max-width: 320px;
+  padding: 8px 26px 8px 12px;
   border: 1px solid;
   border-radius: var(--radius);
   font-size: 11.5px;
   line-height: 1.45;
   box-shadow: 0 3px 14px rgba(0, 0, 0, 0.14);
   z-index: 5;
+}
+.map-notice-close {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  padding: 0 3px;
+  background: none;
+  border: 0;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
 }

@@ -93,8 +93,23 @@ const PAGES = [
   ['admin', '09-admin'],
 ];
 
+// The basemap tiles and the terrain DEM come from third-party hosts. Where the
+// capture runs without access to them (CI, a sandbox, an offline laptop) the map
+// correctly reports them as unavailable -- but those banners are a property of
+// the capture environment, not of the app, and leaving them in every screenshot
+// documents the wrong thing.
+//
+// Hidden with a stylesheet rather than dismissed by clicking: the two notices
+// appear on different schedules (the terrain probe resolves quickly, the basemap
+// one waits for a burst of tile errors), so any click-then-capture sequence
+// races whichever banner is slower and intermittently leaves it in the shot.
+// A style rule cannot race. Nothing is concealed either way -- the run still
+// reports every blocked host in its summary.
+const HIDE_ENV_NOTICES = '.map-notice { display: none !important; }';
+
 for (const [route, name] of PAGES) {
   await page.goto(`${BASE}/${route}`, { waitUntil: 'networkidle' });
+  await page.addStyleTag({ content: HIDE_ENV_NOTICES });
   // Give MapLibre time to fetch and paint its vector tiles.
   await page.waitForTimeout(route === 'admin' ? 1500 : 5000);
   await page.screenshot({ path: `${OUT}${name}.png` });

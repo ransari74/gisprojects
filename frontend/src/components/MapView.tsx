@@ -11,6 +11,10 @@ import { buildPaint } from './layerStyles';
 
 import 'maplibre-gl/dist/maplibre-gl.css';
 
+/** Consecutive tile failures, with none succeeding, before the map admits
+ * the basemap is not coming. Six is about one screenful at low zoom. */
+const BASEMAP_ERROR_THRESHOLD = 6;
+
 export interface ActiveLayer {
   info: LayerInfo;
   visible: boolean;
@@ -78,8 +82,11 @@ export function MapView({
   const [mode, setMode] = useState<Mode>(currentMode);
   // Set when the third-party DEM cannot be reached and we drop back to 2D.
   const [terrainFailed, setTerrainFailed] = useState(false);
+  const [terrainNoticeDismissed, setTerrainNoticeDismissed] = useState(false);
   // Set when the selected basemap's tiles repeatedly fail to load.
   const [basemapNotice, setBasemapNotice] = useState<string | null>(null);
+  // Dismissed by the reader; a basemap change clears it again.
+  const [noticeDismissed, setNoticeDismissed] = useState(false);
 
   const { data: basemapList } = useBasemaps();
   const { data: overlayList } = useOverlays();
@@ -206,6 +213,7 @@ export function MapView({
     }
     basemapOwnedRef.current = { sources: [], layers: [] };
     setBasemapNotice(null);
+    setNoticeDismissed(false);
 
     if (!map.getLayer('basemap-background')) {
       map.addLayer(
@@ -254,21 +262,41 @@ export function MapView({
 
     // A raster tile 404/CORS failure just leaves that one tile blank, unlike
     // the terrain DEM (which blanks the whole map) -- so there is no need to
-    // probe first. A note after a real burst of failures is enough to tell
-    // the user their choice did not load rather than leaving them guessing.
+    // probe first. A note after a real burst of failures tells the user their
+    // choice did not load rather than leaving them guessing.
+    //
+    // Errors alone are not enough to make that call, though. Providers have
+    // edges: PDOK's aerial imagery covers the Netherlands and nothing beyond
+    // it, so panning to the coast 404s a screenful of tiles while the basemap
+    // is plainly working. The notice therefore requires a burst of failures
+    // AND no tile having succeeded, and retracts if one arrives late.
     const ownSources = new Set(basemapOwnedRef.current.sources);
+    let loadedCount = 0;
+
     const onError = (event: { error?: Error; sourceId?: string }) => {
       if (!event.sourceId || !ownSources.has(event.sourceId)) return;
       errorCount += 1;
-      if (errorCount === 6) {
+      if (errorCount >= BASEMAP_ERROR_THRESHOLD && loadedCount === 0) {
         setBasemapNotice(
-          `"${activeBasemap.name}" tiles are not loading. Try a different basemap from the switcher.`,
+          `"${activeBasemap.name}" tiles are not loading — the provider may be unreachable ` +
+            `from this network. Try another basemap from the switcher.`,
         );
       }
     };
+
+    const onData = (event: { sourceId?: string; tile?: unknown; sourceDataType?: string }) => {
+      // `tile` is present only when an actual tile arrived, which is what
+      // distinguishes a working provider from a source that merely exists.
+      if (!event.sourceId || !ownSources.has(event.sourceId) || !event.tile) return;
+      loadedCount += 1;
+      setBasemapNotice(null);
+    };
+
     map.on('error', onError);
+    map.on('sourcedata', onData);
     return () => {
       map.off('error', onError);
+      map.off('sourcedata', onData);
     };
   }, [ready, activeBasemap, mode, chrome.page, firstDataLayerId]);
 
@@ -617,8 +645,17 @@ export function MapView({
         />
       )}
 
-      {terrainFailed && (
+      {terrainFailed && !terrainNoticeDismissed && (
         <div className="map-notice" role="status" style={{ background: chrome.surface, borderColor: chrome.border }}>
+          <button
+            type="button"
+            className="map-notice-close"
+            aria-label="Dismiss terrain warning"
+            onClick={() => setTerrainNoticeDismissed(true)}
+            style={{ color: chrome.textMuted }}
+          >
+            ×
+          </button>
           <strong style={{ color: chrome.textPrimary }}>3D terrain unavailable</strong>
           <span style={{ color: chrome.textSecondary }}>
             The elevation tiles could not be reached, so the map is showing the building model on a
@@ -626,8 +663,17 @@ export function MapView({
           </span>
         </div>
       )}
-      {basemapNotice && (
+      {basemapNotice && !noticeDismissed && (
         <div className="map-notice" role="status" style={{ background: chrome.surface, borderColor: chrome.border }}>
+          <button
+            type="button"
+            className="map-notice-close"
+            aria-label="Dismiss basemap warning"
+            onClick={() => setNoticeDismissed(true)}
+            style={{ color: chrome.textMuted }}
+          >
+            ×
+          </button>
           <strong style={{ color: chrome.textPrimary }}>Basemap unavailable</strong>
           <span style={{ color: chrome.textSecondary }}>{basemapNotice}</span>
         </div>
