@@ -91,7 +91,17 @@ AGRICULTURE_LAYERS = [
         ),
         filterable=("crop_type", "crop_year", "yield_class", "soil_texture", "irrigated", "organic"),
         range_filterable=("yield_t_ha", "soil_ph", "ndvi_mean", "area_ha"),
-        min_zoom=8,
+        # Below z11, ST_AsMVTGeom's own tile-pixel quantization -- not our
+        # simplification step -- drops a visibly large share of real crop
+        # parcels (measured ~18% at z9, ~9.5% at z10) because narrow real
+        # field strips round away at that resolution; that's what read as
+        # "fields only appear at a specific zoom" as the drop rate falls off
+        # with each zoom level. z11 keeps it down to a few percent.
+        min_zoom=11,
+        # Real crop parcels ("slagenlandschap" strips, small orchard plots)
+        # can be narrower than the simplification tolerance too -- never
+        # generalise, same reasoning as terrain_buildings above.
+        simplify_below_zoom=0,
         style_hint={"type": "fill", "colorBy": "yield_t_ha", "scheme": "sequential-green"},
         description="Field parcels enriched with SoilGrids chemistry and Sentinel-2 NDVI.",
     ),
