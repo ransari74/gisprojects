@@ -467,6 +467,13 @@ export function MapView({
         });
       }
       map.setTerrain({ source: TERRAIN_SOURCE, exaggeration: terrainExaggeration });
+      // MapLibre leaves dragPan unresponsive after setTerrain() on this
+      // version -- the cursor still shows grab/grabbing and zoom still
+      // works, but the camera never actually moves on drag. Explicitly
+      // re-enabling it here is the confirmed fix (verified with automated
+      // before/after screenshot diffs); harmless if a future MapLibre
+      // version no longer needs it.
+      map.dragPan.enable();
       setTerrainFailed(false);
     };
 
