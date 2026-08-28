@@ -207,6 +207,14 @@ export function ProjectShell({
                   <div className="map-legend-title" style={{ color: ink.textSecondary }}>
                     {layer.title} · {legend!.title}
                   </div>
+                  {layer.name === 'demog_popgrid' && (
+                    // The grid table has no other numeric column to offer --
+                    // this is the one honest thing to say instead of leaving
+                    // it looking unresponsive to the metric selector above.
+                    <p className="figure-note" style={{ color: ink.textMuted, margin: '0 0 6px' }}>
+                      Always shaded by population count -- the metric selector only affects census tracts.
+                    </p>
+                  )}
                   {legend!.kind === 'categorical' ? (
                     <ul className="legend compact">
                       {legend!.entries.map((e) => (
