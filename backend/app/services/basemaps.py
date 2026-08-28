@@ -168,9 +168,16 @@ OVERLAYS: tuple[OverlaySpec, ...] = (
         projects=("agriculture",),
         tiles=(
             "https://services.terrascope.be/wms/v2?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap"
-            "&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=WORLDCOVER_2021_MAP"
+            "&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=WORLDCOVER_2021_MAP&STYLES="
             "&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}",
         ),
+        # NOTE: Terrascope's WMS is currently returning an HTTP/2 stream error
+        # on every request, including a bare GetCapabilities -- confirmed as a
+        # server-side outage, not a request problem (in-depth search found no
+        # working alternative host for this specific product; ESA WorldCover
+        # is otherwise only distributed as raw COGs on AWS, not as a tile
+        # service). Left registered per explicit request; should start
+        # working again on its own if/when Terrascope's service recovers.
         default_opacity=0.7,
         legend=WORLDCOVER_LEGEND,
     ),
