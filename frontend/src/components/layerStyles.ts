@@ -139,6 +139,11 @@ const LAYER_NUMERIC_RANGE: Record<string, [number, number]> = {
   // On a building this is how tall it stands; on a persistent scatterer it is
   // the ground elevation the reflector sits at.
   'rs_subsidence.height_m': [-3, 50],
+  // Per-500m-cell counts top out around 2,900 (p95 ~2,400) -- the shared
+  // `population` default below is tuned for census-tract totals (tens of
+  // thousands of people), which flattened every grid cell into the same
+  // low-end color since no cell gets remotely close to that ceiling.
+  'demog_popgrid.population': [0, 3000],
 };
 
 function numericRangeFor(layerName: string, column: string): [number, number] | undefined {

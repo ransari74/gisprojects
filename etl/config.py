@@ -25,6 +25,25 @@ MIN_LON, MIN_LAT, MAX_LON, MAX_LAT = 4.95, 51.98, 5.30, 52.18
 # Utrecht city centre (Domtoren)
 CENTRE_LON, CENTRE_LAT = 5.1214, 52.0907
 
+# --- real-data sub-area -------------------------------------------------
+# Nested inside STUDY_AREA. Parcels, irrigation canals, roads and buildings
+# are loaded from real open PDOK sources scoped to this smaller Utrecht
+# city-centre bbox -- see etl/real_data.py and `python -m etl.load --real`.
+# Everything else keeps generating synthetically across the full STUDY_AREA
+# above.
+REAL_DATA_BBOX = (5.05, 52.06, 5.15, 52.12)
+REAL_DATA_CENTRE = (
+    (REAL_DATA_BBOX[0] + REAL_DATA_BBOX[2]) / 2,
+    (REAL_DATA_BBOX[1] + REAL_DATA_BBOX[3]) / 2,
+)
+
+# Crop fields are the one real layer harvested over the *full* study area
+# rather than REAL_DATA_BBOX: that bbox is centred on the city, where real
+# farmland is scarce, while BRP crop parcels are large enough (typically
+# several hectares) that covering the whole province doesn't blow up the row
+# count the way BRK's tiny cadastral slivers would.
+AGRI_HARVEST_BBOX = (MIN_LON, MIN_LAT, MAX_LON, MAX_LAT)
+
 STUDY_AREA = {
     "code": "NL-UT",
     "name": "Utrecht, Netherlands",
@@ -80,6 +99,16 @@ DATASETS: list[Dataset] = [
         url="https://maps.isric.org/mapserv?map=/map/phh2o.map",
         fmt="WCS/GeoTIFF",
         notes="phh2o, soc, clay, sand, silt at 0-30 cm; sampled per field centroid.",
+    ),
+    Dataset(
+        project="agriculture",
+        layer="agri_canals",
+        name="Irrigation/drainage canals",
+        provider="OpenStreetMap contributors",
+        license="ODbL-1.0",
+        url="https://overpass-api.de/api/interpreter",
+        fmt="Overpass API (JSON)",
+        notes="waterway=canal/ditch/drain ways; clipped to REAL_DATA_BBOX.",
     ),
     Dataset(
         project="agriculture",

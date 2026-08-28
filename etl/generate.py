@@ -22,6 +22,7 @@ from datetime import UTC, date, datetime, timedelta
 
 import numpy as np
 from shapely.geometry import LineString, Polygon, box
+from shapely.geometry.base import BaseGeometry
 from shapely.ops import unary_union
 
 from etl.config import CENTRE_LAT, CENTRE_LON, MAX_LAT, MAX_LON, MIN_LAT, MIN_LON
@@ -107,11 +108,90 @@ def _texture_for(lon: float) -> tuple[str, tuple, tuple]:
     return SOIL_TEXTURES[4]  # Heuvelrug sand
 
 
-def gen_fields(r: np.random.Generator, n: int = 1600) -> list[dict]:
+def field_attrs_for(r: np.random.Generator, lon: float, lat: float, crop_override: str | None = None) -> dict:
+    """Everything about a field except geometry, code and farm name -- shared
+    by the synthetic generator and the real-data mapper in etl/real_data.py,
+    which supplies real geometry/crop and wants the rest (soil, yield, NDVI)
+    computed the same plausible way."""
     crops, weights = [c[0] for c in CROPS], np.array([c[1] for c in CROPS])
     weights = weights / weights.sum()
     crop_meta = {c[0]: c for c in CROPS}
 
+    texture, clay_rng, sand_rng = _texture_for(lon)
+    clay = float(r.uniform(*clay_rng))
+    sand = float(r.uniform(*sand_rng))
+    silt = max(1.0, 100 - clay - sand)
+
+    # Peat and clay hold water and organic carbon; sand does not.
+    if texture == "peat":
+        soc, ph = float(r.normal(180, 35)), float(r.normal(5.2, 0.35))
+    elif texture in ("clay", "clay loam"):
+        soc, ph = float(r.normal(38, 9)), float(r.normal(7.1, 0.4))
+    elif texture == "loam":
+        soc, ph = float(r.normal(28, 7)), float(r.normal(6.6, 0.4))
+    else:
+        soc, ph = float(r.normal(19, 6)), float(r.normal(5.6, 0.45))
+    soc, ph = max(4.0, soc), min(8.4, max(3.9, ph))
+
+    if crop_override is not None and crop_override in crop_meta:
+        crop = crop_override
+    else:
+        crop = str(r.choice(crops, p=weights))
+    _, _, y_mean, y_sd, wet_pref = crop_meta[crop]
+
+    elev = elevation_scalar(lon, lat)
+    slope = max(0.0, float(r.gamma(1.6, 0.55)) + max(0.0, (elev - 12) * 0.05))
+
+    # Yield responds to pH optimum, organic carbon and slope -- this is what
+    # makes the soil/yield scatter panel show a real relationship.
+    ph_penalty = 1.0 - min(0.35, abs(ph - 6.6) * 0.11)
+    soc_bonus = 1.0 + min(0.18, (soc - 25) * 0.0035)
+    slope_penalty = 1.0 - min(0.20, slope * 0.022)
+    wet_bonus = 1.06 if (wet_pref and texture in ("peat", "clay", "clay loam")) else 1.0
+    irrigated = bool(r.random() < (0.30 if texture in ("sand", "sandy loam") else 0.08))
+    organic = bool(r.random() < 0.11)
+
+    yield_t = y_mean * ph_penalty * soc_bonus * slope_penalty * wet_bonus
+    yield_t *= 0.88 if organic else 1.0
+    yield_t *= 1.05 if irrigated else 1.0
+    yield_t = max(0.4, float(r.normal(yield_t, y_sd * 0.55)))
+
+    # NDVI tracks canopy vigour, so it tracks the same drivers as yield.
+    ndvi_mean = float(np.clip(r.normal(0.62 + (yield_t / y_mean - 1) * 0.13, 0.055), 0.12, 0.93))
+    ndvi_max = float(np.clip(ndvi_mean + abs(r.normal(0.16, 0.04)), 0.2, 0.98))
+
+    ratio = yield_t / y_mean
+    yield_class = "high" if ratio > 1.12 else ("low" if ratio < 0.88 else "medium")
+
+    landcover = (
+        ("Grassland", 30) if crop == "grassland" else ("Cropland", 40)
+    )
+
+    return {
+        "crop_type": crop,
+        "crop_year": 2024,
+        "irrigated": irrigated,
+        "organic": organic,
+        "soil_ph": round(ph, 2),
+        "soil_organic_c": round(soc, 1),
+        "soil_nitrogen": round(soc * float(r.uniform(0.07, 0.11)) * 10, 1),
+        "soil_clay_pct": round(clay, 1),
+        "soil_sand_pct": round(sand, 1),
+        "soil_silt_pct": round(silt, 1),
+        "soil_texture": texture,
+        "landcover_class": landcover[0],
+        "landcover_code": landcover[1],
+        "ndvi_mean": round(ndvi_mean, 4),
+        "ndvi_max": round(ndvi_max, 4),
+        "ndvi_stddev": round(float(abs(r.normal(0.09, 0.025))), 4),
+        "elevation_m": round(elev, 2),
+        "slope_deg": round(slope, 2),
+        "yield_t_ha": round(yield_t, 2),
+        "yield_class": yield_class,
+    }
+
+
+def gen_fields(r: np.random.Generator, n: int = 1600) -> list[dict]:
     fields = []
     for i in range(n):
         lon, lat = sample_rural_point(r, max_urbanity=0.68)
@@ -124,78 +204,13 @@ def gen_fields(r: np.random.Generator, n: int = 1600) -> list[dict]:
         poly = rect_polygon(lon, lat, width, height, rotation)
         area_ha = round(width * height / 10_000, 3)
 
-        texture, clay_rng, sand_rng = _texture_for(lon)
-        clay = float(r.uniform(*clay_rng))
-        sand = float(r.uniform(*sand_rng))
-        silt = max(1.0, 100 - clay - sand)
-
-        # Peat and clay hold water and organic carbon; sand does not.
-        if texture == "peat":
-            soc, ph = float(r.normal(180, 35)), float(r.normal(5.2, 0.35))
-        elif texture in ("clay", "clay loam"):
-            soc, ph = float(r.normal(38, 9)), float(r.normal(7.1, 0.4))
-        elif texture == "loam":
-            soc, ph = float(r.normal(28, 7)), float(r.normal(6.6, 0.4))
-        else:
-            soc, ph = float(r.normal(19, 6)), float(r.normal(5.6, 0.45))
-        soc, ph = max(4.0, soc), min(8.4, max(3.9, ph))
-
-        crop = str(r.choice(crops, p=weights))
-        _, _, y_mean, y_sd, wet_pref = crop_meta[crop]
-
-        elev = elevation_scalar(lon, lat)
-        slope = max(0.0, float(r.gamma(1.6, 0.55)) + max(0.0, (elev - 12) * 0.05))
-
-        # Yield responds to pH optimum, organic carbon and slope -- this is what
-        # makes the soil/yield scatter panel show a real relationship.
-        ph_penalty = 1.0 - min(0.35, abs(ph - 6.6) * 0.11)
-        soc_bonus = 1.0 + min(0.18, (soc - 25) * 0.0035)
-        slope_penalty = 1.0 - min(0.20, slope * 0.022)
-        wet_bonus = 1.06 if (wet_pref and texture in ("peat", "clay", "clay loam")) else 1.0
-        irrigated = bool(r.random() < (0.30 if texture in ("sand", "sandy loam") else 0.08))
-        organic = bool(r.random() < 0.11)
-
-        yield_t = y_mean * ph_penalty * soc_bonus * slope_penalty * wet_bonus
-        yield_t *= 0.88 if organic else 1.0
-        yield_t *= 1.05 if irrigated else 1.0
-        yield_t = max(0.4, float(r.normal(yield_t, y_sd * 0.55)))
-
-        # NDVI tracks canopy vigour, so it tracks the same drivers as yield.
-        ndvi_mean = float(np.clip(r.normal(0.62 + (yield_t / y_mean - 1) * 0.13, 0.055), 0.12, 0.93))
-        ndvi_max = float(np.clip(ndvi_mean + abs(r.normal(0.16, 0.04)), 0.2, 0.98))
-
-        ratio = yield_t / y_mean
-        yield_class = "high" if ratio > 1.12 else ("low" if ratio < 0.88 else "medium")
-
-        landcover = (
-            ("Grassland", 30) if crop == "grassland" else ("Cropland", 40)
-        )
-
+        attrs = field_attrs_for(r, lon, lat)
         fields.append(
             {
                 "field_code": f"NL-UT-{i + 1:05d}",
                 "farm_name": f"{r.choice(FARM_PREFIX)} {r.choice(FARM_SUFFIX)}",
-                "crop_type": crop,
-                "crop_year": 2024,
                 "area_ha": area_ha,
-                "irrigated": irrigated,
-                "organic": organic,
-                "soil_ph": round(ph, 2),
-                "soil_organic_c": round(soc, 1),
-                "soil_nitrogen": round(soc * float(r.uniform(0.07, 0.11)) * 10, 1),
-                "soil_clay_pct": round(clay, 1),
-                "soil_sand_pct": round(sand, 1),
-                "soil_silt_pct": round(silt, 1),
-                "soil_texture": texture,
-                "landcover_class": landcover[0],
-                "landcover_code": landcover[1],
-                "ndvi_mean": round(ndvi_mean, 4),
-                "ndvi_max": round(ndvi_max, 4),
-                "ndvi_stddev": round(float(abs(r.normal(0.09, 0.025))), 4),
-                "elevation_m": round(elev, 2),
-                "slope_deg": round(slope, 2),
-                "yield_t_ha": round(yield_t, 2),
-                "yield_class": yield_class,
+                **attrs,
                 "geom": multi_wkt(poly, "polygon"),
             }
         )
@@ -256,14 +271,26 @@ CANAL_NAMES = [
 ]
 
 
-def _canal_row(r: np.random.Generator, idx: int, line: LineString, canal_type: str) -> dict:
-    length_m = _line_length_m(line)
+def canal_synth_attrs(r: np.random.Generator, canal_type: str) -> dict:
+    """Everything about a canal except identity/geometry -- shared by the
+    synthetic generator and the real-data mapper, which supplies the real
+    line/name/category and wants capacity/lining/condition modelled the same
+    way (neither OSM nor the Dutch water-board register publishes those)."""
     capacity = {
         "primary": r.uniform(8, 26),
         "secondary": r.uniform(2.5, 8),
         "tertiary": r.uniform(0.4, 2.5),
         "drainage": r.uniform(0.2, 1.6),
     }[canal_type]
+    return {
+        "lined": bool(r.random() < (0.7 if canal_type == "primary" else 0.2)),
+        "capacity_m3s": round(float(capacity), 2),
+        "condition": str(r.choice(["good", "fair", "poor"], p=[0.5, 0.36, 0.14])),
+    }
+
+
+def _canal_row(r: np.random.Generator, idx: int, line: LineString, canal_type: str) -> dict:
+    length_m = _line_length_m(line)
     return {
         "canal_code": f"CNL-{idx:04d}",
         "name": (
@@ -272,10 +299,8 @@ def _canal_row(r: np.random.Generator, idx: int, line: LineString, canal_type: s
             else None
         ),
         "canal_type": canal_type,
-        "lined": bool(r.random() < (0.7 if canal_type == "primary" else 0.2)),
-        "capacity_m3s": round(float(capacity), 2),
         "length_m": round(length_m, 1),
-        "condition": str(r.choice(["good", "fair", "poor"], p=[0.5, 0.36, 0.14])),
+        **canal_synth_attrs(r, canal_type),
         "geom": multi_wkt(line, "line"),
     }
 
@@ -446,6 +471,120 @@ STREETS = [
 ]
 
 
+def zoned_polygons(zoning: list[dict]) -> list[tuple[int, dict, BaseGeometry]]:
+    """Zoning districts as (id, row, shapely geometry), skipping the two
+    categories parcels are never placed in. Shared by the synthetic generator
+    and the real-data mapper, which point-in-polygon tests real parcel
+    centroids against the same zoning to fill zone_code/zoning_district_id."""
+    from shapely import wkt as shapely_wkt
+
+    return [
+        (i + 1, z, shapely_wkt.loads(z["geom"]))
+        for i, z in enumerate(zoning)
+        if z["zone_category"] not in ("agricultural", "open_space")
+    ]
+
+
+def find_zone_for(lon: float, lat: float, zones: list[tuple[int, dict, BaseGeometry]]):
+    """First zone containing (lon, lat), or None if the point falls outside
+    every zoning district (real parcels can land outside the synthetic zoning
+    coverage, unlike synthetically-placed ones)."""
+    from shapely.geometry import Point
+
+    pt = Point(lon, lat)
+    for zid, z, geom in zones:
+        if geom.contains(pt):
+            return zid, z
+    return None, None
+
+
+def parcel_attrs_for(
+    r: np.random.Generator, lon: float, lat: float, lot_area_m2: float, zid: int | None, z: dict | None
+) -> dict:
+    """Everything about a parcel except geometry and pin -- shared by the
+    synthetic generator and the real-data mapper, which supplies real
+    geometry/area/zoning match and wants the value model computed the same
+    plausible way (NL doesn't publish parcel-level assessed value)."""
+    cat = z["zone_category"] if z else "residential"
+
+    uses, probs = LAND_USE_BY_ZONE[cat]
+    land_use = str(r.choice(uses, p=probs))
+
+    d_centre = dist_from_centre_m(lon, lat)
+    max_far = z["max_far"] if z else 1.0
+    max_height_m = z["max_height_m"] if z else 12.0
+
+    if land_use == "vacant":
+        far = 0.0
+        floors, year_built, bld_area, units, n_bld = 0, None, 0.0, 0, 0
+    else:
+        far = float(np.clip(r.normal(max_far * 0.62, max_far * 0.26), 0.05, max_far * 1.18))
+        bld_area = lot_area_m2 * far
+        floors = max(1, int(round(float(r.normal(max(1.0, far / 0.55), 1.1)))))
+        floors = min(floors, max(1, int(max_height_m / 3.2)))
+        # Utrecht's building stock: a medieval core, 1900s belts,
+        # post-war expansion and the Leidsche Rijn new town after 1997.
+        year_built = int(np.clip(
+            r.choice(
+                [r.integers(1600, 1900), r.integers(1900, 1945),
+                 r.integers(1945, 1980), r.integers(1980, 2000),
+                 r.integers(2000, 2025)],
+                p=[0.06, 0.22, 0.30, 0.18, 0.24],
+            ),
+            1600, 2025,
+        ))
+        units = (
+            max(1, int(bld_area / float(r.uniform(70, 130))))
+            if land_use in ("residential", "mixed") else 0
+        )
+        n_bld = max(1, int(r.integers(1, 3)))
+
+    # Value model: centrality dominates, then use class, then age.
+    base = 2600 * math.exp(-d_centre / 5200) + 380
+    use_mult = {
+        "office": 1.45, "retail": 1.55, "mixed": 1.25, "residential": 1.0,
+        "industrial": 0.52, "civic": 0.7, "vacant": 0.38,
+    }[land_use]
+    age_mult = 1.0 if year_built is None else (
+        1.22 if year_built > 2010 else (1.12 if year_built > 1990 else
+        (1.18 if year_built < 1900 else 0.94))
+    )
+    value_per_m2 = float(max(60, r.normal(base * use_mult * age_mult, base * 0.18)))
+    land_value = lot_area_m2 * value_per_m2
+    improvement = bld_area * value_per_m2 * 0.55
+    assessed = land_value + improvement
+
+    sale_date = (
+        (date(2015, 1, 1) + timedelta(days=int(r.integers(0, 3800)))).isoformat()
+        if r.random() < 0.62 else None
+    )
+    return {
+        "address": f"{int(r.integers(1, 320))} {r.choice(STREETS)}",
+        "district": z["zone_name"].split()[0] if z else "Buitengebied",
+        "zone_code": z["zone_code"] if z else None,
+        "zoning_district_id": zid,
+        "land_use": land_use,
+        "owner_type": str(r.choice(
+            ["private", "corporate", "municipal", "state", "ngo"],
+            p=[0.58, 0.26, 0.09, 0.04, 0.03],
+        )),
+        "building_area_m2": round(bld_area, 1),
+        "floor_area_ratio": round(far, 3),
+        "coverage_ratio": round(min(0.95, far / max(floors, 1)), 3),
+        "num_buildings": n_bld,
+        "num_units": units,
+        "floors": floors or None,
+        "year_built": year_built,
+        "assessed_value": round(assessed, 2),
+        "land_value": round(land_value, 2),
+        "improvement_value": round(improvement, 2),
+        "value_per_m2": round(value_per_m2, 2),
+        "last_sale_date": sale_date,
+        "last_sale_price": round(assessed * float(r.uniform(0.82, 1.16)), 2) if sale_date else None,
+        "tax_exempt": bool(land_use == "civic" or r.random() < 0.035),
+    }
+
+
 def gen_parcels(r: np.random.Generator, zoning: list[dict], n: int = 3200) -> list[dict]:
     """Parcels laid out in blocks inside each zoning district.
 
@@ -456,11 +595,7 @@ def gen_parcels(r: np.random.Generator, zoning: list[dict], n: int = 3200) -> li
     from shapely import wkt as shapely_wkt
 
     parcels = []
-    zones = [
-        (i + 1, z, shapely_wkt.loads(z["geom"]))
-        for i, z in enumerate(zoning)
-        if z["zone_category"] not in ("agricultural", "open_space")
-    ]
+    zones = zoned_polygons(zoning)
     # Allocate parcels to zones by area so dense districts get more of them.
     areas = np.array([g.area for _, _, g in zones])
     shares = (areas / areas.sum() * n).astype(int)
@@ -493,84 +628,13 @@ def gen_parcels(r: np.random.Generator, zoning: list[dict], n: int = 3200) -> li
             rotation = float(r.normal(0.6, 0.9))
             poly = rect_polygon(lon, lat, width, depth, rotation)
 
-            uses, probs = LAND_USE_BY_ZONE[cat]
-            land_use = str(r.choice(uses, p=probs))
-
-            d_centre = dist_from_centre_m(lon, lat)
-            u = urbanity(lon, lat)
-
-            if land_use == "vacant":
-                far = 0.0
-                floors, year_built, bld_area, units, n_bld = 0, None, 0.0, 0, 0
-            else:
-                far = float(np.clip(r.normal(z["max_far"] * 0.62, z["max_far"] * 0.26), 0.05, z["max_far"] * 1.18))
-                bld_area = lot_area * far
-                floors = max(1, int(round(float(r.normal(max(1.0, far / 0.55), 1.1)))))
-                floors = min(floors, max(1, int(z["max_height_m"] / 3.2)))
-                # Utrecht's building stock: a medieval core, 1900s belts,
-                # post-war expansion and the Leidsche Rijn new town after 1997.
-                year_built = int(np.clip(
-                    r.choice(
-                        [r.integers(1600, 1900), r.integers(1900, 1945),
-                         r.integers(1945, 1980), r.integers(1980, 2000),
-                         r.integers(2000, 2025)],
-                        p=[0.06, 0.22, 0.30, 0.18, 0.24],
-                    ),
-                    1600, 2025,
-                ))
-                units = (
-                    max(1, int(bld_area / float(r.uniform(70, 130))))
-                    if land_use in ("residential", "mixed") else 0
-                )
-                n_bld = max(1, int(r.integers(1, 3)))
-
-            # Value model: centrality dominates, then use class, then age.
-            base = 2600 * math.exp(-d_centre / 5200) + 380
-            use_mult = {
-                "office": 1.45, "retail": 1.55, "mixed": 1.25, "residential": 1.0,
-                "industrial": 0.52, "civic": 0.7, "vacant": 0.38,
-            }[land_use]
-            age_mult = 1.0 if year_built is None else (
-                1.22 if year_built > 2010 else (1.12 if year_built > 1990 else
-                (1.18 if year_built < 1900 else 0.94))
-            )
-            value_per_m2 = float(max(60, r.normal(base * use_mult * age_mult, base * 0.18)))
-            land_value = lot_area * value_per_m2
-            improvement = bld_area * value_per_m2 * 0.55
-            assessed = land_value + improvement
-
             idx += 1
-            sale_date = (
-                (date(2015, 1, 1) + timedelta(days=int(r.integers(0, 3800)))).isoformat()
-                if r.random() < 0.62 else None
-            )
+            attrs = parcel_attrs_for(r, lon, lat, lot_area, zid, z)
             parcels.append(
                 {
                     "parcel_pin": f"UT-{idx:06d}",
-                    "address": f"{int(r.integers(1, 320))} {r.choice(STREETS)}",
-                    "district": z["zone_name"].split()[0],
-                    "zone_code": z["zone_code"],
-                    "zoning_district_id": zid,
-                    "land_use": land_use,
-                    "owner_type": str(r.choice(
-                        ["private", "corporate", "municipal", "state", "ngo"],
-                        p=[0.58, 0.26, 0.09, 0.04, 0.03],
-                    )),
                     "lot_area_m2": round(lot_area, 1),
-                    "building_area_m2": round(bld_area, 1),
-                    "floor_area_ratio": round(far, 3),
-                    "coverage_ratio": round(min(0.95, far / max(floors, 1)), 3),
-                    "num_buildings": n_bld,
-                    "num_units": units,
-                    "floors": floors or None,
-                    "year_built": year_built,
-                    "assessed_value": round(assessed, 2),
-                    "land_value": round(land_value, 2),
-                    "improvement_value": round(improvement, 2),
-                    "value_per_m2": round(value_per_m2, 2),
-                    "last_sale_date": sale_date,
-                    "last_sale_price": round(assessed * float(r.uniform(0.82, 1.16)), 2) if sale_date else None,
-                    "tax_exempt": bool(land_use == "civic" or r.random() < 0.035),
+                    **attrs,
                     "geom": multi_wkt(poly, "polygon"),
                 }
             )
@@ -944,6 +1008,46 @@ HIGHWAY_PROFILE = {
 }
 
 
+#: Fallback profile for OSM highway values not in HIGHWAY_PROFILE (e.g.
+#: unclassified, living_street, path, track, pedestrian, *_link).
+DEFAULT_HIGHWAY_PROFILE = (1, 30, 800, 0.16)
+
+
+def road_synth_attrs(r: np.random.Generator, hclass: str, line: LineString) -> dict:
+    """Everything about a road segment except identity/geometry -- shared by
+    the synthetic generator and the real-data mapper, which supplies the real
+    line/highway_class/name and wants traffic/condition modelled the same way
+    (OSM doesn't publish AADT or congestion)."""
+    lanes, speed, aadt_mean, cong_base = HIGHWAY_PROFILE.get(hclass, DEFAULT_HIGHWAY_PROFILE)
+    length_m = _line_length_m(line)
+    mid = line.interpolate(0.5, normalized=True)
+    u = urbanity(mid.x, mid.y)
+
+    aadt = int(max(0, r.normal(aadt_mean * (0.45 + 0.95 * u), aadt_mean * 0.28))) if aadt_mean else None
+    # Congestion rises with urbanity and with how loaded the link is.
+    load = (aadt / (aadt_mean or 1)) if aadt else 0
+    congestion = float(np.clip(r.normal(cong_base * (0.55 + 0.75 * u) + 0.12 * load, 0.09), 0.01, 0.98))
+    maxspeed = int(np.clip(r.normal(speed, 6), 5, 130))
+    peak_speed = round(maxspeed * (1 - congestion * 0.62), 1)
+
+    return {
+        "functional_class": None,
+        "oneway": bool(r.random() < (0.55 if hclass in ("motorway", "trunk") else 0.14)),
+        "lanes": int(np.clip(r.normal(lanes, 0.6), 1, 6)),
+        "maxspeed_kmh": maxspeed,
+        "surface": str(r.choice(["asphalt", "concrete", "paving_stones", "gravel"],
+                                p=[0.80, 0.09, 0.09, 0.02])),
+        "bridge": bool(r.random() < 0.05),
+        "tunnel": bool(r.random() < 0.02),
+        "length_m": round(length_m, 1),
+        "aadt": aadt,
+        "peak_speed_kmh": peak_speed,
+        "congestion_index": round(congestion, 3),
+        "accident_count": int(r.poisson(max(0.05, (aadt or 0) / 22_000 * (length_m / 1000) * 2.4))),
+        "has_bike_lane": bool(hclass == "cycleway" or (hclass in ("secondary", "tertiary", "residential") and r.random() < 0.66)),
+    }
+
+
 def gen_roads(r: np.random.Generator) -> list[dict]:
     """A radial-plus-ring network: motorway ring, radial trunks, an urban grid
     and rural connectors. Geometry is generated, but the class hierarchy and
@@ -954,36 +1058,13 @@ def gen_roads(r: np.random.Generator) -> list[dict]:
     def add(line: LineString, hclass: str, name: str | None, fclass: int) -> None:
         nonlocal idx
         idx += 1
-        lanes, speed, aadt_mean, cong_base = HIGHWAY_PROFILE[hclass]
-        length_m = _line_length_m(line)
-        mid = line.interpolate(0.5, normalized=True)
-        u = urbanity(mid.x, mid.y)
-
-        aadt = int(max(0, r.normal(aadt_mean * (0.45 + 0.95 * u), aadt_mean * 0.28))) if aadt_mean else None
-        # Congestion rises with urbanity and with how loaded the link is.
-        load = (aadt / (aadt_mean or 1)) if aadt else 0
-        congestion = float(np.clip(r.normal(cong_base * (0.55 + 0.75 * u) + 0.12 * load, 0.09), 0.01, 0.98))
-        maxspeed = int(np.clip(r.normal(speed, 6), 5, 130))
-        peak_speed = round(maxspeed * (1 - congestion * 0.62), 1)
-
+        attrs = road_synth_attrs(r, hclass, line)
+        attrs["functional_class"] = fclass
         roads.append({
             "osm_id": 100_000_000 + idx,
             "name": name,
             "highway_class": hclass,
-            "functional_class": fclass,
-            "oneway": bool(r.random() < (0.55 if hclass in ("motorway", "trunk") else 0.14)),
-            "lanes": int(np.clip(r.normal(lanes, 0.6), 1, 6)),
-            "maxspeed_kmh": maxspeed,
-            "surface": str(r.choice(["asphalt", "concrete", "paving_stones", "gravel"],
-                                    p=[0.80, 0.09, 0.09, 0.02])),
-            "bridge": bool(r.random() < 0.05),
-            "tunnel": bool(r.random() < 0.02),
-            "length_m": round(length_m, 1),
-            "aadt": aadt,
-            "peak_speed_kmh": peak_speed,
-            "congestion_index": round(congestion, 3),
-            "accident_count": int(r.poisson(max(0.05, (aadt or 0) / 22_000 * (length_m / 1000) * 2.4))),
-            "has_bike_lane": bool(hclass == "cycleway" or (hclass in ("secondary", "tertiary", "residential") and r.random() < 0.66)),
+            **attrs,
             "geom": multi_wkt(line, "line"),
         })
 
@@ -1227,13 +1308,67 @@ BUILDING_TYPES = [
 ]
 
 
+def building_synth_attrs(
+    r: np.random.Generator,
+    lon: float,
+    lat: float,
+    footprint_m2: float,
+    btype: str,
+    levels_hint: int | None = None,
+    height_hint: float | None = None,
+) -> dict:
+    """Everything about a building except identity/geometry -- shared by the
+    synthetic generator and the real-data mapper, which supplies the real
+    footprint/type and (when OSM has it tagged) a real height/level count,
+    and wants the rest (roof, solar, energy label) modelled the same way."""
+    u = urbanity(lon, lat)
+    meta = {b[0]: b for b in BUILDING_TYPES}
+    _, _, h_mean, h_sd = meta.get(btype, meta["residential"])
+
+    if height_hint is not None:
+        height = float(np.clip(height_hint, 3.0, 200.0))
+    else:
+        # Height decays with distance from the centre; the CBD keeps the towers.
+        height = float(np.clip(r.normal(h_mean * (0.55 + 0.85 * u), h_sd), 3.0, 92.0))
+    levels = int(levels_hint) if levels_hint else max(1, int(round(height / 3.2)))
+    ground = elevation_scalar(lon, lat)
+
+    # Taller buildings and open surroundings get more sun; the dense
+    # core self-shades, which is exactly what the solar panel shows.
+    shadow = float(np.clip(r.normal(0.16 + 0.42 * u - height / 320, 0.09), 0.02, 0.88))
+    solar = float(np.clip(r.normal(1010 * (1 - shadow * 0.72), 70), 250, 1180))
+
+    year_built = int(np.clip(r.choice(
+        [r.integers(1400, 1900), r.integers(1900, 1945),
+         r.integers(1945, 1980), r.integers(1980, 2005), r.integers(2005, 2026)],
+        p=[0.05, 0.20, 0.31, 0.20, 0.24],
+    ), 1400, 2026))
+    # Newer stock is better insulated, so the energy label correlates with age.
+    energy_bucket = int(np.clip((2026 - year_built) / 22 + r.normal(0, 1.1), 0, 6))
+
+    return {
+        "levels": levels,
+        "height_m": round(height, 2),
+        "min_height_m": 0.0,
+        "ground_elev_m": round(ground, 2),
+        "roof_shape": str(r.choice(["flat", "gabled", "hipped", "pyramidal", "dome"],
+                                   p=[0.52, 0.30, 0.13, 0.04, 0.01])),
+        "roof_color": str(r.choice(["#8b5a2b", "#4a5568", "#7f1d1d", "#334155"])),
+        "footprint_m2": round(footprint_m2, 1),
+        "volume_m3": round(footprint_m2 * height, 1),
+        "year_built": year_built,
+        "solar_potential_kwh_m2": round(solar, 1),
+        "shadow_index": round(shadow, 3),
+        "energy_class": "ABCDEFG"[energy_bucket],
+    }
+
+
 def gen_buildings(r: np.random.Generator, n: int = 11000) -> list[dict]:
     """Footprints in perimeter blocks -- the Dutch urban form -- with heights
     that decay from the centre and a solar model driven by height and shading."""
     types = [b[0] for b in BUILDING_TYPES]
     probs = np.array([b[1] for b in BUILDING_TYPES])
     probs = probs / probs.sum()
-    meta = {b[0]: b for b in BUILDING_TYPES}
 
     buildings = []
     idx = 0
@@ -1281,49 +1416,19 @@ def gen_buildings(r: np.random.Generator, n: int = 11000) -> list[dict]:
                 continue
 
             btype = str(r.choice(types, p=probs))
-            _, _, h_mean, h_sd = meta[btype]
-            # Height decays with distance from the centre; the CBD keeps the towers.
-            height = float(np.clip(r.normal(h_mean * (0.55 + 0.85 * u), h_sd), 3.0, 92.0))
-            levels = max(1, int(round(height / 3.2)))
-
             fw = float(r.uniform(7, 16)) * (1 + 1.4 * u)
             fd = fw * float(r.uniform(1.1, 2.4))
             poly = rect_polygon(lon, lat, fw, fd, block_rot + float(r.normal(0, 0.06)))
             footprint = fw * fd
-            ground = elevation_scalar(lon, lat)
-
-            # Taller buildings and open surroundings get more sun; the dense
-            # core self-shades, which is exactly what the solar panel shows.
-            shadow = float(np.clip(r.normal(0.16 + 0.42 * u - height / 320, 0.09), 0.02, 0.88))
-            solar = float(np.clip(r.normal(1010 * (1 - shadow * 0.72), 70), 250, 1180))
-
-            year_built = int(np.clip(r.choice(
-                [r.integers(1400, 1900), r.integers(1900, 1945),
-                 r.integers(1945, 1980), r.integers(1980, 2005), r.integers(2005, 2026)],
-                p=[0.05, 0.20, 0.31, 0.20, 0.24],
-            ), 1400, 2026))
-            # Newer stock is better insulated, so the energy label correlates with age.
-            energy_bucket = int(np.clip((2026 - year_built) / 22 + r.normal(0, 1.1), 0, 6))
 
             idx += 1
+            attrs = building_synth_attrs(r, lon, lat, footprint, btype)
             buildings.append({
                 "osm_id": 200_000_000 + idx,
                 "name": (f"{r.choice(['Huize', 'Kantoor', 'Complex', 'Gebouw'])} "
                          f"{r.choice(TRACT_NAMES)}") if r.random() < 0.10 else None,
                 "building_type": btype,
-                "levels": levels,
-                "height_m": round(height, 2),
-                "min_height_m": 0.0,
-                "ground_elev_m": round(ground, 2),
-                "roof_shape": str(r.choice(["flat", "gabled", "hipped", "pyramidal", "dome"],
-                                           p=[0.52, 0.30, 0.13, 0.04, 0.01])),
-                "roof_color": str(r.choice(["#8b5a2b", "#4a5568", "#7f1d1d", "#334155"])),
-                "footprint_m2": round(footprint, 1),
-                "volume_m3": round(footprint * height, 1),
-                "year_built": year_built,
-                "solar_potential_kwh_m2": round(solar, 1),
-                "shadow_index": round(shadow, 3),
-                "energy_class": "ABCDEFG"[energy_bucket],
+                **attrs,
                 "geom": multi_wkt(poly, "polygon"),
             })
 
@@ -1564,17 +1669,27 @@ def gen_elevation_profiles(r: np.random.Generator, buildings: list[dict]) -> lis
 # ===========================================================================
 # ORCHESTRATION
 # ===========================================================================
-def generate_all() -> dict[str, list[dict]]:
-    """Build every table's rows. Returns a dict keyed by 'schema.table'."""
+def generate_all(real: bool = False) -> dict[str, list[dict]]:
+    """Build every table's rows. Returns a dict keyed by 'schema.table'.
+
+    When `real=True`, agri.fields, agri.irrigation_canals, parcel.parcels,
+    transport.road_segments and terrain.buildings are fetched from real open
+    sources (PDOK OGC API Features, OSM Overpass) scoped to REAL_DATA_BBOX
+    instead of generated -- see etl/real_data.py. Everything else is
+    unchanged and still synthetic across the full study area.
+    """
     r = rng()
     out: dict[str, list[dict]] = {}
+
+    if real:
+        from etl.real_data import real_buildings, real_canals, real_fields, real_parcels, real_roads
 
     out["meta.study_area"] = [gen_study_area()]
 
     # --- agriculture --------------------------------------------------------
-    fields = gen_fields(r)
+    fields = real_fields(r) if real else gen_fields(r)
     out["agri.fields"] = fields
-    out["agri.irrigation_canals"] = gen_canals(r)
+    out["agri.irrigation_canals"] = real_canals(r) if real else gen_canals(r)
     out["agri.soil_samples"] = gen_soil_samples(r, fields)
     out["agri.field_ndvi_timeseries"] = gen_ndvi_series(r, len(fields))
     out["agri.field_embeddings"] = gen_field_embeddings(r, fields)
@@ -1582,7 +1697,7 @@ def generate_all() -> dict[str, list[dict]]:
     # --- parcel -------------------------------------------------------------
     zoning = gen_zoning(r)
     out["parcel.zoning_districts"] = zoning
-    parcels = gen_parcels(r, zoning)
+    parcels = real_parcels(r, zoning) if real else gen_parcels(r, zoning)
     out["parcel.parcels"] = parcels
     out["parcel.boundary_lines"] = gen_boundary_lines(r, parcels)
     out["parcel.sales_history"] = gen_sales_history(r, parcels)
@@ -1595,7 +1710,7 @@ def generate_all() -> dict[str, list[dict]]:
     out["demog.population_grid"] = gen_population_grid(r)
 
     # --- transport ----------------------------------------------------------
-    roads = gen_roads(r)
+    roads = real_roads(r) if real else gen_roads(r)
     out["transport.road_segments"] = roads
     routes, stops = gen_transit(r)
     out["transport.transit_routes"] = routes
@@ -1604,7 +1719,7 @@ def generate_all() -> dict[str, list[dict]]:
     out["transport.traffic_counts"] = gen_traffic_counts(r, roads)
 
     # --- terrain ------------------------------------------------------------
-    buildings = gen_buildings(r)
+    buildings = real_buildings(r) if real else gen_buildings(r)
     out["terrain.buildings"] = buildings
     out["terrain.contours"] = gen_contours(r)
     out["terrain.drainage_lines"] = gen_drainage(r)

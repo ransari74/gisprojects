@@ -72,7 +72,7 @@ const ROAD_CLASSES = [
   { value: 'residential', label: 'Residential' },
 ];
 
-const INITIAL_VIEW = { center: [5.1214, 52.0907] as [number, number], zoom: 12.4 };
+const INITIAL_VIEW = { center: [5.10, 52.09] as [number, number], zoom: 13.6 };
 const OVERLAY_IDS = ['protected_areas', 'waterways'];
 
 export function TransportProject() {

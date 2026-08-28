@@ -19,6 +19,9 @@ dist/
 # Data downloads
 data/raw/
 data/processed/
+# Resumable per-request cache for etl/real_data.py's harvest step -- not the
+# bundled output (etl/real_boundaries/), which IS committed.
+data/real_cache/
 *.osm.pbf
 *.gpkg
 *.tif

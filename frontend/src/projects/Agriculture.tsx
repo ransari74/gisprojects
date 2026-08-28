@@ -110,7 +110,7 @@ const SOIL_COLUMNS = [
 // fresh object/array literal on every render would needlessly invalidate the
 // memoised layer list downstream (ProjectShell's `active`, MapView's data
 // layer sync effect) on every unrelated re-render.
-const INITIAL_VIEW = { center: [5.1214, 52.0907] as [number, number], zoom: 10.4 };
+const INITIAL_VIEW = { center: [5.10, 52.09] as [number, number], zoom: 13.0 };
 const OVERLAY_IDS = ['esa_worldcover', 'soilgrids_ph', 'soilgrids_soc', 'protected_areas', 'waterways'];
 
 const LABEL_BUDGETS = [
@@ -122,9 +122,11 @@ const LABEL_BUDGETS = [
 
 export function AgricultureProject() {
   const [soilColumn, setSoilColumn] = useState('soil_organic_c');
-  const [colorBy, setColorBy] = useState('yield_t_ha');
+  const [colorBy, setColorBy] = useState('crop_type');
   const [labelBudget, setLabelBudget] = useState('20');
   const [selectedField, setSelectedField] = useState<number | null>(null);
+  const [selectedFieldCode, setSelectedFieldCode] = useState<string | null>(null);
+  const [similarRequested, setSimilarRequested] = useState(false);
 
   const summary = useApiQuery<AgriSummary>(['agri', 'summary'], '/agriculture/summary');
   const byCrop = useApiQuery<YieldByCrop[]>(['agri', 'yield-by-crop'], '/agriculture/yield-by-crop');
@@ -140,7 +142,7 @@ export function AgricultureProject() {
   const similar = useApiQuery<SimilarFields>(
     ['agri', 'similar', selectedField ?? 0],
     `/agriculture/similar-fields?field_id=${selectedField ?? 0}&limit=12`,
-    { enabled: selectedField !== null },
+    { enabled: selectedField !== null && similarRequested },
   );
   const classification = useApiQuery<CropClassification>(
     ['agri', 'classification', labelBudget],
@@ -170,8 +172,10 @@ export function AgricultureProject() {
   // The map hands back the clicked feature; only parcels carry an embedding,
   // so a click on a canal clears the selection rather than querying for one.
   const handleFeatureClick = useCallback((feature: MapGeoJSONFeature | null) => {
+    setSimilarRequested(false);
     if (!feature || feature.source !== 'agri_fields') {
       setSelectedField(null);
+      setSelectedFieldCode(null);
       return;
     }
     // ST_AsMVT promotes the id column to the feature *id* and drops it from
@@ -179,13 +183,18 @@ export function AgricultureProject() {
     // `properties.feature_id`, which is always undefined here.
     const id = feature.id;
     setSelectedField(typeof id === 'number' ? id : Number(id) || null);
+    setSelectedFieldCode((feature.properties?.field_code as string) ?? null);
   }, []);
 
   const highlight = useMemo(() => {
-    const ids = (similar.data?.matches ?? []).map((m) => m.id);
     if (selectedField === null) return null;
+    // Similar-field ids are only mixed in once the user explicitly asks for
+    // them (see the "Find similar fields" button) -- otherwise a click would
+    // outline several agronomically-similar but geographically unrelated
+    // fields, which reads as a bug rather than the intended comparison tool.
+    const ids = similarRequested ? (similar.data?.matches ?? []).map((m) => m.id) : [];
     return { layer: 'agri_fields', ids: [selectedField, ...ids] };
-  }, [selectedField, similar.data]);
+  }, [selectedField, similarRequested, similar.data]);
 
   const curveSeries: Series[] = useMemo(
     () => [
@@ -334,6 +343,17 @@ export function AgricultureProject() {
 
       {selectedField === null ? (
         <EmptyState message="Click any field on the map to find the parcels most similar to it." />
+      ) : !similarRequested ? (
+        <div className="figure" style={{ background: 'transparent' }}>
+          <p className="figure-subtitle">
+            Selected field{selectedFieldCode ? `: ${selectedFieldCode}` : ''}. Similar fields are
+            scattered across the study area agronomically, not geographically, so they're only
+            outlined on the map once you ask for them.
+          </p>
+          <button type="button" className="primary-button" onClick={() => setSimilarRequested(true)}>
+            Find similar fields
+          </button>
+        </div>
       ) : similar.data ? (
         <div className="figure" style={{ background: 'transparent' }}>
           <div className="figure-head">

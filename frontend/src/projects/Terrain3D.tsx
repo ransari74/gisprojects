@@ -71,7 +71,7 @@ interface SolarRow {
 // Building footprints tile from z14, and the extrusions only read as a city
 // model close in, so this project needs a fixed view rather than the
 // study-area fit.
-const INITIAL_VIEW = { center: [5.1214, 52.0907] as [number, number], zoom: 14.6 };
+const INITIAL_VIEW = { center: [5.10, 52.09] as [number, number], zoom: 15.2 };
 const OVERLAY_IDS = ['protected_areas', 'waterways'];
 
 export function Terrain3DProject() {

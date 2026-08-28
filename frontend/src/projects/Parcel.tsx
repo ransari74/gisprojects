@@ -73,7 +73,7 @@ interface ZoningCompliance {
 // Hoisted: parcels only tile from z13, so this project needs a fixed close-in
 // view rather than the study-area fit. A literal here would otherwise create
 // a fresh object every render and needlessly invalidate the map's layer sync.
-const INITIAL_VIEW = { center: [5.1214, 52.0907] as [number, number], zoom: 14.2 };
+const INITIAL_VIEW = { center: [5.10, 52.09] as [number, number], zoom: 14.5 };
 const OVERLAY_IDS = ['protected_areas', 'waterways'];
 
 export function ParcelProject() {
