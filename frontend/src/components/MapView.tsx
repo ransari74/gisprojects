@@ -120,6 +120,23 @@ export function MapView({
    * on the map yet, in which case a new layer simply appends on top. */
   const firstDataLayerId = useCallback((): string | undefined => ownedRef.current.layers.values().next().value, []);
 
+  /** Bottommost currently-tracked overlay layer, if any. */
+  const firstOverlayLayerId = useCallback(
+    (): string | undefined => overlayOwnedRef.current.values().next().value?.layer,
+    [],
+  );
+
+  /** Where the basemap must be inserted: directly below whichever is lower,
+   * an existing overlay or the first vector data layer. Re-syncing the
+   * basemap (a theme toggle, or switching basemaps) always removes and
+   * re-adds its layers -- anchoring only to the vector layer would insert
+   * the fresh basemap layers *above* an already-present overlay, burying it
+   * under the very basemap it's supposed to sit on top of. */
+  const basemapBeforeId = useCallback(
+    (): string | undefined => firstOverlayLayerId() ?? firstDataLayerId(),
+    [firstOverlayLayerId, firstDataLayerId],
+  );
+
   // --- init -----------------------------------------------------------------
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -218,13 +235,13 @@ export function MapView({
     if (!map.getLayer('basemap-background')) {
       map.addLayer(
         { id: 'basemap-background', type: 'background', paint: { 'background-color': chrome.page } },
-        firstDataLayerId(),
+        basemapBeforeId(),
       );
     } else {
       map.setPaintProperty('basemap-background', 'background-color', chrome.page);
     }
 
-    const beforeId = firstDataLayerId();
+    const beforeId = basemapBeforeId();
     let errorCount = 0;
 
     activeBasemap.layers.forEach((layer, i) => {
@@ -298,7 +315,7 @@ export function MapView({
       map.off('error', onError);
       map.off('sourcedata', onData);
     };
-  }, [ready, activeBasemap, mode, chrome.page, firstDataLayerId]);
+  }, [ready, activeBasemap, mode, chrome.page, basemapBeforeId]);
 
   // --- overlays -----------------------------------------------------------
   // Default each overlay to its server-provided opacity and off (opt-in);
