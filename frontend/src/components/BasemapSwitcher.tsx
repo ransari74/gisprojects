@@ -3,8 +3,13 @@
  * for each raster overlay the current map offers (e.g. ESA WorldCover on the
  * agriculture project). Self-contained -- MapView owns all of the state this
  * reads and writes, so every project page gets the same control for free.
+ *
+ * Collapsed by default behind a header button -- with several projects now
+ * offering multiple overlays, the panel's content can get tall enough to
+ * cover a meaningful chunk of the map otherwise.
  */
 
+import { useState } from 'react';
 import type { BasemapSpec, OverlaySpec } from '@/api/types';
 import { useInk, useMode } from './charts/chartkit';
 
@@ -32,9 +37,33 @@ export function BasemapSwitcher({
 }: BasemapSwitcherProps) {
   const mode = useMode();
   const ink = useInk(mode);
+  const [open, setOpen] = useState(false);
+  const activeBasemap = basemaps.find((b) => b.id === activeId);
+  const activeOverlayCount = overlays.filter((o) => overlayState[o.id]?.visible).length;
 
   return (
-    <div className="basemap-panel" style={{ background: ink.surface, borderColor: ink.border }}>
+    <div
+      className={`basemap-panel${open ? '' : ' collapsed'}`}
+      style={{ background: ink.surface, borderColor: ink.border }}
+    >
+      <button
+        type="button"
+        className="basemap-panel-toggle"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        style={{ color: ink.textPrimary }}
+      >
+        <span>
+          {activeBasemap?.name ?? 'Basemap'}
+          {activeOverlayCount > 0 ? ` + ${activeOverlayCount} overlay${activeOverlayCount > 1 ? 's' : ''}` : ''}
+        </span>
+        <span aria-hidden="true" style={{ color: ink.textSecondary }}>
+          {open ? '✕' : '⚙'}
+        </span>
+      </button>
+
+      {open && (
+        <>
       <div className="basemap-panel-title" style={{ color: ink.textSecondary }}>
         Basemap
       </div>
@@ -119,6 +148,8 @@ export function BasemapSwitcher({
             );
           })}
         </div>
+      )}
+        </>
       )}
     </div>
   );

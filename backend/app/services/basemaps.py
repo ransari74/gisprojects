@@ -188,7 +188,7 @@ OVERLAYS: tuple[OverlaySpec, ...] = (
         projects=("agriculture",),
         tiles=(
             "https://maps.isric.org/mapserv?map=/map/phh2o.map&SERVICE=WMS&VERSION=1.1.1"
-            "&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=phh2o_0-5cm_mean"
+            "&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=phh2o_0-5cm_mean&STYLES="
             "&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}",
         ),
         default_opacity=0.75,
@@ -202,7 +202,7 @@ OVERLAYS: tuple[OverlaySpec, ...] = (
         projects=("agriculture",),
         tiles=(
             "https://maps.isric.org/mapserv?map=/map/soc.map&SERVICE=WMS&VERSION=1.1.1"
-            "&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=soc_0-5cm_mean"
+            "&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=soc_0-5cm_mean&STYLES="
             "&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}",
         ),
         default_opacity=0.75,
@@ -221,30 +221,20 @@ OVERLAYS: tuple[OverlaySpec, ...] = (
         tiles=(
             "https://bio.discomap.eea.europa.eu/arcgis/services/ProtectedSites/"
             "Natura2000_Dyna_WM/MapServer/WmsServer?SERVICE=WMS&VERSION=1.1.1"
-            "&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=0"
+            "&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=TRUE&LAYERS=0&STYLES="
             "&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}",
         ),
         default_opacity=0.55,
         legend=(LandCoverClass(1, "Natura 2000 site", "#2e7d32"),),
     ),
-    # Esri's "Reference" overlay family -- the same collection
-    # Reference/World_Boundaries_and_Places (used in the hybrid basemap above)
-    # belongs to -- also ships a hydro-only sibling: transparent water bodies
-    # and labels, designed specifically to sit on top of plain satellite
-    # imagery, which is exactly where narrow canals are hardest to see.
-    OverlaySpec(
-        id="waterways",
-        name="Waterways",
-        description="Rivers, canals and water bodies with labels",
-        attribution="Esri",
-        projects=("agriculture", "parcel", "demographics", "transport", "terrain"),
-        tiles=(
-            "https://server.arcgisonline.com/ArcGIS/rest/services/"
-            "Reference/World_Hydro_Reference_Overlay/MapServer/tile/{z}/{y}/{x}",
-        ),
-        default_opacity=0.9,
-        legend_note="Esri's cartographic water reference layer -- rivers, canals, lakes and their labels.",
-    ),
+    # A "waterways" overlay (Esri Reference/World_Hydro_Reference_Overlay)
+    # used to live here -- Esri retired that service (confirmed 404 on its
+    # MapServer endpoint) with no equivalent replacement in the same
+    # collection, so it's removed rather than left pointing at a dead URL.
+    # The agriculture project's own agri_canals layer already covers real
+    # canal geometry for the study area; a general-purpose water reference
+    # overlay would need its own real PDOK-sourced vector layer (harvest +
+    # migration + LayerSpec) if it's wanted back.
 )
 
 
