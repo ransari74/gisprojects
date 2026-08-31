@@ -30,6 +30,14 @@ require() {
     fi
 }
 
+# If aws_profile is set, every aws CLI call in these scripts uses it instead
+# of silently falling back to `default` -- important on a machine that
+# already has other AWS profiles configured (work/client accounts) so this
+# personal-account deploy can never accidentally land in the wrong one.
+if [ -n "${aws_profile:-}" ]; then
+    export AWS_PROFILE="$aws_profile"
+fi
+
 # Defaults for anything optional -- required vars are checked by each script
 # via require(), since not every script needs every variable.
 aws_region="${aws_region:-us-east-1}"
