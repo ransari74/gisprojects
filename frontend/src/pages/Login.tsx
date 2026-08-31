@@ -14,6 +14,12 @@ const DEMO_ACCOUNTS = [
 
 const DEMO_PASSWORD = 'demo1234';
 
+// VITE_API_BASE is only set for the deployed build (Cloudflare); local dev
+// and docker-compose both leave it unset and use the same-origin /api proxy
+// instead -- so its presence is a reliable "is this the free-tier deploy?"
+// signal, no separate env flag needed.
+const IS_DEPLOYED = Boolean(import.meta.env.VITE_API_BASE);
+
 export function LoginPage() {
   const { signIn, error } = useAuth();
   const mode = useMode();
@@ -21,6 +27,7 @@ export function LoginPage() {
   const [email, setEmail] = useState('admin@geo.dev');
   const [password, setPassword] = useState(DEMO_PASSWORD);
   const [busy, setBusy] = useState(false);
+  const [showDeployNotice, setShowDeployNotice] = useState(IS_DEPLOYED);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -55,6 +62,23 @@ export function LoginPage() {
           Five analytics projects over Utrecht, Netherlands — agriculture, cadastre, demographics,
           transport and 3D terrain. Vector tiles are served from PostGIS and gated per role.
         </p>
+
+        {showDeployNotice && (
+          <div className="deploy-notice" role="status">
+            <button
+              type="button"
+              className="deploy-notice-close"
+              onClick={() => setShowDeployNotice(false)}
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+            This deployment runs on free-tier hosting — an AWS Lambda API (cold starts) in front of
+            a free-tier Postgres instance, both of which add real latency the first time each layer
+            or chart loads. For a faster, always-warm experience, clone the repo and run it locally
+            with Docker Compose instead.
+          </div>
+        )}
 
         <form onSubmit={submit} className="login-form">
           <label style={{ color: ink.textSecondary }}>
