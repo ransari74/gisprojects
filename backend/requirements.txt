@@ -12,3 +12,4 @@ httpx==0.28.1
 orjson==3.10.13
 alembic==1.14.0
 geoalchemy2==0.16.0
+mangum==0.19.0

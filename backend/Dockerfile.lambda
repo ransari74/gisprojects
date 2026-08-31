@@ -1,0 +1,20 @@
+# syntax=docker/dockerfile:1
+#
+# AWS Lambda container image. Separate from Dockerfile (the docker-compose /
+# Koyeb / HF-style image, which runs uvicorn directly via entrypoint.sh) --
+# a Lambda container image must implement the Lambda Runtime API, which AWS's
+# base image provides, rather than serving HTTP on its own.
+#
+# No migrations run here on purpose: the CMD is a single Lambda handler
+# import, no entrypoint script -- `alembic upgrade head` runs once, out of
+# band, against the database directly (see docs/DEPLOYMENT.md), not on every
+# cold start.
+FROM public.ecr.aws/lambda/python:3.12
+
+COPY requirements.txt ${LAMBDA_TASK_ROOT}/
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app ${LAMBDA_TASK_ROOT}/app
+COPY lambda_handler.py ${LAMBDA_TASK_ROOT}/
+
+CMD ["lambda_handler.handler"]
