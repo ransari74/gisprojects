@@ -69,13 +69,25 @@ if ! aws lambda get-function-url-config --function-name "$lambda_function_name" 
         --region "$aws_region" >/dev/null
     # A resource-based policy is required separately for auth-type NONE to
     # actually be reachable without an AWS SigV4-signed request.
+    # NONE auth means "no identity check", not "no resource-policy check" --
+    # a public Function URL needs BOTH of these statements. Missing either
+    # one produces a 403 that looks identical to a misconfigured auth type
+    # (found this the hard way: AuthType NONE + only the first statement
+    # still 403s). The console adds both automatically when you create a
+    # NONE Function URL there; the CLI does not.
     aws lambda add-permission \
         --function-name "$lambda_function_name" \
         --statement-id FunctionURLAllowPublicAccess \
         --action lambda:InvokeFunctionUrl \
         --principal '*' \
         --function-url-auth-type NONE \
-        --region "$aws_region" >/dev/null 2>&1 || true
+        --region "$aws_region" >/dev/null
+    aws lambda add-permission \
+        --function-name "$lambda_function_name" \
+        --statement-id FunctionURLAllowPublicInvoke \
+        --action lambda:InvokeFunction \
+        --principal '*' \
+        --region "$aws_region" >/dev/null
 fi
 
 FUNCTION_URL="$(aws lambda get-function-url-config --function-name "$lambda_function_name" --region "$aws_region" --query FunctionUrl --output text)"
