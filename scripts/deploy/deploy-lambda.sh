@@ -29,8 +29,22 @@ if [ -z "${secret_key:-}" ]; then
     printf "\nsecret_key='%s'\n" "$secret_key" >> "$ENV_FILE"
 fi
 
+# Each Lambda execution environment holds its own connection pool -- the
+# app's defaults (pool_size=5, max_overflow=10 -- sane for one persistent
+# server handling many requests) let a SINGLE instance open up to 15
+# connections. Aiven's free tier caps max_connections at 20 total, so two
+# concurrent instances at default settings can exhaust it by themselves.
+# 1 + 1 per instance, combined with the reserved-concurrency cap below,
+# keeps the fleet-wide total safely under the limit.
+db_pool_size="${db_pool_size:-1}"
+db_max_overflow="${db_max_overflow:-1}"
+# Ceiling on simultaneous warm instances -- without this, a burst of tile
+# requests (one map view = dozens of concurrent tiles) scales Lambda
+# horizontally with no regard for how many DB connections that implies.
+lambda_reserved_concurrency="${lambda_reserved_concurrency:-10}"
+
 IMAGE_URI="$ecr_repo_uri:latest"
-ENV_VARS="Variables={DATABASE_URL=$pg_uri,SECRET_KEY=$secret_key,CORS_ORIGINS=$cors_origins,SEED_DEMO_USERS=$seed_demo_users}"
+ENV_VARS="Variables={DATABASE_URL=$pg_uri,SECRET_KEY=$secret_key,CORS_ORIGINS=$cors_origins,SEED_DEMO_USERS=$seed_demo_users,DB_POOL_SIZE=$db_pool_size,DB_MAX_OVERFLOW=$db_max_overflow}"
 
 if aws lambda get-function --function-name "$lambda_function_name" --region "$aws_region" >/dev/null 2>&1; then
     echo "==> $lambda_function_name exists -- updating code and config..."
@@ -88,6 +102,26 @@ if ! aws lambda get-function-url-config --function-name "$lambda_function_name" 
         --action lambda:InvokeFunction \
         --principal '*' \
         --region "$aws_region" >/dev/null
+fi
+
+# --- concurrency cap (protects the DB connection limit, not a Lambda quota concern) ---
+# Only settable if the account's total concurrency limit leaves room for both
+# this reservation AND AWS's own required minimum of 10 unreserved -- a new
+# AWS account starts capped at exactly 10 total, which leaves zero room for
+# any reservation at all. In that case the account's own ceiling already
+# caps concurrent instances at 10, so this is a no-op, not a gap: request an
+# AWS service-quota increase for Lambda concurrent executions if you want an
+# explicit, lower cap than the account-wide limit.
+ACCOUNT_LIMIT="$(aws lambda get-account-settings --region "$aws_region" --query 'AccountLimit.ConcurrentExecutions' --output text)"
+if [ "$((ACCOUNT_LIMIT - lambda_reserved_concurrency))" -ge 10 ]; then
+    echo "==> Capping reserved concurrency at $lambda_reserved_concurrency (Aiven free tier: 20 max_connections total)..."
+    aws lambda put-function-concurrency \
+        --function-name "$lambda_function_name" \
+        --reserved-concurrent-executions "$lambda_reserved_concurrency" \
+        --region "$aws_region" >/dev/null
+else
+    echo "==> Skipping reserved-concurrency cap: account limit is $ACCOUNT_LIMIT, which doesn't leave AWS's required 10 unreserved after a $lambda_reserved_concurrency reservation."
+    echo "    The account's own $ACCOUNT_LIMIT-execution ceiling already caps concurrency for now."
 fi
 
 FUNCTION_URL="$(aws lambda get-function-url-config --function-name "$lambda_function_name" --region "$aws_region" --query FunctionUrl --output text)"
