@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     # Demo accounts are created on startup. Turn OFF in any real deployment.
     seed_demo_users: bool = True
     demo_password: str = "demo1234"
+    # A public shared deployment can't let anonymous visitors actually create/
+    # delete/reassign real accounts and permissions -- but hiding the admin
+    # role entirely would defeat the point of a demo that exists to show off
+    # RBAC. This blocks only the five mutating admin endpoints; every read
+    # (list users, roles, permissions, audit log, stats) stays live so the
+    # model is still fully explorable. Off by default (local dev, docker-
+    # compose); the Lambda deploy turns it on.
+    demo_read_only: bool = False
 
     # --- cors ----------------------------------------------------------------
     cors_origins: str = "http://localhost:5173,http://localhost:3000,http://localhost:4173"

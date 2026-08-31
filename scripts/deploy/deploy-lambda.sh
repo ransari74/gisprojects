@@ -42,9 +42,14 @@ db_max_overflow="${db_max_overflow:-1}"
 # requests (one map view = dozens of concurrent tiles) scales Lambda
 # horizontally with no regard for how many DB connections that implies.
 lambda_reserved_concurrency="${lambda_reserved_concurrency:-10}"
+# This is a public, shared demo -- anonymous visitors get the admin login,
+# but can't actually create/delete/reassign real users or roles (see
+# app/api/admin.py's _block_if_demo_read_only). Reads (list users/roles/
+# audit log) stay live so the RBAC model is still fully explorable.
+demo_read_only="${demo_read_only:-true}"
 
 IMAGE_URI="$ecr_repo_uri:latest"
-ENV_VARS="Variables={DATABASE_URL=$pg_uri,SECRET_KEY=$secret_key,CORS_ORIGINS=$cors_origins,SEED_DEMO_USERS=$seed_demo_users,DB_POOL_SIZE=$db_pool_size,DB_MAX_OVERFLOW=$db_max_overflow}"
+ENV_VARS="Variables={DATABASE_URL=$pg_uri,SECRET_KEY=$secret_key,CORS_ORIGINS=$cors_origins,SEED_DEMO_USERS=$seed_demo_users,DB_POOL_SIZE=$db_pool_size,DB_MAX_OVERFLOW=$db_max_overflow,DEMO_READ_ONLY=$demo_read_only}"
 
 if aws lambda get-function --function-name "$lambda_function_name" --region "$aws_region" >/dev/null 2>&1; then
     echo "==> $lambda_function_name exists -- updating code and config..."

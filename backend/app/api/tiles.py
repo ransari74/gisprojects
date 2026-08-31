@@ -160,4 +160,9 @@ async def flush_cache(
 ) -> None:
     if not current.has("admin:users"):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Requires permission: admin:users")
+    if settings.demo_read_only:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "This is a public demo deployment -- flushing the tile cache is disabled here.",
+        )
     mvt.tile_cache.clear()

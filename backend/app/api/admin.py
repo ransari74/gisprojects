@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import delete, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.db import get_db
 from app.core.deps import CurrentUser, require_permission
 from app.core.security import hash_password
@@ -27,6 +28,15 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 AdminUsers = Annotated[CurrentUser, Depends(require_permission("admin:users"))]
 AdminRoles = Annotated[CurrentUser, Depends(require_permission("admin:roles"))]
 Db = Annotated[AsyncSession, Depends(get_db)]
+
+
+def _block_if_demo_read_only() -> None:
+    if settings.demo_read_only:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "This is a public demo deployment -- admin write actions are disabled here. "
+            "Clone the repo and run it locally (see the README) to try user/role administration.",
+        )
 
 
 async def _resolve_roles(db: AsyncSession, names: list[str]) -> list[Role]:
@@ -52,6 +62,7 @@ async def list_users(
 
 @router.post("/users", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 async def create_user(payload: UserCreate, admin: AdminUsers, db: Db) -> User:
+    _block_if_demo_read_only()
     email = payload.email.strip().lower()
     exists = (await db.execute(select(User.id).where(User.email == email))).first()
     if exists:
@@ -89,6 +100,7 @@ async def get_user(user_id: uuid.UUID, _: AdminUsers, db: Db) -> User:
 
 @router.patch("/users/{user_id}", response_model=UserOut)
 async def update_user(user_id: uuid.UUID, payload: UserUpdate, admin: AdminUsers, db: Db) -> User:
+    _block_if_demo_read_only()
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
@@ -118,6 +130,7 @@ async def update_user(user_id: uuid.UUID, payload: UserUpdate, admin: AdminUsers
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: uuid.UUID, admin: AdminUsers, db: Db) -> None:
+    _block_if_demo_read_only()
     if user_id == admin.id:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "You cannot delete your own account")
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
@@ -132,6 +145,7 @@ async def delete_user(user_id: uuid.UUID, admin: AdminUsers, db: Db) -> None:
 async def set_user_roles(
     user_id: uuid.UUID, payload: RoleAssignment, admin: AdminRoles, db: Db
 ) -> User:
+    _block_if_demo_read_only()
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
@@ -166,6 +180,7 @@ async def list_permissions(_: AdminRoles, db: Db) -> list[Permission]:
 async def set_role_permissions(
     role_id: int, payload: RolePermissionUpdate, admin: AdminRoles, db: Db
 ) -> Role:
+    _block_if_demo_read_only()
     role = (await db.execute(select(Role).where(Role.id == role_id))).scalar_one_or_none()
     if role is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Role not found")

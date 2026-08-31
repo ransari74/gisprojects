@@ -71,6 +71,14 @@ export function AdminPage() {
         </div>
       </header>
 
+      {Boolean(import.meta.env.VITE_API_BASE) && (
+        <div className="deploy-notice" role="status">
+          This is a public demo deployment — creating, deleting or reassigning users/roles is
+          disabled here (the API rejects it too, not just this notice). Clone the repo and run it
+          locally to try full admin read/write access.
+        </div>
+      )}
+
       {stats.data && (
         <StatRow>
           <StatTile label="Users" value={stats.data.total_users} hint={`${stats.data.active_users} active`} />
