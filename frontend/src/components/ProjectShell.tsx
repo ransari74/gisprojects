@@ -85,14 +85,31 @@ export function ProjectShell({
     [projectLayers, enabled, tileFilters, colorOverrides],
   );
 
-  const legends = useMemo(
-    () =>
-      active
-        .filter((l) => l.visible)
-        .map((l) => ({ layer: l.info, legend: buildLegend(l.info, mode, l.colorBy) }))
-        .filter((l) => l.legend !== null),
-    [active, mode],
-  );
+  const legends = useMemo(() => {
+    const built = active
+      .filter((l) => l.visible)
+      .map((l) => ({ layer: l.info, legend: buildLegend(l.info, mode, l.colorBy) }))
+      .filter((l) => l.legend !== null);
+
+    // Two layers that encode the same field from the same domain produce
+    // byte-identical legends -- transit routes and transit stops are both
+    // bus/tram/metro/rail/ferry -- and printing the block twice tells the
+    // reader nothing the first one did not. Collapse them, naming both layers.
+    const bySignature = new Map<string, { layer: LayerInfo; legend: NonNullable<ReturnType<typeof buildLegend>>; titles: string[] }>();
+    for (const entry of built) {
+      const legend = entry.legend!;
+      const signature = JSON.stringify([
+        legend.kind,
+        legend.title,
+        legend.range,
+        legend.entries.map((e) => [e.label, e.color]),
+      ]);
+      const existing = bySignature.get(signature);
+      if (existing) existing.titles.push(entry.layer.title);
+      else bySignature.set(signature, { layer: entry.layer, legend, titles: [entry.layer.title] });
+    }
+    return [...bySignature.values()];
+  }, [active, mode]);
 
   function toggle(name: string) {
     setEnabled((prev) => {
@@ -202,10 +219,10 @@ export function ProjectShell({
 
           {legends.length > 0 && (
             <div className="map-legend" style={{ background: ink.surface, borderColor: ink.border }}>
-              {legends.map(({ layer, legend }) => (
+              {legends.map(({ layer, legend, titles }) => (
                 <div key={layer.name} className="map-legend-block">
                   <div className="map-legend-title" style={{ color: ink.textSecondary }}>
-                    {layer.title} · {legend!.title}
+                    {titles.join(' & ')} · {legend!.title}
                   </div>
                   {layer.name === 'demog_popgrid' && (
                     // The grid table has no other numeric column to offer --

@@ -517,12 +517,35 @@ a { color: inherit; }
 /* Stat tiles */
 .stat-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px;
+  /* Every page ships five tiles. At a 140px minimum they wrapped 4 + 1, leaving
+     an orphan on its own row at the top of every project -- the first thing on
+     the page and the raggedest. 112px lets all five sit on one line at the rail
+     width, and still falls back cleanly on a narrow viewport. */
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 8px;
 }
-.stat-tile { padding: 12px 14px; border: 1px solid; border-radius: var(--radius); }
-.stat-label { font-size: 11px; font-weight: 500; margin-bottom: 4px; }
-.stat-value { font-size: 21px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; }
+.stat-tile {
+  padding: 11px 12px;
+  border: 1px solid;
+  border-radius: var(--radius);
+  /* Rows read as a row: the values line up on one baseline and the hints on
+     another, whatever each tile's own content does. */
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+.stat-label {
+  font-size: 10.5px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  line-height: 1.3;
+  /* Two lines' worth, always. "Bike-lane coverage" wraps and "Density" does
+     not, and without a reserved height the wrapped tile pushed its own value
+     a line lower than every neighbour's. */
+  min-height: 2.6em;
+}
+/* Proportional figures, not tabular: these do not align vertically with
+   anything, and equal-width digits read loose at display size. */
+.stat-value { font-size: 19px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; font-variant-numeric: proportional-nums; }
 .stat-unit { font-size: 12px; font-weight: 500; margin-left: 2px; }
 .stat-hint { font-size: 10.5px; margin-top: 3px; }
 

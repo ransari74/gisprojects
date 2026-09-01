@@ -125,12 +125,13 @@ export function BarChart({
   const barColor = (category: string) =>
     monochrome || !colorDomain ? CATEGORICAL[mode][0] : categoricalFor(colorDomain, category, mode);
 
-  const legend: LegendItem[] | undefined =
-    !monochrome && colorDomain
-      ? [...new Map(data.map((d) => [d.category, barColor(d.category)])).entries()].map(
-          ([label, color]) => ({ label, color }),
-        )
-      : undefined;
+  // No legend, even when the bars are individually coloured. Every category is
+  // already named on the axis directly beside its bar, so a legend restates the
+  // axis in a second place and costs a line of vertical space on every card.
+  // The colours still carry cross-view identity -- a crop is the same hue here
+  // as on the map -- which is what colorDomain is for; identifying the bar is
+  // the axis's job.
+  const legend: LegendItem[] | undefined = undefined;
 
   const table = {
     columns: ['category', valueLabel],
@@ -254,7 +255,12 @@ export function BarChart({
                   const end = scales.linear(d.value);
                   const negative = d.value < 0;
                   const barPx = Math.abs(end - zero);
-                  const inside = barPx > LABEL_INSIDE_PX;
+                  // Inside-placement exists for horizontal bars, which run to
+                  // the plot edge and leave no room past the end. A vertical
+                  // bar always has headroom above it (the domain is padded),
+                  // so putting some labels inside and some outside only makes
+                  // one row of numbers sit at two different heights.
+                  const inside = horizontal && barPx > LABEL_INSIDE_PX;
                   const away = negative ? -1 : 1; // direction pointing away from zero
 
                   return horizontal ? (

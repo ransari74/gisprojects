@@ -7,6 +7,7 @@ import {
   drawAxisBottom,
   drawAxisLeft,
   drawGrid,
+  leftMarginFor,
   fmtTwo,
   linearFit,
   titleCase,
@@ -67,9 +68,7 @@ export function ScatterPlot({
   const { ref, width } = useChartSize(height);
   const [tip, setTip] = useState<TooltipState | null>(null);
 
-  const margin = { ...DEFAULT_MARGIN, bottom: 44, left: 58 };
-  const innerW = Math.max(0, width - margin.left - margin.right);
-  const innerH = Math.max(0, height - margin.top - margin.bottom);
+  const innerH = Math.max(0, height - DEFAULT_MARGIN.top - 44);
 
   // Fold the tail of the group list into "Other" so no pair exceeds the cap.
   const { groups, groupOf } = useMemo(() => {
@@ -88,17 +87,27 @@ export function ScatterPlot({
     };
   }, [data]);
 
-  const xScale = useMemo(() => {
-    const extent = d3.extent(data, (d) => d.x) as [number, number];
-    const pad = ((extent[1] ?? 1) - (extent[0] ?? 0)) * 0.05 || 1;
-    return d3.scaleLinear().domain([(extent[0] ?? 0) - pad, (extent[1] ?? 1) + pad]).range([0, innerW]).nice();
-  }, [data, innerW]);
-
+  // y first, then the margin, then x: the left margin has to fit the y tick
+  // labels and the rotated axis title, or a currency axis clips ("median
+  // income (EUR)" was drawn as "me (EUR)" at the fixed 58px).
   const yScale = useMemo(() => {
     const extent = d3.extent(data, (d) => d.y) as [number, number];
     const pad = ((extent[1] ?? 1) - (extent[0] ?? 0)) * 0.06 || 1;
     return d3.scaleLinear().domain([(extent[0] ?? 0) - pad, (extent[1] ?? 1) + pad]).range([innerH, 0]).nice();
   }, [data, innerH]);
+
+  const margin = {
+    ...DEFAULT_MARGIN,
+    bottom: 44,
+    left: leftMarginFor(yScale, (v) => yFormat(Number(v)), { axisTitle: true }),
+  };
+  const innerW = Math.max(0, width - margin.left - margin.right);
+
+  const xScale = useMemo(() => {
+    const extent = d3.extent(data, (d) => d.x) as [number, number];
+    const pad = ((extent[1] ?? 1) - (extent[0] ?? 0)) * 0.05 || 1;
+    return d3.scaleLinear().domain([(extent[0] ?? 0) - pad, (extent[1] ?? 1) + pad]).range([0, innerW]).nice();
+  }, [data, innerW]);
 
   const rScale = useMemo(() => {
     const extent = d3.extent(data, (d) => d.size ?? 1) as [number, number];

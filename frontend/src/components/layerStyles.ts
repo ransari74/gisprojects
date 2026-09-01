@@ -146,6 +146,27 @@ const LAYER_NUMERIC_RANGE: Record<string, [number, number]> = {
   'demog_popgrid.population': [0, 3000],
 };
 
+/**
+ * Polygon layers that cover most of the viewport rather than sitting in it.
+ *
+ * A 0.62 fill is right for a parcel you can see around, and wrong for an
+ * isochrone or a census grid that fills the screen: two of them stacked turn
+ * the map into one flat blue field with the basemap and every line layer
+ * underneath it invisible. Saturated fills belong on small marks; a large area
+ * gets a tint plus a defined edge, and is read from its boundary.
+ */
+const AREA_LAYERS = new Set([
+  'transport_isochrones',
+  'demog_tracts',
+  'demog_popgrid',
+  'parcel_zoning',
+  'terrain_elevation_bands',
+  'rs_index_cells',
+  'rs_water',
+  'rs_scenes',
+  'rs_change',
+]);
+
 function numericRangeFor(layerName: string, column: string): [number, number] | undefined {
   return LAYER_NUMERIC_RANGE[`${layerName}.${column}`] ?? NUMERIC_RANGE[column];
 }
@@ -311,23 +332,30 @@ export function buildPaint(
     return specs;
   }
 
-  // Default: polygon fill with a hairline outline.
+  // Default: polygon fill with an outline.
+  const isArea = AREA_LAYERS.has(info.name);
   return [
     {
       suffix: 'fill',
       type: 'fill',
       paint: {
         'fill-color': color,
-        'fill-opacity': opacityOverride ?? 0.62,
+        'fill-opacity': opacityOverride ?? (isArea ? 0.26 : 0.6),
       },
     },
     {
       suffix: 'outline',
       type: 'line',
       paint: {
-        'line-color': chrome.surface,
-        'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.3, 16, 1.2],
-        'line-opacity': 0.75,
+        // A wide-area polygon draws its own edge in its own colour, because at
+        // a 0.26 tint the boundary is the only thing that still reads. A small
+        // dense polygon keeps the surface-coloured hairline, which is a
+        // separator between neighbours rather than an outline.
+        'line-color': isArea ? color : chrome.surface,
+        'line-width': isArea
+          ? ['interpolate', ['linear'], ['zoom'], 8, 0.6, 14, 1.4]
+          : ['interpolate', ['linear'], ['zoom'], 10, 0.3, 16, 1.2],
+        'line-opacity': isArea ? 0.9 : 0.75,
       },
     },
   ];

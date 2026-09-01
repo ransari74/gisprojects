@@ -7,6 +7,7 @@ import {
   drawAxisBottom,
   drawAxisLeft,
   drawGrid,
+  leftMarginFor,
   fmtTwo,
   titleCase,
   useChartSize,
@@ -69,11 +70,35 @@ export function LineChart({
   const [hoverX, setHoverX] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const margin = { ...DEFAULT_MARGIN, right: 24 };
-  const innerW = Math.max(0, width - margin.left - margin.right);
-  const innerH = Math.max(0, height - margin.top - margin.bottom);
+  // End labels sit outside the plot, so the right margin has to be wide
+  // enough to hold the longest of them. A fixed 24px clipped "Vehicles
+  // counted" to "Veh" -- the label-overflow anti-pattern, on the chart that
+  // opens the transport page.
+  const labelled = series.length >= 2 && series.length <= 4;
+  const longestName = labelled
+    ? Math.max(0, ...series.map((s) => titleCase(s.name).length))
+    : 0;
+  const innerH = Math.max(0, height - DEFAULT_MARGIN.top - DEFAULT_MARGIN.bottom);
 
   const all = useMemo(() => series.flatMap((s) => s.points), [series]);
+
+  // y first: its domain and range depend only on the height, so it can be
+  // built before the left margin is known -- and the left margin has to be
+  // derived from its tick labels rather than fixed, or "50.0 km/h" is drawn
+  // into 52px and comes out as "i0.0 km/h".
+  const yScale = useMemo(() => {
+    const lo = d3.min(all, (p) => Math.min(p.y, p.lower ?? p.y)) ?? 0;
+    const hi = d3.max(all, (p) => Math.max(p.y, p.upper ?? p.y)) ?? 1;
+    const pad = (hi - lo) * 0.08 || 0.5;
+    return d3.scaleLinear().domain([lo - pad, hi + pad]).range([innerH, 0]).nice();
+  }, [all, innerH]);
+
+  const margin = {
+    ...DEFAULT_MARGIN,
+    left: leftMarginFor(yScale, (v) => yFormat(Number(v))),
+    right: labelled ? Math.min(132, Math.max(24, longestName * 6.2 + 12)) : 24,
+  };
+  const innerW = Math.max(0, width - margin.left - margin.right);
 
   const xScale = useMemo(() => {
     const values = all.map((p) => (p.x instanceof Date ? p.x.getTime() : p.x));
@@ -83,13 +108,6 @@ export function LineChart({
       ? d3.scaleTime().domain([new Date(domain[0]), new Date(domain[1])]).range([0, innerW])
       : d3.scaleLinear().domain(domain).range([0, innerW]);
   }, [all, innerW, isTime]);
-
-  const yScale = useMemo(() => {
-    const lo = d3.min(all, (p) => Math.min(p.y, p.lower ?? p.y)) ?? 0;
-    const hi = d3.max(all, (p) => Math.max(p.y, p.upper ?? p.y)) ?? 1;
-    const pad = (hi - lo) * 0.08 || 0.5;
-    return d3.scaleLinear().domain([lo - pad, hi + pad]).range([innerH, 0]).nice();
-  }, [all, innerH]);
 
   const px = (p: SeriesPoint) => xScale(p.x instanceof Date ? p.x : (p.x as never)) as number;
 
@@ -204,8 +222,11 @@ export function LineChart({
                 />
               ))}
 
-              {/* Direct labels at the line end, for up to four series */}
-              {series.length <= 4 &&
+              {/* Direct labels at the line end, for two to four series.
+                  A single series is already named by the title -- labelling it
+                  again just repeats the heading inside the plot, and it is the
+                  case where the label most often ran past the right edge. */}
+              {series.length >= 2 && series.length <= 4 &&
                 series.map((s) => {
                   const last = s.points.at(-1);
                   if (!last) return null;

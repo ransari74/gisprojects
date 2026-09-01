@@ -18,6 +18,33 @@ export interface Margin {
 
 export const DEFAULT_MARGIN: Margin = { top: 16, right: 20, bottom: 34, left: 52 };
 
+/**
+ * Left margin wide enough for the y-axis tick labels actually being drawn.
+ *
+ * The fixed 52px default fits "40k" and clips anything longer: "50.0 km/h"
+ * rendered as "i0.0 km/h", and a rotated "median income (EUR)" axis title as
+ * "me (EUR)". Both are the label-overflow anti-pattern, and both were on the
+ * page rather than in some edge case.
+ *
+ * Width is estimated from character count rather than measured: an exact
+ * measurement needs a DOM text node, and the axis is drawn inside a d3 `call`
+ * after the margin is already fixed. 6.4px per character at 11px is a slight
+ * over-estimate for digits, which errs toward whitespace rather than clipping.
+ */
+export function leftMarginFor(
+  scale: d3.ScaleLinear<number, number>,
+  format?: (v: d3.NumberValue) => string,
+  options: { ticks?: number; axisTitle?: boolean } = {},
+): number {
+  const { ticks = 5, axisTitle = false } = options;
+  const longest = Math.max(
+    0,
+    ...scale.ticks(ticks).map((t) => (format ? format(t) : String(t)).length),
+  );
+  // 8px tick padding + a little breathing room, plus a rotated title's line box.
+  return Math.min(120, Math.max(52, longest * 6.4 + 14 + (axisTitle ? 16 : 0)));
+}
+
 /** Observes the container so charts resize with the layout, not the window. */
 export function useChartSize(height: number) {
   const ref = useRef<HTMLDivElement>(null);
