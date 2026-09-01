@@ -11,6 +11,7 @@
 
 import { useState } from 'react';
 import type { BasemapSpec, OverlaySpec } from '@/api/types';
+import { Icon } from './Icon';
 import { useInk, useMode } from './charts/chartkit';
 
 interface OverlayUiState {
@@ -57,8 +58,8 @@ export function BasemapSwitcher({
           {activeBasemap?.name ?? 'Basemap'}
           {activeOverlayCount > 0 ? ` + ${activeOverlayCount} overlay${activeOverlayCount > 1 ? 's' : ''}` : ''}
         </span>
-        <span aria-hidden="true" style={{ color: ink.textSecondary }}>
-          {open ? '✕' : '⚙'}
+        <span style={{ color: ink.textSecondary, display: 'flex' }}>
+          <Icon name={open ? 'close' : 'layers'} size={15} />
         </span>
       </button>
 
@@ -83,6 +84,10 @@ export function BasemapSwitcher({
                 : { color: ink.textSecondary, borderColor: ink.border }
             }
           >
+            {/* "roads" vs "imagery" is the one distinction that actually
+                separates a set of basemaps that are otherwise just names --
+                the glyph says at a glance what family an option belongs to. */}
+            <Icon name={b.kind === 'roads' ? 'road' : 'image'} size={13} />
             {b.name}
           </button>
         ))}

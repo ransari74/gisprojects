@@ -15,6 +15,7 @@ import { useCapabilities, useDatasetSources, useStudyArea } from '@/hooks/useApi
 import { CHROME, DIVERGING, MAP_SEQUENTIAL_RAMP } from '@/styles/theme';
 import { useInk, useMode } from './charts/chartkit';
 import { EmptyState } from './charts/Primitives';
+import { Icon } from './Icon';
 import { buildLegend } from './layerStyles';
 import { MapView, type ActiveLayer } from './MapView';
 
@@ -201,7 +202,10 @@ export function ProjectShell({
           />
 
           <div className="layer-panel" style={{ background: ink.surface, borderColor: ink.border }}>
-            <div className="layer-panel-title" style={{ color: ink.textSecondary }}>Layers</div>
+            <div className="layer-panel-title" style={{ color: ink.textSecondary }}>
+              <Icon name="layers" size={12} />
+              Layers
+            </div>
             {projectLayers.map((info) => (
               <label key={info.name} className="layer-row" title={info.description}>
                 <input

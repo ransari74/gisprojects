@@ -2,7 +2,16 @@ import { Link } from 'react-router-dom';
 
 import { useAuth } from '@/auth/AuthContext';
 import { useInk, useMode } from '@/components/charts/chartkit';
+import { Icon, type IconName } from '@/components/Icon';
 import { useCapabilities, useProjectCatalogue, useStudyArea } from '@/hooks/useApi';
+
+// ProjectSummary.icon is a plain string from the API (e.g. "sprout"), not the
+// Icon component's literal union, so a project the frontend doesn't yet know
+// an icon for falls back to a generic glyph instead of throwing.
+const KNOWN_ICONS = new Set<IconName>(['sprout', 'map', 'users', 'route', 'mountain', 'satellite']);
+function iconFor(name: string): IconName {
+  return KNOWN_ICONS.has(name as IconName) ? (name as IconName) : 'layers';
+}
 
 const ROUTE_FOR: Record<string, string> = {
   agriculture: '/agriculture',
@@ -49,6 +58,9 @@ export function LandingPage() {
           const body = (
             <>
               <div className="project-card-accent" style={{ background: project.accent }} />
+              <div className="project-card-icon" style={{ background: project.accent }}>
+                <Icon name={iconFor(project.icon)} size={19} color="#fff" />
+              </div>
               <h2 style={{ color: ink.textPrimary }}>{project.title}</h2>
               <p style={{ color: ink.textSecondary }}>{project.tagline}</p>
               <div className="project-card-foot" style={{ color: ink.textMuted }}>

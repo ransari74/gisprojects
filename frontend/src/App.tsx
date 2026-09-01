@@ -1,8 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
+import type { ProjectKey } from '@/api/types';
 import { AuthProvider, useAuth } from '@/auth/AuthContext';
 import { useInk, useMode } from '@/components/charts/chartkit';
+import { Icon, type IconName } from '@/components/Icon';
 import { AdminPage } from '@/pages/Admin';
 import { LandingPage } from '@/pages/Landing';
 import { LoginPage } from '@/pages/Login';
@@ -24,13 +26,17 @@ const queryClient = new QueryClient({
   },
 });
 
-const NAV = [
-  { to: '/agriculture', label: 'Agriculture', project: 'agriculture' as const },
-  { to: '/parcel', label: 'Cadastre', project: 'parcel' as const },
-  { to: '/demographics', label: 'Demographics', project: 'demographics' as const },
-  { to: '/transport', label: 'Transport', project: 'transport' as const },
-  { to: '/terrain', label: '3D Terrain', project: 'terrain' as const },
-  { to: '/remote-sensing', label: 'Remote Sensing', project: 'remote_sensing' as const },
+// Icon names mirror the `icon` field the backend assigns per project in
+// PROJECTS (app/services/layers.py) -- kept as a local literal rather than
+// read off /tiles/capabilities so the nav can render on the very first paint,
+// before that request resolves.
+const NAV: Array<{ to: string; label: string; project: ProjectKey; icon: IconName }> = [
+  { to: '/agriculture', label: 'Agriculture', project: 'agriculture', icon: 'sprout' },
+  { to: '/parcel', label: 'Cadastre', project: 'parcel', icon: 'map' },
+  { to: '/demographics', label: 'Demographics', project: 'demographics', icon: 'users' },
+  { to: '/transport', label: 'Transport', project: 'transport', icon: 'route' },
+  { to: '/terrain', label: '3D Terrain', project: 'terrain', icon: 'mountain' },
+  { to: '/remote-sensing', label: 'Remote Sensing', project: 'remote_sensing', icon: 'satellite' },
 ];
 
 function Shell() {
@@ -64,6 +70,7 @@ function Shell() {
               className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
               style={{ color: ink.textSecondary }}
             >
+              <Icon name={item.icon} size={15} />
               {item.label}
             </NavLink>
           ))}
@@ -73,6 +80,7 @@ function Shell() {
               className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
               style={{ color: ink.textSecondary }}
             >
+              <Icon name="shield" size={15} />
               Admin
             </NavLink>
           )}
