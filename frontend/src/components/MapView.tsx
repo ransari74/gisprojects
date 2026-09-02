@@ -389,12 +389,22 @@ export function MapView({
     const map = mapRef.current;
     if (!map || !ready) return;
     if (initialView) {
+      // Every vector tile source is pinned to a single zoom derived from this
+      // same value (see the data-layers effect below) -- so the interactive
+      // range only needs to cover "a couple of steps out for context" rather
+      // than the full 0-19 MapLibre default. Capping it here, not just
+      // leaving it to convention, is what actually stops a visitor scrolling
+      // their way into a zoom level nothing was ever pinned for.
+      map.setMinZoom(initialView.zoom - 2);
+      map.setMaxZoom(initialView.zoom);
       map.jumpTo({
         center: initialView.center ?? studyArea?.center ?? [5.1214, 52.0907],
         zoom: initialView.zoom,
       });
       return;
     }
+    map.setMinZoom(0);
+    map.setMaxZoom(19);
     if (studyArea) map.fitBounds(studyArea.bbox, { padding: 40, duration: 600, maxZoom: 14 });
   }, [ready, studyArea, initialView]);
 
@@ -508,6 +518,28 @@ export function MapView({
     if (!map || !ready) return;
     const layers = layersRef.current;
 
+    // Every layer on this map is pinned to a single integer tile zoom
+    // derived from the project's own initialView, instead of a fresh live
+    // ST_AsMVT computation for whatever zoom a visitor happens to scroll to.
+    //
+    // MapLibre only overzooms upward from a source's maxzoom (reusing that
+    // tile, scaled) -- a camera zoom BELOW a source's minzoom renders
+    // nothing at all, it does not underzoom the same way. So the base pin
+    // sits at the camera's own minimum (initialView.zoom - 2, see the
+    // fit-to-study-area effect's setMinZoom), not at initialView.zoom
+    // itself -- otherwise the interactive range's low end falls under the
+    // pin and the whole layer goes blank.
+    //
+    // That base can still undershoot a layer's own backend-enforced minZoom
+    // (tiles.py returns an empty tile below it, independent of anything
+    // MapLibre does) -- terrain_buildings at minZoom=14 with a project
+    // opening at zoom 15.2 computes a base pin of 13, which the API then
+    // rejects outright. Clamping per-layer to max(base, info.minZoom) keeps
+    // every layer's pin at or above what the API will actually answer;
+    // Math.min(info.maxZoom, 16) mirrors the previous behaviour when a
+    // layer's own zoom range is narrower than what this project needs.
+    const pinnedZoomBase = initialView ? Math.floor(initialView.zoom - 2) : undefined;
+
     const owned = ownedRef.current;
     const wanted = new Set(layers.filter((l) => l.visible).map((l) => l.info.name));
 
@@ -537,6 +569,12 @@ export function MapView({
       const { info } = active;
       const sourceId = info.name;
       const tiles = tileUrlTemplate(info.name, active.filters);
+      // Per-layer, not just per-project: two layers on the same map can have
+      // different backend minZoom values (e.g. terrain_buildings at 14 vs.
+      // elevation_bands lower), so each needs its own clamped pin rather
+      // than sharing one project-wide number that might undershoot one of
+      // them.
+      const pinnedZoom = pinnedZoomBase !== undefined ? Math.max(pinnedZoomBase, info.minZoom) : undefined;
 
       const existing = map.getSource(sourceId) as maplibregl.VectorTileSource | undefined;
       if (existing) {
@@ -546,9 +584,14 @@ export function MapView({
       } else {
         map.addSource(sourceId, {
           type: 'vector',
+          // minzoom deliberately NOT pinned to the same value as maxzoom:
+          // the whole point is for the camera's entire allowed range (which
+          // sits AT OR ABOVE pinnedZoom) to land in overzoom territory, so
+          // 0 here just means "no lower bound of its own" -- the camera's
+          // own setMinZoom is what actually stops a visitor going lower.
           tiles: [tiles],
-          minzoom: info.minZoom,
-          maxzoom: Math.min(info.maxZoom, 16),
+          minzoom: pinnedZoom !== undefined ? 0 : info.minZoom,
+          maxzoom: pinnedZoom ?? Math.min(info.maxZoom, 16),
         });
         owned.sources.add(sourceId);
       }
@@ -561,6 +604,13 @@ export function MapView({
           type: spec.type,
           source: sourceId,
           'source-layer': info.name,
+          // Always info.minZoom, pin or no pin: if the clamp above pushed
+          // this layer's pin up to its own backend minZoom (because the
+          // project's default -2 floor undershot it), the camera can still
+          // sit below that minZoom for part of its allowed range -- the
+          // layer should simply not render there, exactly like it never did
+          // before this optimisation, rather than requesting a tile the API
+          // will reject.
           minzoom: info.minZoom,
           paint: spec.paint as never,
           ...(spec.layout ? { layout: spec.layout as never } : {}),
@@ -568,7 +618,7 @@ export function MapView({
         owned.layers.add(layerId);
       }
     }
-  }, [ready, layerSignature, mode]);
+  }, [ready, layerSignature, mode, initialView]);
 
   // --- selection highlight ---------------------------------------------------
   // Drawn as an extra line layer over the *existing* vector source, filtered by
