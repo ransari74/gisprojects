@@ -1,0 +1,4 @@
+$schema: https://azuremlschemas.azureedge.net/latest/managedOnlineEndpoint.schema.json
+name: eurosat-landcover-endpoint
+auth_mode: key
+description: Managed online endpoint serving the fine-tuned EuroSAT land-cover classifier

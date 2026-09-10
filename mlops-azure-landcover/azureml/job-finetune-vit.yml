@@ -1,0 +1,15 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+command: >-
+  python -m src.data.download_eurosat --data-dir ${{outputs.data_dir}} &&
+  python -m src.models.finetune --data-dir ${{outputs.data_dir}} --arch vit_tiny_patch16_224
+  --epochs 8 --batch-size 64 --lr 0.0003 --weight-decay 0.00001
+code: ../
+environment:
+  conda_file: environment.yml
+  image: mcr.microsoft.com/azureml/curated/acpt-pytorch-2.2-cuda12.1:latest
+compute: azureml:gpu-cluster
+outputs:
+  data_dir:
+    type: uri_folder
+experiment_name: eurosat-landcover
+display_name: finetune-vit-tiny

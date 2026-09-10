@@ -29,3 +29,12 @@ data/real_cache/
 
 # Repo-level tooling (playwright for the screenshot smoke test)
 /node_modules/
+
+# MLOps projects: local run artifacts (never committed, only generated code/config is)
+mlops-azure-landcover/data/
+mlops-azure-landcover/outputs/
+mlops-azure-landcover/mlruns/
+mlops-azure-landcover/mlflow.db
+mlops-aws-churn/data/
+mlops-aws-churn/experiments/
+mlops-aws-churn/outputs/

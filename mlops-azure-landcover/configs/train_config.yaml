@@ -1,0 +1,30 @@
+# Training defaults, overridable via CLI flags in src/models/*.py
+baseline:
+  epochs: 10
+  batch_size: 128
+  lr: 0.01
+  weight_decay: 0.0001
+
+finetune:
+  epochs: 8
+  batch_size: 64
+  lr: 0.0003
+  weight_decay: 0.00001
+  freeze_backbone_epochs: 1     # warm up the new classification head first
+  architectures:
+    - resnet18
+    - efficientnet_b0
+    - vit_tiny_patch16_224
+
+sweep:
+  target_architecture: resnet18   # set after comparing the three fine-tune runs
+  lr:
+    min: 0.00001
+    max: 0.01
+  weight_decay:
+    min: 0.000001
+    max: 0.001
+  max_total_trials: 12
+  max_concurrent_trials: 4
+  primary_metric: val_f1_macro
+  goal: maximize

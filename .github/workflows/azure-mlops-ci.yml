@@ -1,0 +1,54 @@
+name: Azure MLOps CI/CD
+
+on:
+  pull_request:
+    paths:
+      - "mlops-azure-landcover/**"
+  push:
+    branches: [main]
+    paths:
+      - "mlops-azure-landcover/**"
+
+defaults:
+  run:
+    working-directory: mlops-azure-landcover
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Lint
+        run: |
+          ruff check src tests
+          black --check src tests
+      - name: Unit tests
+        run: pytest tests/ -v
+
+  submit-azure-ml-pipeline:
+    needs: lint-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Install Azure ML CLI extension
+        run: az extension add -n ml -y
+      - name: Submit pipeline job
+        run: |
+          az ml job create -f azureml/pipeline.yml \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --workspace-name "${{ secrets.AZURE_ML_WORKSPACE }}"

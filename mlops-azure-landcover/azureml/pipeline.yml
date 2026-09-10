@@ -1,0 +1,64 @@
+$schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
+type: pipeline
+display_name: eurosat-landcover-pipeline
+experiment_name: eurosat-landcover
+description: >-
+  Data prep -> fine-tune (resnet18) -> evaluate -> register best model.
+  The three-architecture comparison and the HPO sweep are run separately
+  (job-finetune-*.yml, sweep-job.yml) since their outputs feed the manual
+  model-selection step before this pipeline registers a specific run.
+
+settings:
+  default_compute: azureml:gpu-cluster
+
+jobs:
+  prepare_data:
+    type: command
+    component:
+      command: python -m src.data.download_eurosat --data-dir ${{outputs.data_dir}}
+      code: ../
+      environment:
+        conda_file: environment.yml
+        image: mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04
+      outputs:
+        data_dir:
+          type: uri_folder
+
+  finetune_resnet18:
+    type: command
+    inputs:
+      data_dir: ${{parent.jobs.prepare_data.outputs.data_dir}}
+    component:
+      command: >-
+        python -m src.models.finetune --data-dir ${{inputs.data_dir}} --arch resnet18
+        --epochs 8 --batch-size 64 --lr 0.0003 --weight-decay 0.00001
+        --output-dir ${{outputs.model_dir}}
+      code: ../
+      environment:
+        conda_file: environment.yml
+        image: mcr.microsoft.com/azureml/curated/acpt-pytorch-2.2-cuda12.1:latest
+      inputs:
+        data_dir:
+          type: uri_folder
+      outputs:
+        model_dir:
+          type: uri_folder
+
+  evaluate_model:
+    type: command
+    inputs:
+      data_dir: ${{parent.jobs.prepare_data.outputs.data_dir}}
+      model_dir: ${{parent.jobs.finetune_resnet18.outputs.model_dir}}
+    component:
+      command: >-
+        python -m src.evaluate --data-dir ${{inputs.data_dir}} --arch resnet18
+        --checkpoint ${{inputs.model_dir}}/resnet18_best.pt
+      code: ../
+      environment:
+        conda_file: environment.yml
+        image: mcr.microsoft.com/azureml/curated/acpt-pytorch-2.2-cuda12.1:latest
+      inputs:
+        data_dir:
+          type: uri_folder
+        model_dir:
+          type: uri_folder

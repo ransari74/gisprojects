@@ -1,0 +1,58 @@
+name: AWS MLOps CI/CD
+
+on:
+  pull_request:
+    paths:
+      - "mlops-aws-churn/**"
+  push:
+    branches: [main]
+    paths:
+      - "mlops-aws-churn/**"
+
+defaults:
+  run:
+    working-directory: mlops-aws-churn
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Lint
+        run: |
+          ruff check src tests sagemaker
+          black --check src tests sagemaker
+      - name: Unit tests
+        run: pytest tests/ -v
+
+  start-sagemaker-pipeline:
+    needs: lint-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Start SageMaker Pipeline execution
+        run: |
+          python sagemaker/pipeline.py \
+            --role-arn "${{ secrets.SAGEMAKER_EXECUTION_ROLE_ARN }}" \
+            --bucket "${{ secrets.SAGEMAKER_BUCKET }}" \
+            --pipeline-name mlops-churn-pipeline \
+            --submit --execute

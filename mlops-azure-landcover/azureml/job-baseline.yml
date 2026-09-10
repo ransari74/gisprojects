@@ -1,0 +1,14 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+command: >-
+  python -m src.data.download_eurosat --data-dir ${{outputs.data_dir}} &&
+  python -m src.models.baseline --data-dir ${{outputs.data_dir}} --epochs 10
+code: ../
+environment:
+  conda_file: environment.yml
+  image: mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04
+compute: azureml:cpu-cluster
+outputs:
+  data_dir:
+    type: uri_folder
+experiment_name: eurosat-landcover
+display_name: baseline-logreg

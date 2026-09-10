@@ -1,0 +1,28 @@
+# Data configuration for EuroSAT land-cover classification
+dataset:
+  name: eurosat
+  variant: rgb          # torchvision.datasets.EuroSAT ships the RGB (all-band-averaged) variant
+  num_classes: 10
+  class_names:
+    - AnnualCrop
+    - Forest
+    - HerbaceousVegetation
+    - Highway
+    - Industrial
+    - Pasture
+    - PermanentCrop
+    - Residential
+    - River
+    - SeaLake
+
+split:
+  train: 0.70
+  val: 0.15
+  test: 0.15
+  seed: 42
+
+image:
+  size: 64            # native EuroSAT patch size
+  resize_for_pretrained: 224   # upsampled for ImageNet-pretrained backbones
+  normalize_mean: [0.485, 0.456, 0.406]   # ImageNet stats, since backbones are ImageNet-pretrained
+  normalize_std: [0.229, 0.224, 0.225]
