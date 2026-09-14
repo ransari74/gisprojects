@@ -137,6 +137,35 @@ that is where the hook goes.
 
 ---
 
+## The second credential: API keys
+
+A paying integration authenticates with an API key rather than a session token, and the key's
+permissions come from its **plan**, not from its owner's roles:
+
+```
+session token ──→ roles ──→ permissions ─┐
+                                         ├──→ CurrentUser.has("parcel:read")
+API key ──→ subscription ──→ plan ───────┘
+```
+
+`billing.plans.permissions` is a text[] of the *same* codes this document catalogues, which is
+the whole reason the commercial layer needed no second access model. Everything in
+"Where enforcement happens" applies unchanged — `require_permission("parcel:read")` cannot tell
+the two credentials apart, and does not need to.
+
+Two consequences worth being explicit about:
+
+- **A key is not its owner.** A superuser's key carries the free tier's three permissions, not
+  `*`. Pasting a key into a client-side app exposes the tier that was bought, not the account.
+- **Revocation is immediate for keys, deferred for roles.** Resolved keys are cached by digest
+  for `API_KEY_CACHE_SECONDS`, and revoking one drops that exact digest — whereas a role change
+  still waits for the access token to expire, for the reason given above.
+
+Quotas, rate limits and metering ride on top of this and are documented in
+**[MONETIZATION.md](MONETIZATION.md)**.
+
+---
+
 ## Demo accounts
 
 All use the password `demo1234`. They are created on startup by

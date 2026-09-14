@@ -678,3 +678,143 @@ a { color: inherit; }
   line-height: 1;
   cursor: pointer;
 }
+
+/* ---------------------------------------------------------------------------
+   Pricing and account
+   -------------------------------------------------------------------------*/
+.pricing-page { max-width: 1120px; margin: 0 auto; padding: 32px 24px 56px; }
+.pricing-header h1 { margin: 0 0 10px; font-size: 26px; letter-spacing: -0.02em; }
+.pricing-header p { margin: 0 0 24px; max-width: 78ch; font-size: 14px; }
+.pricing-notice {
+  padding: 10px 14px;
+  border: 1px solid;
+  border-radius: var(--radius);
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: var(--gap);
+  margin-bottom: var(--gap);
+}
+.plan-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 20px 18px;
+  border: 1px solid;
+  border-radius: var(--radius);
+}
+.plan-card.current { border-width: 1.5px; }
+.plan-badge {
+  position: absolute;
+  top: -9px;
+  left: 18px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+.plan-card h2 { margin: 2px 0 8px; font-size: 15.5px; letter-spacing: -0.01em; }
+.plan-price { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; }
+.plan-price-suffix { display: block; font-size: 11.5px; font-weight: 400; margin-top: 2px; }
+.plan-blurb { margin: 12px 0 14px; font-size: 12.5px; min-height: 3em; }
+.plan-features { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 7px; font-size: 12.5px; }
+.plan-features li { display: grid; grid-template-columns: 14px 1fr; gap: 6px; align-items: start; }
+.plan-tick { font-weight: 700; }
+.plan-limits {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0 0 16px;
+  font-size: 11px;
+  /* Pushes the CTA to a common baseline across cards of unequal height. */
+  margin-top: auto;
+}
+.plan-limits dt { font-weight: 600; margin-bottom: 2px; }
+.plan-limits dd { margin: 0; }
+.plan-cta { width: 100%; text-align: center; text-decoration: none; display: block; }
+
+.pricing-notes { padding: 22px 24px; border: 1px solid; border-radius: var(--radius); }
+.pricing-notes h3 { margin: 0 0 14px; font-size: 15px; display: flex; align-items: center; gap: 7px; }
+.pricing-notes dl { margin: 0; display: grid; gap: 14px; }
+.pricing-notes dt { font-weight: 650; font-size: 12.5px; margin-bottom: 3px; }
+.pricing-notes dd { margin: 0; font-size: 12.5px; max-width: 88ch; }
+
+.account-page { max-width: 1120px; margin: 0 auto; padding: 32px 24px 56px; display: grid; gap: var(--gap); }
+.account-header h1 { margin: 0 0 10px; font-size: 26px; letter-spacing: -0.02em; }
+.account-header p { margin: 0; max-width: 78ch; font-size: 14px; }
+.account-error { padding: 10px 14px; border: 1px solid; border-radius: var(--radius); font-size: 13px; }
+.account-cta { margin: 14px 0 0; font-size: 12.5px; }
+.account-period { margin: 0 0 12px; font-size: 11.5px; }
+.account-page .admin-section h2 { display: flex; align-items: center; gap: 7px; }
+
+.quota-row { margin-bottom: 14px; }
+.quota-head { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 5px; }
+.quota-track { height: 7px; border-radius: 999px; overflow: hidden; }
+.quota-fill { height: 100%; border-radius: 999px; }
+
+.key-form { display: flex; gap: 8px; margin: 4px 0 14px; }
+.key-form input {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+}
+.key-reveal {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1.5px solid;
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  font-size: 12.5px;
+}
+.key-secret {
+  display: block;
+  padding: 9px 11px;
+  border: 1px solid;
+  border-radius: 6px;
+  font-size: 12px;
+  /* The key is long and must stay selectable in one piece. */
+  word-break: break-all;
+  user-select: all;
+}
+.key-reveal-actions { display: flex; gap: 8px; }
+
+.key-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.key-table th { text-align: left; font-weight: 600; font-size: 11px; padding: 0 10px 7px 0; }
+.key-table td { padding: 8px 10px 8px 0; border-top: 1px solid; }
+.key-table code { font-size: 11.5px; }
+
+.key-snippet {
+  margin: 0;
+  padding: 13px 15px;
+  border: 1px solid;
+  border-radius: var(--radius);
+  font-size: 11.5px;
+  line-height: 1.65;
+  overflow-x: auto;
+}
+
+.landing-api {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: var(--gap);
+  padding: 20px 24px;
+  border: 1px solid;
+  border-radius: var(--radius);
+}
+.landing-api h3 { margin: 0 0 6px; font-size: 15px; }
+.landing-api p { margin: 0; font-size: 12.5px; max-width: 72ch; }
+.landing-api-actions { display: flex; gap: 10px; align-items: center; }
+.landing-api-actions a { text-decoration: none; }

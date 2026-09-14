@@ -5,9 +5,11 @@ import type { ProjectKey } from '@/api/types';
 import { AuthProvider, useAuth } from '@/auth/AuthContext';
 import { useInk, useMode } from '@/components/charts/chartkit';
 import { Icon, type IconName } from '@/components/Icon';
+import { AccountPage } from '@/pages/Account';
 import { AdminPage } from '@/pages/Admin';
 import { LandingPage } from '@/pages/Landing';
 import { LoginPage } from '@/pages/Login';
+import { PricingPage } from '@/pages/Pricing';
 import { AgricultureProject } from '@/projects/Agriculture';
 import { DemographicsProject } from '@/projects/Demographics';
 import { ParcelProject } from '@/projects/Parcel';
@@ -74,6 +76,14 @@ function Shell() {
               {item.label}
             </NavLink>
           ))}
+          <NavLink
+            to="/pricing"
+            className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+            style={{ color: ink.textSecondary }}
+          >
+            <Icon name="tag" size={15} />
+            Pricing
+          </NavLink>
           {can('admin:users') && (
             <NavLink
               to="/admin"
@@ -87,6 +97,14 @@ function Shell() {
         </div>
 
         <div className="nav-user">
+          <NavLink
+            to="/account"
+            className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+            style={{ color: ink.textSecondary }}
+          >
+            <Icon name="key" size={15} />
+            API keys
+          </NavLink>
           <span style={{ color: ink.textSecondary }}>
             {user.full_name ?? user.email}
             <span className="role-chip" style={{ borderColor: ink.border, color: ink.textMuted }}>
@@ -122,6 +140,8 @@ function Shell() {
             path="/remote-sensing"
             element={canOpen('remote_sensing') ? <RemoteSensingProject /> : <Denied />}
           />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/account" element={<AccountPage />} />
           <Route path="/admin" element={can('admin:users') ? <AdminPage /> : <Denied />} />
           <Route path="*" element={<Navigate to="/" replace state={{ from: location }} />} />
         </Routes>

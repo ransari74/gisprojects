@@ -786,3 +786,182 @@ async def test_classification_result_is_cached(client, admin_token):
 
     assert analysis_cache.hits == hits_before + 1
     assert first["accuracy"] == second["accuracy"]
+
+
+# ---------------------------------------------------------------------------
+# Billing: the API as a product
+# ---------------------------------------------------------------------------
+async def test_price_list_needs_no_login(client):
+    """A pricing page behind a login is a pricing page nobody reads."""
+    resp = await client.get("/api/billing/plans")
+    assert resp.status_code == 200
+    plans = resp.json()
+    codes = [p["code"] for p in plans]
+    assert {"free", "starter", "pro", "enterprise"} <= set(codes)
+
+    enterprise = next(p for p in plans if p["code"] == "enterprise")
+    assert enterprise["price_cents"] is None and enterprise["self_serve"] is False
+
+
+async def test_new_account_lands_on_the_default_plan(client, viewer_token):
+    body = (await client.get("/api/billing/subscription", headers=auth(viewer_token))).json()
+    assert body["plan"]["code"] in {"free", "starter", "pro", "enterprise"}
+    assert body["status"] in {"trialing", "active", "past_due", "canceled"}
+
+
+async def test_api_key_round_trip(client, admin_token):
+    """Mint, use, revoke. The secret is returned exactly once."""
+    created = await client.post(
+        "/api/billing/keys", headers=auth(admin_token), json={"name": "integration-test"}
+    )
+    assert created.status_code == 201, created.text
+    payload = created.json()
+    secret = payload["secret"]
+    assert secret.startswith("gpk_")
+    # The listing must never be able to reconstruct it.
+    assert payload["masked"].endswith("*" * 8)
+
+    listed = (await client.get("/api/billing/keys", headers=auth(admin_token))).json()
+    entry = next(k for k in listed if k["id"] == payload["id"])
+    assert "secret" not in entry
+    assert entry["masked"] == payload["masked"]
+
+    # The key authenticates on its own, in all three slots.
+    for headers in (
+        {"X-API-Key": secret},
+        {"Authorization": f"Bearer {secret}"},
+    ):
+        resp = await client.get("/api/billing/subscription", headers=headers)
+        assert resp.status_code == 200, resp.text
+
+    revoked = await client.delete(
+        f"/api/billing/keys/{payload['id']}", headers=auth(admin_token)
+    )
+    assert revoked.status_code == 204
+
+    # Revocation is immediate, not "at the end of the cache TTL".
+    after = await client.get("/api/billing/subscription", headers={"X-API-Key": secret})
+    assert after.status_code == 401
+
+
+async def test_unknown_api_key_is_a_flat_401(client):
+    resp = await client.get(
+        "/api/billing/subscription", headers={"X-API-Key": "gpk_test_deadbeef_not-a-key"}
+    )
+    assert resp.status_code == 401
+
+
+async def test_api_key_sees_only_what_its_plan_grants(client, admin_token):
+    """A superuser's key is NOT a superuser: the plan decides, not the account.
+
+    This is the whole security argument for selling access this way -- an admin
+    who pastes their key into a client-side app leaks their plan, not their
+    account.
+    """
+    created = await client.post(
+        "/api/billing/keys", headers=auth(admin_token), json={"name": "scope-test"}
+    )
+    secret = created.json()["secret"]
+    key_id = created.json()["id"]
+    try:
+        plan = (
+            await client.get("/api/billing/subscription", headers={"X-API-Key": secret})
+        ).json()["plan"]
+        granted = set(plan["permissions"])
+
+        caps = await client.get("/api/tiles/capabilities", headers={"X-API-Key": secret})
+        assert caps.status_code == 200
+        visible = {p["key"] for p in caps.json()["projects"]}
+
+        # Every visible project is one the plan pays for, even though the
+        # underlying account is a superuser that can see all six.
+        for project in visible:
+            assert f"{project}:read" in granted, f"{project} visible without entitlement"
+
+        ungranted = {"parcel", "transport"} - {
+            code.split(":")[0] for code in granted
+        }
+        for project in ungranted:
+            denied = await client.get(
+                f"/api/{project}/summary", headers={"X-API-Key": secret}
+            )
+            assert denied.status_code == 403
+    finally:
+        await client.delete(f"/api/billing/keys/{key_id}", headers=auth(admin_token))
+
+
+async def test_keyed_tile_requests_are_metered(client, admin_token):
+    """Usage has to actually move, or the invoice is fiction."""
+    from app.services import billing as billing_service
+
+    created = await client.post(
+        "/api/billing/keys", headers=auth(admin_token), json={"name": "meter-test"}
+    )
+    secret = created.json()["secret"]
+    key_id = created.json()["id"]
+    try:
+        before = (await client.get("/api/billing/usage", headers=auth(admin_token))).json()
+        started = before["metrics"]["tile_request"]["used"]
+
+        # A layer the plan grants -- agriculture is on every tier.
+        for _ in range(3):
+            resp = await client.get(
+                "/api/tiles/agri_fields/11/1053/675.mvt", headers={"X-API-Key": secret}
+            )
+            assert resp.status_code in (200, 204), resp.text
+
+        # /usage flushes the buffer first, so this is the persisted number.
+        after = (await client.get("/api/billing/usage", headers=auth(admin_token))).json()
+        assert after["metrics"]["tile_request"]["used"] >= started + 3
+        assert billing_service.usage.stats()["buffered"] >= 0
+    finally:
+        await client.delete(f"/api/billing/keys/{key_id}", headers=auth(admin_token))
+
+
+async def test_browser_traffic_is_not_metered(client, admin_token):
+    """The customer pays for programmatic access, not for reading their own
+    dashboard. A session token must move no counter."""
+    before = (await client.get("/api/billing/usage", headers=auth(admin_token))).json()
+    started = before["metrics"]["tile_request"]["used"]
+
+    for _ in range(3):
+        await client.get(
+            "/api/tiles/agri_fields/11/1053/675.mvt", headers=auth(admin_token)
+        )
+
+    after = (await client.get("/api/billing/usage", headers=auth(admin_token))).json()
+    assert after["metrics"]["tile_request"]["used"] == started
+
+
+async def test_key_allowance_is_enforced(client, viewer_token):
+    """The free tier's key cap is what makes the paid tiers worth buying."""
+    sub = (await client.get("/api/billing/subscription", headers=auth(viewer_token))).json()
+    allowance = sub["plan"]["max_api_keys"]
+
+    created = []
+    try:
+        while len(created) < allowance:
+            resp = await client.post(
+                "/api/billing/keys",
+                headers=auth(viewer_token),
+                json={"name": f"cap-test-{len(created)}"},
+            )
+            if resp.status_code == 409:
+                break  # the account already had keys from an earlier run
+            assert resp.status_code == 201, resp.text
+            created.append(resp.json()["id"])
+
+        over = await client.post(
+            "/api/billing/keys", headers=auth(viewer_token), json={"name": "one-too-many"}
+        )
+        assert over.status_code == 409
+        assert str(allowance) in over.json()["detail"]
+    finally:
+        for key_id in created:
+            await client.delete(f"/api/billing/keys/{key_id}", headers=auth(viewer_token))
+
+
+async def test_webhook_rejects_an_unsigned_body(client):
+    """Unsigned, this endpoint would be an 'upgrade any account' API."""
+    resp = await client.post("/api/billing/webhook", content=b'{"type":"x"}')
+    assert resp.status_code in (400, 503)

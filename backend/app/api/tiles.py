@@ -12,8 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.db import get_db
-from app.core.deps import CurrentUser, get_current_user, get_tile_user
-from app.services import mvt
+from app.core.deps import CurrentUser, get_current_user, metered
+from app.services import billing, mvt
 from app.services.layers import ALL_LAYERS, PROJECTS, get_layer
 
 router = APIRouter(prefix="/tiles", tags=["tiles"])
@@ -100,7 +100,7 @@ async def tilejson(
 async def get_tile(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current: Annotated[CurrentUser, Depends(get_tile_user)],
+    current: Annotated[CurrentUser, Depends(metered(billing.TILE, tile=True))],
     layer_name: str = Path(...),
     z: int = Path(..., ge=0, le=22),
     x: int = Path(..., ge=0),

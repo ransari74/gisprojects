@@ -25,8 +25,10 @@ from app.schemas.auth import (
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-AdminUsers = Annotated[CurrentUser, Depends(require_permission("admin:users"))]
-AdminRoles = Annotated[CurrentUser, Depends(require_permission("admin:roles"))]
+# metric=None: the admin screens are not a billable product surface, and no
+# plan grants admin:* anyway, so metering them would only ever record zeroes.
+AdminUsers = Annotated[CurrentUser, Depends(require_permission("admin:users", metric=None))]
+AdminRoles = Annotated[CurrentUser, Depends(require_permission("admin:roles", metric=None))]
 Db = Annotated[AsyncSession, Depends(get_db)]
 
 
@@ -218,7 +220,7 @@ async def set_role_permissions(
 
 @router.get("/audit", response_model=list[AuditEntry])
 async def read_audit_log(
-    _: Annotated[CurrentUser, Depends(require_permission("admin:audit"))],
+    _: Annotated[CurrentUser, Depends(require_permission("admin:audit", metric=None))],
     db: Db,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
 ) -> list[AuditLog]:

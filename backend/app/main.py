@@ -9,7 +9,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse, ORJSONResponse
 from sqlalchemy import text
 
-from app.api import admin, auth, features, meta, tiles
+from app.api import admin, auth, billing, features, meta, tiles
 from app.api.projects import (
     agriculture,
     demographics,
@@ -21,6 +21,7 @@ from app.api.projects import (
 from app.core.bootstrap import schema_ready, seed_demo_users
 from app.core.config import settings
 from app.core.db import SessionLocal, engine
+from app.services import billing as billing_service
 
 logging.basicConfig(
     level=logging.INFO,
@@ -46,6 +47,18 @@ async def lifespan(app: FastAPI):
         # does not flap the container.
         log.warning("Startup database check failed (%s: %s)", type(exc).__name__, exc)
     yield
+
+    # Metered usage buffers in memory; draining it on the way out is the
+    # difference between a clean shutdown losing nothing and losing whatever
+    # the last flush interval collected.
+    try:
+        async with SessionLocal() as db:
+            drained = await billing_service.usage.flush(db)
+            if drained:
+                log.info("Flushed %d buffered usage rows on shutdown", drained)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Final usage flush failed (%s: %s)", type(exc).__name__, exc)
+
     await engine.dispose()
 
 
@@ -54,7 +67,12 @@ app = FastAPI(
     description=(
         "Six geospatial portfolio projects -- agriculture, cadastre, demographics, "
         "transport, 3D terrain and remote sensing -- served as MVT vector tiles from "
-        "PostGIS with role-based access control."
+        "PostGIS with role-based access control.\n\n"
+        "**Programmatic access.** Mint an API key under /api/billing/keys and send it "
+        "as `X-API-Key`, as a bearer token, or as `?api_key=` where headers are "
+        "impossible. A key authorises against the permissions its plan grants, is "
+        "rate-limited per minute and metered per month; see /api/billing/plans for "
+        "the price list."
     ),
     version="1.0.0",
     lifespan=lifespan,
@@ -105,6 +123,7 @@ async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse
 for router in (
     auth.router,
     admin.router,
+    billing.router,
     meta.router,
     tiles.router,
     features.router,

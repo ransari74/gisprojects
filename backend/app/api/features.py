@@ -13,7 +13,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response,
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
-from app.core.deps import CurrentUser, get_current_user
+from app.core.deps import CurrentUser, enforce_billing, get_current_user
+from app.services import billing
 from app.services import features as feat
 from app.services.layers import LayerSpec, get_layer
 from app.services.mvt import parse_filters
@@ -22,6 +23,20 @@ router = APIRouter(prefix="/layers", tags=["features"])
 
 Db = Annotated[AsyncSession, Depends(get_db)]
 Current = Annotated[CurrentUser, Depends(get_current_user)]
+
+
+async def _metered_layer(
+    db: AsyncSession, layer_name: str, current: CurrentUser, metric: str
+) -> LayerSpec:
+    """Authorise the layer, then bill the call.
+
+    The project routers get this for free through `require_permission`; these
+    generic endpoints check the layer registry's own permission code instead,
+    so they have to meter explicitly.
+    """
+    layer = _authorised_layer(layer_name, current)
+    await enforce_billing(db, current, metric)
+    return layer
 
 
 def _authorised_layer(layer_name: str, current: CurrentUser, action: str = "read") -> LayerSpec:
@@ -48,7 +63,7 @@ async def list_features(
     geometry: bool = True,
     simplify_m: Annotated[float | None, Query(ge=0, le=10000)] = None,
 ) -> dict:
-    layer = _authorised_layer(layer_name, current)
+    layer = await _metered_layer(db, layer_name, current, billing.ANALYTICS)
     filters = parse_filters(layer, dict(request.query_params))
     try:
         return await feat.fetch_features(
@@ -69,7 +84,7 @@ async def list_features(
 
 @router.get("/{layer_name}/features/{feature_id}")
 async def get_feature(layer_name: str, feature_id: int, current: Current, db: Db) -> dict:
-    layer = _authorised_layer(layer_name, current)
+    layer = await _metered_layer(db, layer_name, current, billing.ANALYTICS)
     feature = await feat.fetch_feature_by_id(db, layer, feature_id)
     if feature is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Feature not found")
@@ -88,7 +103,7 @@ async def breakdown(
     ] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> dict:
-    layer = _authorised_layer(layer_name, current)
+    layer = await _metered_layer(db, layer_name, current, billing.ANALYTICS)
     if not current.has("analytics:read"):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Requires permission: analytics:read")
 
@@ -118,7 +133,7 @@ async def layer_histogram(
     column: str,
     bins: Annotated[int, Query(ge=2, le=100)] = 20,
 ) -> dict:
-    layer = _authorised_layer(layer_name, current)
+    layer = await _metered_layer(db, layer_name, current, billing.ANALYTICS)
     if not current.has("analytics:read"):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Requires permission: analytics:read")
     filters = parse_filters(layer, dict(request.query_params))
@@ -141,6 +156,9 @@ async def export_layer(
     layer = _authorised_layer(layer_name, current)
     if not current.has("data:export"):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Requires permission: data:export")
+    # Metered after the entitlement check: a caller whose plan does not include
+    # export should not have the attempt billed against their allowance.
+    await enforce_billing(db, current, billing.EXPORT)
 
     filters = parse_filters(layer, dict(request.query_params))
     try:

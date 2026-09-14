@@ -138,6 +138,25 @@ export function LandingPage() {
           </div>
         </dl>
       </section>
+
+      <section className="landing-api" style={{ background: ink.surface, borderColor: ink.border }}>
+        <div>
+          <h3 style={{ color: ink.textPrimary }}>Use it from your own code</h3>
+          <p style={{ color: ink.textSecondary }}>
+            Every layer and every analytics endpoint on this page is available over an API key.
+            Start on the free tier — twenty thousand tiles a month, no card — and move up when the
+            traffic justifies it.
+          </p>
+        </div>
+        <div className="landing-api-actions">
+          <Link to="/pricing" className="primary-button">
+            See pricing
+          </Link>
+          <Link to="/account" className="ghost-button" style={{ color: ink.textSecondary, borderColor: ink.border }}>
+            Get an API key
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }

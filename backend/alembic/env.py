@@ -19,6 +19,7 @@ from app.core.db import Base
 # Importing the models registers them on Base.metadata, which is what
 # `alembic revision --autogenerate` diffs against.
 import app.models.auth  # noqa: F401
+import app.models.billing  # noqa: F401
 import app.models.spatial  # noqa: F401
 
 config = context.config
@@ -32,7 +33,9 @@ target_metadata = Base.metadata
 # Schemas this project owns. Without version_table_schema + include_schemas,
 # autogenerate would either miss our tables or try to drop everything it finds
 # in schemas it does not manage.
-MANAGED_SCHEMAS = {"auth", "agri", "parcel", "demog", "transport", "terrain", "meta"}
+MANAGED_SCHEMAS = {
+    "auth", "agri", "parcel", "demog", "transport", "terrain", "meta", "billing",
+}
 
 
 # Expression and partial indexes have no declarative equivalent, so
@@ -42,6 +45,7 @@ HANDWRITTEN_INDEXES = {
     "users_email_lower_idx",     # UNIQUE on lower(email)
     "refresh_tokens_user_idx",   # partial: WHERE revoked_at IS NULL
     "audit_log_user_time_idx",   # (user_id, created_at DESC)
+    "usage_daily_bucket",        # UNIQUE on COALESCE(api_key_id, zero-uuid)
 }
 
 

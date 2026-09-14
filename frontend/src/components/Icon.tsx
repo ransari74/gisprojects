@@ -26,7 +26,9 @@ export type IconName =
   | 'road'
   | 'image'
   | 'close'
-  | 'shield';
+  | 'shield'
+  | 'key'
+  | 'tag';
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, 'name'> {
   name: IconName;
@@ -111,6 +113,19 @@ const PATHS: Record<IconName, JSX.Element> = {
     <>
       <path d="M12 3.5 19 6v6c0 4.4-3 7.7-7 8.5-4-.8-7-4.1-7-8.5V6l7-2.5Z" />
       <path d="m9 12 2.2 2.2L15.5 10" />
+    </>
+  ),
+  key: (
+    <>
+      <circle cx="8" cy="8" r="4" />
+      <path d="m11 11 9 9" />
+      <path d="m17 17 2-2" />
+    </>
+  ),
+  tag: (
+    <>
+      <path d="M4 12V5a1 1 0 0 1 1-1h7l8 8-8 8-8-8Z" />
+      <circle cx="8.5" cy="8.5" r="1.2" />
     </>
   ),
 };

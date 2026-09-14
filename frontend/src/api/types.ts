@@ -201,3 +201,72 @@ export interface TerrainTileConfig {
   defaultExaggeration: number;
   skyDefaults: { sunIntensity: number; horizonBlend: number };
 }
+
+// --- billing ---------------------------------------------------------------
+
+export interface Plan {
+  code: string;
+  name: string;
+  blurb: string | null;
+  /** null means "contact us" -- render it as such, never as free. */
+  price_cents: number | null;
+  currency: string;
+  billing_interval: string;
+  tile_quota: number | null;
+  analytics_quota: number | null;
+  rate_limit_per_minute: number;
+  max_api_keys: number;
+  permissions: string[];
+  features: string[];
+  current: boolean;
+  self_serve: boolean;
+  /** Set only on tiers that are not self-serve. */
+  sales_email: string | null;
+}
+
+export interface Subscription {
+  plan: Plan;
+  status: 'trialing' | 'active' | 'past_due' | 'canceled';
+  current_period_start: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  provider: string | null;
+  payments_configured: boolean;
+}
+
+export interface MetricUsage {
+  used: number;
+  limit: number | null;
+  remaining: number | null;
+  percentUsed: number | null;
+}
+
+export interface UsageSummary {
+  planCode: string;
+  planName: string;
+  status: string;
+  rateLimitPerMinute: number;
+  periodStart: string;
+  metrics: Record<string, MetricUsage>;
+}
+
+export interface ApiKey {
+  id: string;
+  name: string;
+  /** The secret half is replaced by asterisks; it is readable exactly once. */
+  masked: string;
+  created_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+}
+
+export interface ApiKeyCreated extends ApiKey {
+  secret: string;
+}
+
+export interface CheckoutResponse {
+  checkout_url: string | null;
+  plan_code: string;
+  status: string;
+  message: string;
+}

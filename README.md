@@ -170,14 +170,51 @@ stack. Three of its results are worth the click:
 
 ---
 
+## Selling it
+
+The app is the shop window; the product is the API behind it. `/pricing` is a real price
+list served from `billing.plans`, `/account` mints API keys, and a key authorises against
+**the permissions its plan grants, never its owner's** — an admin who pastes a key into a
+client-side app exposes the tier they bought, not their account.
+
+```bash
+curl -H "X-API-Key: gpk_live_…" \
+  "http://localhost:8000/api/tiles/agri_fields/11/1053/675.mvt" -o tile.mvt
+```
+
+| | Free | Starter | Pro | Enterprise |
+|---|---|---|---|---|
+| | €0 | €49/mo | €199/mo | invoiced |
+| Projects | 2 | all six | all six | all six |
+| Tiles / month | 20k | 250k | 2M | unmetered |
+| Rate limit | 60/min | 300/min | 1,200/min | 6,000/min |
+
+Three things happen on a keyed request that do not happen on a browser one: a token-bucket
+rate check, a quota check against the month's counter, and a metered increment. All three
+are in-process — key resolution caches for a minute, usage buffers and flushes as one
+upsert per bucket — so a tile request still costs the one PostGIS query it always did.
+**Browser traffic is not metered**: the customer pays for programmatic access, not for
+reading their own dashboard.
+
+Stripe is optional. With no keys configured the price list, API keys, quotas and metering
+all still work and paid tiers answer `503` naming a sales address — invoicing the first
+few customers by hand is a supported mode, not a broken one. Entitlements are granted by
+the signature-verified webhook, never by the success redirect.
+
+**[docs/MONETIZATION.md](docs/MONETIZATION.md)** has the full model: what each check costs
+on the hot path, why usage is a daily counter rather than an event log, the dunning
+policy, and the list of what still has to be true before the first invoice goes out.
+
+---
+
 ## Layout
 
 ```
 backend/          FastAPI: auth, RBAC, MVT tiles, per-project analytics
   alembic/        migration chain -- the single source of truth for the schema
   app/models/     declarative models (auth + spatial), the autogenerate target
-  app/services/   layer registry, MVT builder, generic feature/aggregate queries
-  tests/          118 integration tests against live PostGIS
+  app/services/   layer registry, MVT builder, feature/aggregate queries, billing
+  tests/          158 tests: integration against live PostGIS, plus the billing unit suite
 etl/              open-data registry, downloaders, synthetic generator, loader
 frontend/         React + MapLibre + D3
 docs/             data sources, architecture, RBAC, deployment
@@ -223,8 +260,8 @@ make migrate-history
 make migrate-sql        # print the whole chain without running it
 ```
 
-The chain is nine revisions: extensions and schemas, RBAC tables, one revision per project, and
-the permission catalogue as a data migration. Every revision has a real downgrade, and
+The chain is thirteen revisions: extensions and schemas, RBAC tables, one revision per project,
+the permission catalogue as a data migration, and the billing schema with its price list. Every revision has a real downgrade, and
 `upgrade → downgrade → upgrade` round-trips cleanly. `tests/test_migration_files.py` asserts the
 history stays linear and that no revision ships an empty downgrade.
 
@@ -237,12 +274,17 @@ make test        # in Docker
 make dev-test    # locally
 ```
 
-76 integration tests against a live PostGIS — the interesting logic is SQL, and a mocked session
+Integration tests against a live PostGIS — the interesting logic is SQL, and a mocked session
 would verify none of it. They cover the auth flows (including that login cannot be used to
 enumerate accounts, and that a replayed refresh token fails), the full RBAC matrix, MVT tiles
 decoded back into features, filter pushdown, SQL-injection rejection, every analytics endpoint,
-and the migrated schema itself (every geometry column indexed, every layer in the registry
-matching a real table).
+the API-key lifecycle end to end, and the migrated schema itself (every geometry column indexed,
+every layer in the registry matching a real table).
+
+`tests/test_billing.py` is deliberately the exception: everything that decides whether a
+customer is charged, throttled or cut off is arithmetic over in-memory state, and it runs on a
+machine with no Postgres at all. It also asserts the price list itself stays coherent — no tier
+costs more and gives less, and nothing on the public list sells write or admin access.
 
 The end-to-end check drives a real browser:
 
@@ -270,6 +312,7 @@ and how to split static tiles from the API so a recruiter never waits on a cold 
 
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — how a tile request flows, and why each layer is where it is
 - **[docs/RBAC.md](docs/RBAC.md)** — the permission model and how to extend it
+- **[docs/MONETIZATION.md](docs/MONETIZATION.md)** — plans, API keys, quotas, metering and taking payment
 - **[docs/DATA_SOURCES.md](docs/DATA_SOURCES.md)** — every dataset, licence and download command
 - **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** — free-tier hosting, with the traps
 

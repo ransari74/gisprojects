@@ -47,9 +47,16 @@ lambda_reserved_concurrency="${lambda_reserved_concurrency:-10}"
 # app/api/admin.py's _block_if_demo_read_only). Reads (list users/roles/
 # audit log) stay live so the RBAC model is still fully explorable.
 demo_read_only="${demo_read_only:-true}"
+# Where the pricing page's checkout sends the customer back to, and the address
+# the invoiced tiers point at. Stripe credentials are deliberately NOT set here:
+# demo_read_only already blocks plan changes and key minting on this deployment,
+# so the price list is a shop window, not a till. See docs/MONETIZATION.md.
+# Defaults to the first CORS origin, which is already the web app's URL.
+public_site_url="${public_site_url:-${cors_origins%%,*}}"
+sales_email="${sales_email:-sales@example.com}"
 
 IMAGE_URI="$ecr_repo_uri:latest"
-ENV_VARS="Variables={DATABASE_URL=$pg_uri,SECRET_KEY=$secret_key,CORS_ORIGINS=$cors_origins,SEED_DEMO_USERS=$seed_demo_users,DB_POOL_SIZE=$db_pool_size,DB_MAX_OVERFLOW=$db_max_overflow,DEMO_READ_ONLY=$demo_read_only}"
+ENV_VARS="Variables={DATABASE_URL=$pg_uri,SECRET_KEY=$secret_key,CORS_ORIGINS=$cors_origins,SEED_DEMO_USERS=$seed_demo_users,DB_POOL_SIZE=$db_pool_size,DB_MAX_OVERFLOW=$db_max_overflow,DEMO_READ_ONLY=$demo_read_only,PUBLIC_SITE_URL=$public_site_url,SALES_EMAIL=$sales_email}"
 
 if aws lambda get-function --function-name "$lambda_function_name" --region "$aws_region" >/dev/null 2>&1; then
     echo "==> $lambda_function_name exists -- updating code and config..."

@@ -49,6 +49,15 @@ services:
       SEED_DEMO_USERS: "true"
       DEMO_PASSWORD: ${DEMO_PASSWORD:-demo1234}
       CORS_ORIGINS: http://localhost:5173,http://localhost:4173,http://localhost:3000
+      # Commercial layer. Unset Stripe credentials are a supported mode, not a
+      # broken one: the price list, API keys, quotas and metering all work, and
+      # paid tiers answer 503 naming SALES_EMAIL. See docs/MONETIZATION.md.
+      BILLING_ENABLED: "true"
+      DEFAULT_PLAN_CODE: free
+      PUBLIC_SITE_URL: http://localhost:5173
+      SALES_EMAIL: ${SALES_EMAIL:-sales@example.com}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:

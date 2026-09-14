@@ -4,13 +4,17 @@ import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
 
 import { apiGet } from '@/api/client';
 import type {
+  ApiKey,
   BasemapSpec,
   Capabilities,
   DatasetSource,
   OverlaySpec,
+  Plan,
   ProjectSummary,
   StudyArea,
+  Subscription,
   TerrainTileConfig,
+  UsageSummary,
 } from '@/api/types';
 
 /** Reference data changes only when the ETL re-runs, so cache it hard. */
@@ -58,3 +62,16 @@ export const useBasemaps = () =>
 
 export const useOverlays = () =>
   useApiQuery<OverlaySpec[]>(['overlays'], '/meta/overlays', STATIC);
+
+/** The price list is public and changes only on a deploy. */
+export const usePlans = () => useApiQuery<Plan[]>(['billing', 'plans'], '/billing/plans', STATIC);
+
+export const useSubscription = () =>
+  useApiQuery<Subscription>(['billing', 'subscription'], '/billing/subscription');
+
+/** Usage moves with every metered request, so never serve it from cache. */
+export const useUsage = () =>
+  useApiQuery<UsageSummary>(['billing', 'usage'], '/billing/usage', { staleTime: 0 });
+
+export const useApiKeys = () =>
+  useApiQuery<ApiKey[]>(['billing', 'keys'], '/billing/keys', { staleTime: 0 });

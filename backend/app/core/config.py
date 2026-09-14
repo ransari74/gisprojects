@@ -47,6 +47,38 @@ class Settings(BaseSettings):
     # --- cors ----------------------------------------------------------------
     cors_origins: str = "http://localhost:5173,http://localhost:3000,http://localhost:4173"
 
+    # --- billing -------------------------------------------------------------
+    # The commercial layer. With billing_enabled off the API behaves exactly as
+    # it did before it existed: no quota checks, no metering, /billing/* still
+    # serves the public price list so the marketing page keeps working.
+    billing_enabled: bool = True
+    # Plan a user lands on the first time they authenticate with no
+    # subscription row. Free by default -- signing someone up to a paid tier
+    # they never chose is a chargeback, not revenue.
+    default_plan_code: str = "free"
+    # Entitlements survive a failed payment for this long before the plan stops
+    # authorising requests. Cutting an integration off the hour a card expires
+    # costs more than the usage it saves.
+    past_due_grace_days: int = 7
+    # Resolved API keys are cached in-process so the tile path stays a single
+    # PostGIS query. Short, because it also bounds how long a revoked key keeps
+    # working on an already-warm instance.
+    api_key_cache_seconds: int = 60
+    api_key_cache_max_entries: int = 1024
+    # Usage counters buffer in memory and flush as one upsert per bucket.
+    usage_flush_seconds: int = 20
+    usage_flush_max_buffered: int = 500
+
+    # --- payment provider ----------------------------------------------------
+    # Unset in development: checkout then returns a 503 that names the sales
+    # contact instead of pretending to take a card.
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_api_base: str = "https://api.stripe.com/v1"
+    # Where Stripe sends the customer back to after checkout.
+    public_site_url: str = "http://localhost:5173"
+    sales_email: str = "sales@example.com"
+
     # --- tiles ---------------------------------------------------------------
     tile_cache_seconds: int = 3600
     tile_buffer: int = 64          # MVT buffer in tile-extent units
@@ -70,6 +102,11 @@ class Settings(BaseSettings):
             kept = [(k, val) for k, val in parse_qsl(parts.query) if k != "sslmode"]
             v = urlunsplit(parts._replace(query=urlencode(kept)))
         return v
+
+    @property
+    def payments_configured(self) -> bool:
+        """True when a real checkout can be started."""
+        return bool(self.stripe_secret_key)
 
     @property
     def cors_origin_list(self) -> list[str]:
