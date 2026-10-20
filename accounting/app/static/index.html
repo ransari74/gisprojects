@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alberta Books</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #5d6676; --line: #dfe3ea;
+    --accent: #1f5fbf; --accent-text: #ffffff; --good: #1e7a46; --bad: #b3261e; --chip: #eef2f8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #12151b; --panel: #1b2029; --text: #e6e9ef; --muted: #9aa3b2; --line: #2c3340;
+      --accent: #6ea3ff; --accent-text: #0d1320; --good: #5cc98a; --bad: #ff8a80; --chip: #242b37; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; padding: 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  header h1 { margin: 0; font-size: 18px; }
+  header .meta { color: var(--muted); font-size: 13px; }
+  nav { display: flex; gap: 4px; overflow-x: auto; padding: 8px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  nav button { border: 0; background: none; color: var(--muted); padding: 8px 12px; border-radius: 6px; cursor: pointer; font: inherit; white-space: nowrap; }
+  nav button.on { background: var(--chip); color: var(--text); font-weight: 600; }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  section { display: none; } section.on { display: block; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 12px; font-size: 16px; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom: 16px; }
+  .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+  .kpi .label { color: var(--muted); font-size: 13px; } .kpi .value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; font-size: 13px; }
+  td.n, th.n { text-align: right; }
+  tr.total td { font-weight: 600; border-top: 2px solid var(--line); }
+  .scroll { overflow-x: auto; }
+  form { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); align-items: end; }
+  label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+  input, select, textarea { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; width: 100%; }
+  textarea { min-height: 80px; resize: vertical; }
+  .full { grid-column: 1 / -1; }
+  button.primary { background: var(--accent); color: var(--accent-text); border: 0; border-radius: 6px; padding: 8px 14px; font: inherit; font-weight: 600; cursor: pointer; }
+  button.small { padding: 4px 10px; font-size: 13px; }
+  .chip { display: inline-block; background: var(--chip); border-radius: 999px; padding: 1px 8px; font-size: 12px; color: var(--muted); }
+  .good { color: var(--good); } .bad { color: var(--bad); } .muted { color: var(--muted); }
+  #toast { position: fixed; bottom: 16px; left: 16px; right: 16px; max-width: 520px; margin: auto; padding: 10px 14px; border-radius: 8px; background: var(--text); color: var(--bg); display: none; }
+  .answer { white-space: pre-wrap; }
+  td select { min-width: 200px; }
+</style>
+</head>
+<body>
+<header><h1 id="bizname">Alberta Books</h1><span class="meta" id="meta"></span></header>
+<nav id="tabs"></nav>
+<main>
+  <section id="dashboard">
+    <div class="kpis" id="kpis"></div>
+    <div class="grid">
+      <div class="card"><h2>Income statement (year to date)</h2><div class="scroll" id="pnl"></div></div>
+      <div class="card"><h2>Balance sheet</h2><div class="scroll" id="bs"></div></div>
+    </div>
+  </section>
+
+  <section id="bank">
+    <div class="card"><h2>Import bank transactions</h2>
+      <p class="muted">Paste CSV lines: <code>date,description,amount</code> (negative = money out). Keyword rules run first; anything they can't place goes to Claude.</p>
+      <form id="bankForm"><label class="full">CSV<textarea name="csv" placeholder="2026-03-01,PETRO-CANADA 1234 CALGARY,-63.00&#10;2026-03-02,NOTION LABS,-21.00"></textarea></label>
+        <label>Bank account<select name="bank" id="bankAcct"></select></label>
+        <label><span><input type="checkbox" name="ai" checked style="width:auto"> Use AI for unmatched lines</span></label>
+        <button class="primary">Import</button></form></div>
+    <div class="card"><h2>To review</h2><div class="scroll" id="bankList"></div></div>
+  </section>
+
+  <section id="invoices">
+    <div class="card"><h2>New invoice</h2>
+      <form id="custForm"><label>New customer<input name="name" required></label><label>Email<input name="email"></label><button class="primary">Add customer</button></form><br>
+      <form id="invForm">
+        <label>Customer<select name="customer_id" id="custSel" required></select></label>
+        <label>Issue date<input type="date" name="issue_date" required></label>
+        <label>Terms (days)<input type="number" name="due_days" value="30"></label>
+        <label class="full">Description<input name="description" required></label>
+        <label>Quantity<input name="quantity" value="1"></label>
+        <label>Unit price ($)<input name="unit_price" required></label>
+        <label>Revenue account<select name="account_code" id="revSel"></select></label>
+        <label><span><input type="checkbox" name="gst_exempt" style="width:auto"> GST exempt / zero-rated</span></label>
+        <button class="primary">Create invoice</button></form></div>
+    <div class="card"><h2>Invoices</h2><div class="scroll" id="invList"></div></div>
+  </section>
+
+  <section id="bills">
+    <div class="card"><h2>Record a bill or expense</h2>
+      <form id="billForm">
+        <label>Vendor<input name="vendor_name" required></label>
+        <label>Date<input type="date" name="date" required></label>
+        <label>Description<input name="description" required></label>
+        <label>Expense account<select name="account_code" id="expSel"></select></label>
+        <label>Amount ($)<input name="amount" required></label>
+        <label><span><input type="checkbox" name="gst_included" checked style="width:auto"> Amount includes 5% GST</span></label>
+        <label>Paid from<select name="paid_from"><option value="2000">On account (A/P)</option><option value="1000">Chequing</option><option value="2100">Credit card</option></select></label>
+        <button class="primary">Save</button></form></div>
+    <div class="card"><h2>Draft from a receipt (AI)</h2>
+      <form id="receiptForm"><label>Receipt image or PDF<input type="file" name="file" accept="image/*,application/pdf" required></label>
+        <label>Note (optional)<input name="note" placeholder="paid with company Visa"></label><button class="primary">Read receipt</button></form>
+      <div id="receiptOut"></div></div>
+    <div class="card"><h2>Bills</h2><div class="scroll" id="billList"></div></div>
+  </section>
+
+  <section id="payroll">
+    <div class="card"><h2>Employees</h2>
+      <form id="empForm"><label>Name<input name="name" required></label>
+        <label>Pay frequency<select name="pay_periods"><option value="26">Bi-weekly</option><option value="52">Weekly</option><option value="24">Semi-monthly</option><option value="12">Monthly</option></select></label>
+        <label>Gross per period ($)<input name="gross_per_period" required></label><button class="primary">Add employee</button></form>
+      <div class="scroll" id="empList"></div></div>
+    <div class="card"><h2>Run payroll</h2>
+      <form id="runForm"><label>Pay date<input type="date" name="pay_date" required></label><button class="primary">Run for everyone</button></form>
+      <p class="muted">Deductions follow CRA's T4127 method for Alberta (CPP, CPP2, EI, federal and Alberta tax). Check against CRA's PDOC before remitting.</p>
+      <div class="scroll" id="stubList"></div></div>
+  </section>
+
+  <section id="tax">
+    <div class="card"><h2>GST return (GST34)</h2>
+      <form id="gstForm"><label>From<input type="date" name="start" required></label><label>To<input type="date" name="end" required></label><button class="primary">Calculate</button></form>
+      <div id="gstOut"></div></div>
+    <div class="card"><h2>Corporate income tax estimate (Alberta CCPC)</h2><div id="corpOut"></div></div>
+  </section>
+
+  <section id="assistant">
+    <div class="card"><h2>Ask about your books</h2>
+      <form id="askForm"><label class="full">Question<textarea name="question" placeholder="What were my biggest expenses this year, and how much GST should I set aside?"></textarea></label><button class="primary">Ask</button></form>
+      <div id="askOut" class="answer"></div></div>
+    <div class="card"><h2>Describe a transaction</h2>
+      <form id="draftForm"><label class="full">Plain English<textarea name="text" placeholder="Bought a $1,575 laptop (GST included) from Best Buy on the company Visa on March 3"></textarea></label><button class="primary">Draft entry</button></form>
+      <div id="draftOut"></div></div>
+  </section>
+
+  <section id="journal">
+    <div class="card"><h2>Journal</h2><div class="scroll" id="jList"></div></div>
+    <div class="card"><h2>Trial balance</h2><div class="scroll" id="tb"></div></div>
+  </section>
+</main>
+<div id="toast"></div>
+<script>
+const TABS = [["dashboard","Dashboard"],["bank","Bank feed"],["invoices","Invoices"],["bills","Bills"],["payroll","Payroll"],["tax","GST & tax"],["assistant","AI assistant"],["journal","Journal"]];
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = c => (c < 0 ? "-$" : "$") + (Math.abs(c) / 100).toLocaleString("en-CA", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const today = new Date().toISOString().slice(0, 10);
+let accounts = [];
+let apiKey = "";
+try { apiKey = localStorage.getItem("apiKey") || ""; } catch {}
+
+function toast(msg, bad) { const t = $("#toast"); t.textContent = msg; t.style.display = "block"; t.style.background = bad ? "var(--bad)" : ""; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", 4000); }
+
+async function api(path, opts = {}) {
+  const headers = opts.body instanceof FormData ? {} : {"Content-Type": "application/json"};
+  if (apiKey) headers["X-API-Key"] = apiKey;
+  const r = await fetch("/api" + path, {...opts, headers});
+  if (r.status === 401) { apiKey = prompt("API key") || ""; try { localStorage.setItem("apiKey", apiKey); } catch {} return api(path, opts); }
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { const d = data.detail; throw new Error(typeof d === "string" ? d : JSON.stringify(d)); }
+  return data;
+}
+const post = (path, body) => api(path, {method: "POST", body: body instanceof FormData ? body : JSON.stringify(body)});
+const formObj = f => Object.fromEntries(new FormData(f));
+function onSubmit(id, fn) { $(id).addEventListener("submit", async e => { e.preventDefault(); const b = e.submitter; b.disabled = true; try { await fn(e.target); } catch (err) { toast(err.message, true); } finally { b.disabled = false; } }); }
+
+function table(cols, rows) {
+  return `<table><tr>${cols.map(c => `<th class="${c.n ? "n" : ""}">${c.h}</th>`).join("")}</tr>` +
+    rows.map(r => `<tr class="${r._cls || ""}">${cols.map(c => `<td class="${c.n ? "n" : ""}">${c.f ? c.f(r) : esc(r[c.k])}</td>`).join("")}</tr>`).join("") + "</table>";
+}
+const money = (h, k) => ({h, n: 1, f: r => r[k] === "" || r[k] == null ? "" : fmt(r[k])});
+const acctName = code => (accounts.find(a => a.code === code) || {}).name || code;
+
+function stmt(sections, totalLabel, total) {
+  const rows = [];
+  for (const [title, items, sub] of sections) {
+    rows.push({name: `<strong>${title}</strong>`, amount: ""});
+    items.forEach(i => rows.push({name: `${i.code} ${esc(i.name)}`, amount: i.amount}));
+    if (sub !== undefined) rows.push({name: `Total ${title.toLowerCase()}`, amount: sub, _cls: "total"});
+  }
+  if (totalLabel) rows.push({name: totalLabel, amount: total, _cls: "total"});
+  return table([{h: "", f: r => r.name}, money("", "amount")], rows);
+}
+
+async function loadDashboard() {
+  const [pnl, bs, ar, gst] = await Promise.all([
+    api("/reports/income-statement"), api("/reports/balance-sheet"), api("/reports/aged-receivables"),
+    api(`/tax/gst-return?start=${today.slice(0, 4)}-01-01&end=${today}`)]);
+  const cash = bs.assets.filter(a => a.code.startsWith("10")).reduce((s, a) => s + a.amount, 0);
+  const owing = Object.values(ar.buckets).reduce((s, v) => s + v, 0);
+  $("#kpis").innerHTML = [["Cash", cash], ["Revenue YTD", pnl.total_revenue], ["Net income YTD", pnl.net_income], ["Receivables", owing], ["GST net YTD", gst.line_109_net_tax]]
+    .map(([l, v]) => `<div class="kpi"><div class="label">${l}</div><div class="value">${fmt(v)}</div></div>`).join("");
+  $("#pnl").innerHTML = stmt([["Revenue", pnl.revenue, pnl.total_revenue], ["Cost of goods sold", pnl.cost_of_goods_sold], ["Operating expenses", pnl.operating_expenses, pnl.total_operating_expenses]], "Net income", pnl.net_income);
+  $("#bs").innerHTML = stmt([["Assets", bs.assets, bs.total_assets], ["Liabilities", bs.liabilities, bs.total_liabilities], ["Equity", bs.equity, bs.total_equity]]) +
+    `<p class="${bs.balanced ? "good" : "bad"}">${bs.balanced ? "Balanced" : "Out of balance"}</p>`;
+}
+
+async function loadBank() {
+  const txns = await api("/bank/transactions");
+  const opts = code => accounts.map(a => `<option value="${a.code}" ${a.code === code ? "selected" : ""}>${a.code} ${esc(a.name)}</option>`).join("");
+  $("#bankList").innerHTML = txns.length ? table([
+    {h: "Date", k: "date"}, {h: "Description", k: "description"}, money("Amount", "amount"),
+    {h: "Account", f: t => `<select data-acct="${t.id}">${opts(t.suggested_account)}</select><div class="muted" style="font-size:12px"><span class="chip">${t.suggestion_source} · ${t.confidence}</span> ${esc(t.suggestion_reason)}</div>`},
+    {h: "GST", f: t => `<input type="checkbox" data-gst="${t.id}" ${t.suggested_gst ? "checked" : ""} style="width:auto">`},
+    {h: "", f: t => `<button class="primary small" data-post="${t.id}">Post</button>`}], txns) : `<p class="muted">Nothing to review.</p>`;
+}
+$("#bankList").addEventListener("click", async e => {
+  const id = e.target.dataset.post; if (!id) return;
+  try { await post(`/bank/transactions/${id}/post`, {account_code: $(`[data-acct="${id}"]`).value, gst_included: $(`[data-gst="${id}"]`).checked}); toast("Posted"); loadBank(); }
+  catch (err) { toast(err.message, true); }
+});
+onSubmit("#bankForm", async f => {
+  const d = formObj(f);
+  const transactions = d.csv.split("\n").map(l => l.trim()).filter(Boolean).map(l => {
+    const parts = l.split(","); const amount = parts.pop().trim(); const date = parts.shift().trim();
+    return {date, description: parts.join(",").trim(), amount};
+  });
+  const r = await post("/bank/import", {transactions, bank_account_code: d.bank, use_ai: !!d.ai});
+  toast(r.note || `Imported ${r.imported.length} transactions`, !!r.note); f.reset(); loadBank();
+});
+
+async function loadInvoices() {
+  const [custs, invs] = await Promise.all([api("/contacts?kind=customer"), api("/invoices")]);
+  $("#custSel").innerHTML = custs.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("");
+  $("#invList").innerHTML = invs.length ? table([{h: "No.", k: "number"}, {h: "Customer", k: "customer"}, {h: "Issued", k: "issue_date"}, {h: "Due", k: "due_date"},
+    money("Subtotal", "subtotal"), money("GST", "gst"), money("Total", "total"),
+    {h: "Status", f: i => i.status === "paid" ? `<span class="good">Paid</span>` : `<button class="primary small" data-pay="${i.id}">Mark paid</button>`}], invs) : `<p class="muted">No invoices yet.</p>`;
+}
+$("#invList").addEventListener("click", async e => {
+  const id = e.target.dataset.pay; if (!id) return;
+  try { await post(`/invoices/${id}/payments`, {date: today}); toast("Payment recorded"); loadInvoices(); } catch (err) { toast(err.message, true); }
+});
+onSubmit("#custForm", async f => { await post("/contacts", {...formObj(f), kind: "customer"}); f.reset(); toast("Customer added"); loadInvoices(); });
+onSubmit("#invForm", async f => {
+  const d = formObj(f);
+  const inv = await post("/invoices", {customer_id: +d.customer_id, issue_date: d.issue_date, due_days: +d.due_days,
+    lines: [{description: d.description, quantity: d.quantity, unit_price: d.unit_price, account_code: d.account_code, gst_exempt: !!d.gst_exempt}]});
+  toast(`${inv.number} created for ${fmt(inv.total)}`); f.reset(); f.issue_date.value = today; loadInvoices();
+});
+
+async function loadBills() {
+  const bills = await api("/bills");
+  $("#billList").innerHTML = bills.length ? table([{h: "Date", k: "date"}, {h: "Vendor", k: "vendor_name"}, {h: "Description", k: "description"}, {h: "Account", f: b => esc(acctName(b.account_code))},
+    money("Subtotal", "subtotal"), money("GST", "gst"), money("ITC", "itc"), money("Total", "total")], bills) : `<p class="muted">No bills yet.</p>`;
+}
+onSubmit("#billForm", async f => {
+  const d = formObj(f);
+  await post("/bills", {...d, gst_included: !!d.gst_included}); toast("Saved"); f.reset(); f.date.value = today; loadBills();
+});
+
+function showDraft(el, d) {
+  el.innerHTML = `<p>${esc(d.explanation)}</p>` +
+    table([{h: "Account", f: l => `${l.account_code} ${esc(acctName(l.account_code))}`}, {h: "Description", k: "description"},
+      {h: "Debit", n: 1, f: l => l.debit ? fmt(Math.round(l.debit * 100)) : ""}, {h: "Credit", n: 1, f: l => l.credit ? fmt(Math.round(l.credit * 100)) : ""}], d.lines) +
+    (d.review_notes.length ? `<p class="muted">Check: ${d.review_notes.map(esc).join("; ")}</p>` : "") +
+    (d.valid ? `<p><button class="primary">Post ${esc(d.date)} entry</button></p>` : `<p class="bad">Can't post: ${esc(d.problem)}</p>`);
+  const b = el.querySelector("button");
+  if (b) b.onclick = async () => {
+    try { await post("/journal", {date: d.date, memo: d.memo, source: "ai", lines: d.lines}); el.innerHTML = `<p class="good">Posted.</p>`; loadBills(); }
+    catch (err) { toast(err.message, true); }
+  };
+}
+onSubmit("#receiptForm", async f => { $("#receiptOut").innerHTML = `<p class="muted">Reading receipt…</p>`; showDraft($("#receiptOut"), await post("/ai/receipt", new FormData(f))); });
+onSubmit("#draftForm", async f => { $("#draftOut").innerHTML = `<p class="muted">Drafting…</p>`; showDraft($("#draftOut"), await post("/ai/draft-entry", formObj(f))); });
+onSubmit("#askForm", async f => { $("#askOut").textContent = "Thinking…"; $("#askOut").textContent = (await post("/ai/ask", formObj(f))).answer; });
+
+async function loadPayroll() {
+  const [emps, stubs] = await Promise.all([api("/employees"), api("/payroll/stubs")]);
+  $("#empList").innerHTML = emps.length ? table([{h: "Name", k: "name"}, {h: "Periods/yr", k: "pay_periods", n: 1}, money("Gross/period", "gross_per_period")], emps) : "";
+  $("#stubList").innerHTML = stubs.length ? table([{h: "Date", k: "pay_date"}, {h: "Employee", k: "employee"}, money("Gross", "gross"), money("CPP", "cpp"), money("CPP2", "cpp2"),
+    money("EI", "ei"), money("Federal", "federal_tax"), money("Alberta", "alberta_tax"), money("Net", "net")], stubs) : "";
+}
+onSubmit("#empForm", async f => { await post("/employees", {...formObj(f), pay_periods: +f.pay_periods.value}); f.reset(); loadPayroll(); });
+onSubmit("#runForm", async f => { const s = await post("/payroll/run", formObj(f)); toast(`Paid ${s.length} employee(s)`); loadPayroll(); });
+
+async function loadTax() {
+  const c = await api("/tax/corporate-estimate");
+  $("#corpOut").innerHTML = table([{h: "", k: "l"}, money("", "v")], [
+    {l: "Book net income", v: c.book_net_income}, {l: "Add back 50% of meals", v: c.meals_addback}, {l: "Taxable income", v: c.taxable_income, _cls: "total"},
+    {l: "Federal tax", v: c.federal_tax}, {l: "Alberta tax", v: c.alberta_tax}, {l: `Total (${(c.effective_rate * 100).toFixed(1)}% effective)`, v: c.total_tax, _cls: "total"}]) +
+    `<p class="muted">${esc(c.note)} Rates table: ${c.rates_year}.</p>`;
+}
+onSubmit("#gstForm", async f => {
+  const d = formObj(f); const g = await api(`/tax/gst-return?start=${d.start}&end=${d.end}`);
+  $("#gstOut").innerHTML = table([{h: "Line", k: "l"}, money("Amount", "v")], [
+    {l: "101 Sales and other revenue", v: g.line_101_sales}, {l: "105 GST collected", v: g.line_105_gst_collected},
+    {l: "108 Input tax credits", v: g.line_108_itcs}, {l: `109 Net tax (${g.result})`, v: g.line_109_net_tax, _cls: "total"}]) +
+    `<p class="muted">${esc(g.note)}</p><button class="primary" id="remit">Record ${g.result === "refund" ? "refund" : "payment"} to CRA today</button>`;
+  $("#remit").onclick = async () => { try { await post("/tax/gst-remit", {start: d.start, end: d.end, paid_on: today}); toast("GST remittance posted"); } catch (err) { toast(err.message, true); } };
+});
+
+async function loadJournal() {
+  const [entries, tb] = await Promise.all([api("/journal?limit=100"), api("/reports/trial-balance")]);
+  const rows = entries.flatMap(e => e.lines.map((l, i) => ({...l, date: i ? "" : e.date, memo: i ? "" : e.memo, source: i ? "" : e.source})));
+  $("#jList").innerHTML = rows.length ? table([{h: "Date", k: "date"}, {h: "Memo", k: "memo"}, {h: "Source", f: r => r.source ? `<span class="chip">${r.source}</span>` : ""},
+    {h: "Account", f: r => `${r.account_code} ${esc(r.account_name)}`}, {h: "Debit", n: 1, f: r => r.debit ? fmt(r.debit) : ""}, {h: "Credit", n: 1, f: r => r.credit ? fmt(r.credit) : ""}], rows) : `<p class="muted">No entries yet.</p>`;
+  $("#tb").innerHTML = table([{h: "Account", f: r => `${r.code} ${esc(r.name)}`}, {h: "Debit", n: 1, f: r => r.debit ? fmt(r.debit) : ""}, {h: "Credit", n: 1, f: r => r.credit ? fmt(r.credit) : ""}],
+    [...tb.rows, {code: "", name: "Total", debit: tb.total_debit, credit: tb.total_credit, _cls: "total"}]);
+}
+
+const LOADERS = {dashboard: loadDashboard, bank: loadBank, invoices: loadInvoices, bills: loadBills, payroll: loadPayroll, tax: loadTax, journal: loadJournal};
+function show(id) {
+  document.querySelectorAll("section").forEach(s => s.classList.toggle("on", s.id === id));
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === id));
+  try { localStorage.setItem("tab", id); } catch {}
+  (LOADERS[id] || (async () => {}))().catch(err => toast(err.message, true));
+}
+
+(async () => {
+  $("#tabs").innerHTML = TABS.map(([id, label]) => `<button data-tab="${id}">${label}</button>`).join("");
+  $("#tabs").addEventListener("click", e => e.target.dataset.tab && show(e.target.dataset.tab));
+  document.querySelectorAll('input[type=date]').forEach(i => { if (i.name !== "start") i.value = today; });
+  $('#gstForm [name=start]').value = today.slice(0, 4) + "-01-01";
+  try {
+    const s = await api("/settings");
+    $("#bizname").textContent = s.business_name;
+    $("#meta").textContent = `Alberta · GST 5% · AI ${s.ai_enabled ? "on" : "off"}${s.gst_number ? " · GST# " + s.gst_number : ""}`;
+    accounts = await api("/accounts");
+  } catch (err) { toast(err.message, true); }
+  const opt = list => list.map(a => `<option value="${a.code}">${a.code} ${esc(a.name)}</option>`).join("");
+  $("#revSel").innerHTML = opt(accounts.filter(a => a.type === "revenue"));
+  $("#revSel").value = "4100";
+  $("#expSel").innerHTML = opt(accounts.filter(a => a.type === "expense" || ["1200", "1400", "1500", "1600"].includes(a.code)));
+  $("#bankAcct").innerHTML = opt(accounts.filter(a => ["1000", "1010", "2100"].includes(a.code)));
+  let tab = "dashboard"; try { tab = localStorage.getItem("tab") || tab; } catch {}
+  show(LOADERS[tab] || tab === "assistant" ? tab : "dashboard");
+})();
+</script>
+</body>
+</html>
